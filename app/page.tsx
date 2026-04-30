@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { ProcessingQueue } from '@/components/ProcessingQueue';
 import { BatchProgress } from '@/components/BatchProgress';
@@ -20,6 +20,8 @@ export default function UploadPage() {
     hasPendingFile,
     processQueue,
   } = useStore();
+
+  const [batchLabel, setBatchLabel] = useState('');
 
   const queuedBatches = useMemo(
     () => state.batches.filter((b) => b.status === 'queued'),
@@ -41,6 +43,7 @@ export default function UploadPage() {
       } catch {
         // Surface as an error in the batch
       }
+      const trimmedLabel = batchLabel.trim();
       const batch: PhotoBatch = {
         id,
         filename: file.name,
@@ -53,6 +56,7 @@ export default function UploadPage() {
         spinesDetected: 0,
         booksIdentified: 0,
         books: [],
+        batchLabel: trimmedLabel || undefined,
       };
       addBatch(batch);
       if (!lowRes) setPendingFile(id, file);
@@ -78,6 +82,31 @@ export default function UploadPage() {
           look up its metadata, infer tags, and let you review every result before any
           export. Nothing leaves your machine for LibraryThing without your explicit
           approval.
+        </p>
+      </div>
+
+      <div className="bg-cream-50 dark:bg-ink-soft/60 border border-cream-300 dark:border-ink-soft rounded-lg p-4">
+        <label
+          htmlFor="batch-label"
+          className="block text-xs uppercase tracking-wider font-semibold text-ink/60 dark:text-cream-300/60 mb-1.5"
+        >
+          Batch label <span className="text-ink/40 dark:text-cream-300/40 normal-case font-normal">— optional</span>
+        </label>
+        <input
+          id="batch-label"
+          type="text"
+          value={batchLabel}
+          onChange={(e) => setBatchLabel(e.target.value)}
+          placeholder='e.g. "Shelf 3", "Box 4", "Upstairs hallway"'
+          disabled={isProcessing}
+          className="w-full px-3 py-2 text-base bg-cream-100 dark:bg-ink rounded border border-cream-300 dark:border-ink-soft focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50"
+        />
+        <p className="mt-2 text-xs text-ink/50 dark:text-cream-300/50 leading-relaxed">
+          Photos uploaded while this is set will be tagged as that location.
+          Books group by label in Review and can be exported as a LibraryThing
+          Collection or as a <span className="font-mono">location:Shelf 3</span>{' '}
+          tag — your choice on the Export screen. Change the label between
+          uploads to start a new batch.
         </p>
       </div>
 

@@ -139,14 +139,63 @@ export default function ReviewPage() {
         </button>
       </div>
 
-      {/* Book list */}
-      <div className="space-y-3">
+      {/* Book list — grouped by batch label */}
+      <div className="space-y-6">
         {visibleBooks.length === 0 ? (
           <div className="text-sm text-ink/50 dark:text-cream-300/50 italic p-8 text-center border border-dashed border-cream-300 dark:border-ink-soft rounded-lg">
             No books in this filter.
           </div>
         ) : (
-          visibleBooks.map((book) => <BookCard key={book.id} book={book} />)
+          (() => {
+            const groups = new Map<string, typeof visibleBooks>();
+            for (const b of visibleBooks) {
+              const key = b.batchLabel ?? '';
+              const arr = groups.get(key) ?? [];
+              arr.push(b);
+              groups.set(key, arr);
+            }
+            const groupKeys = Array.from(groups.keys()).sort((a, b) => {
+              if (a === '' && b !== '') return 1; // Uncategorized last
+              if (b === '' && a !== '') return -1;
+              return a.localeCompare(b);
+            });
+            const onlyOneGroup = groupKeys.length === 1 && groupKeys[0] === '';
+            return groupKeys.map((key) => {
+              const groupBooks = groups.get(key)!;
+              const label = key || 'Uncategorized';
+              const pendingInGroup = groupBooks.filter((b) => b.status === 'pending');
+              return (
+                <div key={key} className="space-y-3">
+                  {!onlyOneGroup && (
+                    <div className="sticky top-[88px] z-[5] bg-cream-50/95 dark:bg-ink/95 backdrop-blur border-b border-cream-300 dark:border-ink-soft py-2 -mx-2 px-2 flex items-center gap-3">
+                      <h2 className="font-serif text-xl text-ink dark:text-cream-100">{label}</h2>
+                      <span className="text-xs text-ink/50 dark:text-cream-300/50">
+                        {groupBooks.length} book{groupBooks.length !== 1 ? 's' : ''}
+                      </span>
+                      <div className="flex-1" />
+                      {pendingInGroup.length > 0 && (
+                        <button
+                          onClick={() =>
+                            pendingInGroup.forEach((b) =>
+                              updateBook(b.id, { status: 'approved' })
+                            )
+                          }
+                          className="text-[11px] px-2.5 py-1 rounded border border-green-400/70 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition"
+                        >
+                          Approve all in {label} ({pendingInGroup.length})
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  <div className="space-y-3">
+                    {groupBooks.map((book) => (
+                      <BookCard key={book.id} book={book} />
+                    ))}
+                  </div>
+                </div>
+              );
+            });
+          })()
         )}
       </div>
 

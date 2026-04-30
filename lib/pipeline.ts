@@ -405,6 +405,8 @@ export interface BuildBookOptions {
   sourcePhoto: string;
   /** A larger crop (data URI) sent to /api/read-spine for OCR. */
   ocrCrop: string;
+  /** Optional location label inherited from the parent PhotoBatch. */
+  batchLabel?: string;
 }
 
 export interface BuiltBook {
@@ -414,7 +416,7 @@ export interface BuiltBook {
 }
 
 export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBook> {
-  const { position, bbox, spineThumbnail, sourcePhoto, ocrCrop } = opts;
+  const { position, bbox, spineThumbnail, sourcePhoto, ocrCrop, batchLabel } = opts;
   const { base64, mediaType } = dataUriToBase64Parts(ocrCrop);
 
   // Pass B — read the spine with Opus. (Sonnet was tried as a cheaper
@@ -528,6 +530,7 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
     status: 'pending',
     warnings: grounded.warnings,
     sourcePhoto,
+    batchLabel,
     lookupSource: lookup.source,
     lccSource,
     spineThumbnail,
@@ -618,9 +621,14 @@ export async function rereadBook(
       mediaType,
       position: current.spineRead.position,
     });
-    title = read.title;
-    author = read.author;
-    publisher = read.publisher || current.publisher;
+    // Merge: user-edited fields always win over Pass B. Field is "edited"
+    // if the current value differs from the original snapshot.
+    const titleEdited = current.title !== current.original.title;
+    const authorEdited = current.author !== current.original.author;
+    const publisherEdited = current.publisher !== current.original.publisher;
+    title = titleEdited ? current.title : read.title;
+    author = authorEdited ? current.author : read.author;
+    publisher = publisherEdited ? current.publisher : read.publisher || current.publisher;
     confidence = read.confidence;
     lccFromSpine = read.lcc || '';
   }
@@ -633,9 +641,20 @@ export async function rereadBook(
     lcc: '',
     source: 'none',
   };
+  // Use edition-scoped lookup when:
+  //   - matchEdition was explicitly requested, OR
+  //   - this is an AI retry where the user has edited year/publisher/ISBN
+  //     (in which case those edits should bias the lookup toward the
+  //     user's specific printing).
+  const yearEdited = current.publicationYear !== current.original.publicationYear;
+  const publisherEdited = current.publisher !== current.original.publisher;
+  const isbnEdited = current.isbn !== current.original.isbn;
+  const useEditionScoping =
+    options.matchEdition || (!options.hint && (yearEdited || publisherEdited || isbnEdited));
+
   if (title) {
     try {
-      const r = options.matchEdition
+      const r = useEditionScoping
         ? await lookupBookClient(title, author, {
             matchEdition: true,
             hints: {

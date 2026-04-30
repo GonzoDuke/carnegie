@@ -287,6 +287,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 spineThumbnail,
                 ocrCrop,
                 sourcePhoto: batch.filename,
+                batchLabel: batch.batchLabel,
               });
               bookDone += 1;
               if (kept) keptBooks.push(book);

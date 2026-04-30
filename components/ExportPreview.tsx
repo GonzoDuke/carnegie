@@ -1,9 +1,15 @@
 'use client';
 
 import type { BookRecord } from '@/lib/types';
-import { CSV_HEADERS, bookToCsvRow } from '@/lib/csv-export';
+import { CSV_HEADERS, bookToCsvRow, type CsvOptions } from '@/lib/csv-export';
 
-export function ExportPreview({ books }: { books: BookRecord[] }) {
+export function ExportPreview({
+  books,
+  options,
+}: {
+  books: BookRecord[];
+  options?: CsvOptions;
+}) {
   if (books.length === 0) {
     return (
       <div className="text-sm text-ink/50 dark:text-cream-300/50 italic p-8 text-center border border-dashed border-cream-300 dark:border-ink-soft rounded-lg">
@@ -30,7 +36,7 @@ export function ExportPreview({ books }: { books: BookRecord[] }) {
           </thead>
           <tbody>
             {books.map((book) => {
-              const row = bookToCsvRow(book);
+              const row = bookToCsvRow(book, options);
               return (
                 <tr
                   key={book.id}

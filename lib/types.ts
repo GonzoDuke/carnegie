@@ -46,6 +46,8 @@ export interface BookRecord {
   status: 'pending' | 'approved' | 'rejected';
   warnings: string[];
   sourcePhoto: string;
+  /** Optional location label (e.g., "Shelf 3") inherited from the parent PhotoBatch. */
+  batchLabel?: string;
   lookupSource: 'openlibrary' | 'googlebooks' | 'none';
   /** Where the LCC came from. 'spine' wins over 'lookup'. */
   lccSource: 'spine' | 'lookup' | 'none';
@@ -76,6 +78,8 @@ export interface PhotoBatch {
   spinesDetected: number;
   booksIdentified: number;
   books: BookRecord[];
+  /** Optional location label set at upload time (e.g., "Shelf 3"). */
+  batchLabel?: string;
 }
 
 export interface AppState {
