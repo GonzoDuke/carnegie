@@ -254,44 +254,58 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           const loaded = await loadImage(file);
           const keptBooks: BookRecord[] = [];
 
-          for (let i = 0; i < detections.length; i++) {
-            const det = detections[i];
-            const bbox = { x: det.x, y: det.y, width: det.width, height: det.height };
-            const ocrCrop = cropSpine(loaded, bbox, { paddingPct: 10, maxLongEdge: 1600 });
-            const spineThumbnail = cropSpine(loaded, bbox, {
-              paddingPct: 5,
-              maxLongEdge: 220,
-              quality: 0.8,
-            });
+          // Pre-crop everything (sync, fast) so the workers below only do I/O.
+          const jobs = detections.map((det, i) => ({
+            det,
+            bbox: { x: det.x, y: det.y, width: det.width, height: det.height },
+            ocrCrop: cropSpine(loaded, { x: det.x, y: det.y, width: det.width, height: det.height }, {
+              paddingPct: 10,
+              maxLongEdge: 1200,
+            }),
+            spineThumbnail: cropSpine(
+              loaded,
+              { x: det.x, y: det.y, width: det.width, height: det.height },
+              { paddingPct: 5, maxLongEdge: 220, quality: 0.8 }
+            ),
+            position: det.position ?? i + 1,
+          }));
 
-            dispatch({
-              type: 'PATCH_PROCESSING',
-              patch: { currentLabel: `Reading spine ${i + 1} of ${detections.length}…` },
-            });
-
-            const { book, kept } = await buildBookFromCrop({
-              position: det.position ?? i + 1,
-              bbox,
-              spineThumbnail,
-              ocrCrop,
-              sourcePhoto: batch.filename,
-            });
-
-            bookDone += 1;
-            if (kept) keptBooks.push(book);
-
-            dispatch({
-              type: 'PATCH_PROCESSING',
-              patch: {
-                bookDone,
-                currentLabel: kept
-                  ? book.title
-                    ? `Identified: ${book.title}`
-                    : `Spine #${det.position} — verify`
-                  : `Skipped illegible spine #${det.position}`,
-              },
-            });
+          // Concurrency-limited worker pool. Anthropic vision and the
+          // metadata APIs all happily handle 4 concurrent requests; this
+          // is a roughly 4× wall-clock speedup vs. the sequential loop
+          // and saves the user from staring at the screen.
+          const CONCURRENCY = 4;
+          let nextIndex = 0;
+          async function runWorker() {
+            while (true) {
+              const i = nextIndex++;
+              if (i >= jobs.length) return;
+              const { det, bbox, ocrCrop, spineThumbnail, position: pos } = jobs[i];
+              const { book, kept } = await buildBookFromCrop({
+                position: pos,
+                bbox,
+                spineThumbnail,
+                ocrCrop,
+                sourcePhoto: batch.filename,
+              });
+              bookDone += 1;
+              if (kept) keptBooks.push(book);
+              dispatch({
+                type: 'PATCH_PROCESSING',
+                patch: {
+                  bookDone,
+                  currentLabel: kept
+                    ? book.title
+                      ? `Identified: ${book.title}`
+                      : `Spine #${det.position} — verify`
+                    : `Skipped illegible spine #${det.position}`,
+                },
+              });
+            }
           }
+          await Promise.all(
+            Array.from({ length: Math.min(CONCURRENCY, jobs.length) }, runWorker)
+          );
 
           const finalBooks = dedupeBooks(keptBooks);
           for (const book of finalBooks) {

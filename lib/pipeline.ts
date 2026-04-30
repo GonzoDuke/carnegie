@@ -52,6 +52,7 @@ export async function readSpine(args: {
   imageBase64: string;
   mediaType: string;
   position: number;
+  model?: 'sonnet' | 'opus';
 }): Promise<ReadSpineResponse> {
   const res = await fetch('/api/read-spine', {
     method: 'POST',
@@ -383,8 +384,23 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
   const { position, bbox, spineThumbnail, sourcePhoto, ocrCrop } = opts;
   const { base64, mediaType } = dataUriToBase64Parts(ocrCrop);
 
-  // Pass B — read the spine.
-  const read = await readSpine({ imageBase64: base64, mediaType, position });
+  // Pass B — read the spine. Two-tier: try Sonnet first (cheaper, fast).
+  // Escalate to Opus only when Sonnet returns LOW confidence — the hard
+  // spines that actually need the better model.
+  let read = await readSpine({ imageBase64: base64, mediaType, position, model: 'sonnet' });
+  if (read.confidence === 'LOW') {
+    const opusRead = await readSpine({
+      imageBase64: base64,
+      mediaType,
+      position,
+      model: 'opus',
+    });
+    // Take Opus result if it's at least as good as Sonnet's.
+    const order = { LOW: 0, MEDIUM: 1, HIGH: 2 } as const;
+    if (order[opusRead.confidence] >= order[read.confidence]) {
+      read = opusRead;
+    }
+  }
 
   const spineRead: SpineRead = {
     position,
@@ -441,14 +457,18 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
       ? 'lookup'
       : 'none';
 
-  // Tag inference — only if we're keeping the entry and have a title.
+  // Tag inference — only if we're keeping the entry, have a title, AND
+  // a successful metadata lookup. With no lookup match we'd be tagging
+  // from title alone, which produces noisy tags; better to leave empty
+  // and let the user re-trigger via the Reread button after correcting
+  // the title.
   let tags: InferTagsResult = {
     genreTags: [],
     formTags: [],
     confidence: 'LOW',
     reasoning: '',
   };
-  if (grounded.keep && read.title) {
+  if (grounded.keep && read.title && lookup.source !== 'none') {
     try {
       tags = await inferTagsClient({
         title: read.title,
@@ -609,25 +629,28 @@ export async function rereadBook(
       ? 'lookup'
       : 'none';
 
-  // Tag inference
+  // Tag inference — skip when lookup completely failed (same rationale as
+  // first-pass: noisy tags from title-alone aren't worth the call).
   let tags: InferTagsResult = {
     genreTags: [],
     formTags: [],
     confidence: 'LOW',
     reasoning: '',
   };
-  try {
-    tags = await inferTagsClient({
-      title,
-      author,
-      isbn: lookup.isbn,
-      publisher: lookup.publisher,
-      publicationYear: lookup.publicationYear,
-      lcc: finalLcc,
-      subjectHeadings: lookup.subjects,
-    });
-  } catch {
-    grounded.warnings.push('Tag inference failed.');
+  if (lookup.source !== 'none') {
+    try {
+      tags = await inferTagsClient({
+        title,
+        author,
+        isbn: lookup.isbn,
+        publisher: lookup.publisher,
+        publicationYear: lookup.publicationYear,
+        lcc: finalLcc,
+        subjectHeadings: lookup.subjects,
+      });
+    } catch {
+      grounded.warnings.push('Tag inference failed.');
+    }
   }
 
   const order = { LOW: 0, MEDIUM: 1, HIGH: 2 } as const;

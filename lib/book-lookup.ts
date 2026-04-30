@@ -405,10 +405,14 @@ export async function lookupBook(
         const publisher = vi.publisher ?? '';
         const editionYear = vi.publishedDate ? parseInt(vi.publishedDate.slice(0, 4), 10) : 0;
 
-        // Enrich from Open Library work-level data via ISBN lookup —
-        // gives us first_publish_year (e.g., 1942 for Camus' The Stranger)
-        // and LCC code, both of which Google Books does not provide.
-        const enriched = await enrichFromIsbn(isbn);
+        // Enrich in parallel: Open Library /isbn for the work's
+        // first_publish_year (e.g., 1942 for Camus' The Stranger), and
+        // LoC SRU for the authoritative LCC. Two independent ISBN-keyed
+        // calls — running them concurrently saves the slower one's wait.
+        const [enriched, sruLcc] = await Promise.all([
+          enrichFromIsbn(isbn),
+          lookupLccByIsbn(isbn),
+        ]);
         const publicationYear =
           enriched.firstPublishYear || (Number.isFinite(editionYear) ? editionYear : 0);
 
@@ -416,7 +420,9 @@ export async function lookupBook(
           isbn,
           publisher,
           publicationYear,
-          lcc: enriched.lcc,
+          // LoC SRU is the most authoritative LCC source; fall back to the
+          // OL work-level enrichment if SRU had nothing.
+          lcc: sruLcc || enriched.lcc,
           subjects: vi.categories ?? [],
           source: 'googlebooks',
         };
@@ -426,7 +432,8 @@ export async function lookupBook(
     // ignore
   }
 
-  // 3) Final post-processing: canonicalize LCC + LoC SRU fallback
+  // 3) Final post-processing: canonicalize LCC + LoC SRU fallback when the
+  // primary path didn't already enrich (i.e., the Open Library branch).
   result.lcc = normalizeLcc(result.lcc);
   if (result.isbn && !result.lcc) {
     const sruLcc = await lookupLccByIsbn(result.isbn);
