@@ -52,7 +52,6 @@ export async function readSpine(args: {
   imageBase64: string;
   mediaType: string;
   position: number;
-  model?: 'sonnet' | 'opus';
 }): Promise<ReadSpineResponse> {
   const res = await fetch('/api/read-spine', {
     method: 'POST',
@@ -384,23 +383,10 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
   const { position, bbox, spineThumbnail, sourcePhoto, ocrCrop } = opts;
   const { base64, mediaType } = dataUriToBase64Parts(ocrCrop);
 
-  // Pass B — read the spine. Two-tier: try Sonnet first (cheaper, fast).
-  // Escalate to Opus only when Sonnet returns LOW confidence — the hard
-  // spines that actually need the better model.
-  let read = await readSpine({ imageBase64: base64, mediaType, position, model: 'sonnet' });
-  if (read.confidence === 'LOW') {
-    const opusRead = await readSpine({
-      imageBase64: base64,
-      mediaType,
-      position,
-      model: 'opus',
-    });
-    // Take Opus result if it's at least as good as Sonnet's.
-    const order = { LOW: 0, MEDIUM: 1, HIGH: 2 } as const;
-    if (order[opusRead.confidence] >= order[read.confidence]) {
-      read = opusRead;
-    }
-  }
+  // Pass B — read the spine with Opus. (Sonnet was tried as a cheaper
+  // first tier but produced confident hallucinations on hard spines —
+  // reverted in favor of accuracy.)
+  const read = await readSpine({ imageBase64: base64, mediaType, position });
 
   const spineRead: SpineRead = {
     position,
