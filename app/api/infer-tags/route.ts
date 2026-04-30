@@ -1,0 +1,113 @@
+import { NextRequest, NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
+import { promises as fs } from 'fs';
+import path from 'path';
+import type { InferTagsResult } from '@/lib/types';
+
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+
+let cachedSystemPrompt: string | null = null;
+async function loadSystemPrompt(): Promise<string> {
+  if (cachedSystemPrompt) return cachedSystemPrompt;
+  const p = path.join(process.cwd(), 'lib', 'system-prompt.md');
+  cachedSystemPrompt = await fs.readFile(p, 'utf8');
+  return cachedSystemPrompt;
+}
+
+function extractJsonObject(text: string): unknown {
+  let t = text.trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) t = fence[1].trim();
+  const start = t.indexOf('{');
+  const end = t.lastIndexOf('}');
+  if (start === -1 || end === -1) throw new Error('No JSON object in model response');
+  return JSON.parse(t.slice(start, end + 1));
+}
+
+interface InferRequest {
+  title?: string;
+  author?: string;
+  isbn?: string;
+  publisher?: string;
+  publicationYear?: number;
+  lcc?: string;
+  existingGenreTags?: string[];
+  subjectHeadings?: string[];
+}
+
+export async function POST(req: NextRequest) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ error: 'ANTHROPIC_API_KEY not set' }, { status: 500 });
+  }
+
+  let body: InferRequest;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  if (!body.title) {
+    return NextResponse.json({ error: 'title is required' }, { status: 400 });
+  }
+
+  const system = await loadSystemPrompt();
+  const client = new Anthropic({ apiKey });
+
+  const userMessage = `Tag the following book according to the rules in the system prompt. Return ONLY a single JSON object (no markdown fences) with fields: title, author, isbn, publication_year, publisher, lcc, genre_tags (array of strings), form_tags (array of strings), confidence ("HIGH"|"MEDIUM"|"LOW"), reasoning (short string).
+
+Book metadata:
+- Title: ${body.title}
+- Author: ${body.author ?? ''}
+- ISBN: ${body.isbn ?? ''}
+- Publisher: ${body.publisher ?? ''}
+- Publication year: ${body.publicationYear ?? ''}
+- LCC: ${body.lcc ?? ''}
+- Subject headings: ${(body.subjectHeadings ?? []).join('; ')}
+- Existing genre tags: ${(body.existingGenreTags ?? []).join('; ')}`;
+
+  try {
+    const resp = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      system,
+      messages: [{ role: 'user', content: userMessage }],
+    });
+
+    const textBlock = resp.content.find((b) => b.type === 'text');
+    if (!textBlock || textBlock.type !== 'text') {
+      return NextResponse.json({ error: 'Empty model response' }, { status: 502 });
+    }
+
+    let parsed: any;
+    try {
+      parsed = extractJsonObject(textBlock.text);
+    } catch (err) {
+      return NextResponse.json(
+        { error: 'Could not parse JSON from model', text: textBlock.text },
+        { status: 502 }
+      );
+    }
+
+    const result: InferTagsResult = {
+      genreTags: Array.isArray(parsed.genre_tags) ? parsed.genre_tags.map(String) : [],
+      formTags: Array.isArray(parsed.form_tags) ? parsed.form_tags.map(String) : [],
+      confidence:
+        parsed.confidence === 'HIGH' ||
+        parsed.confidence === 'MEDIUM' ||
+        parsed.confidence === 'LOW'
+          ? parsed.confidence
+          : 'LOW',
+      reasoning: String(parsed.reasoning ?? ''),
+    };
+
+    return NextResponse.json(result);
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: 'Tag inference error', details: err?.message ?? String(err) },
+      { status: 502 }
+    );
+  }
+}

@@ -1,0 +1,191 @@
+{
+  "schema_version": "1.0",
+  "updated": "2026-04-29",
+  "description": "Tag vocabulary and inference rules for the Skinsbury Home Library. Used by the Claude Code tagging pipeline to auto-generate tags for LibraryThing import.",
+
+  "domains": {
+    "philosophy": {
+      "label": "Philosophy",
+      "lcc_prefixes": ["B1", "B4", "B5", "B8", "BC", "BD"],
+      "tags": [
+        "Stoicism",
+        "Ethics",
+        "Epistemology",
+        "Existentialism",
+        "Postmodernism",
+        "Logic",
+        "Critical thinking",
+        "Philosophy of mind",
+        "Philosophy of science",
+        "Ancient philosophy"
+      ]
+    },
+    "religion": {
+      "label": "Religion & spirituality",
+      "lcc_prefixes": ["BL", "BM", "BP", "BQ", "BR", "BS", "BT", "BV", "BX"],
+      "tags": [
+        "Atheism",
+        "Buddhism",
+        "Comparative religion",
+        "Sacred texts",
+        "Spirituality"
+      ]
+    },
+    "psychology": {
+      "label": "Psychology",
+      "lcc_prefixes": ["BF"],
+      "tags": [
+        "Behavioral psychology",
+        "Addiction",
+        "Neuroscience",
+        "Self-improvement"
+      ]
+    },
+    "literature": {
+      "label": "Literature",
+      "lcc_prefixes": ["PN", "PQ", "PR", "PS"],
+      "tags": [
+        "American poetry",
+        "Beat poetry",
+        "World poetry",
+        "Fiction",
+        "Essays",
+        "Literary criticism",
+        "Writing craft",
+        "Anthology",
+        "Harlem Renaissance",
+        "French literature"
+      ]
+    },
+    "language": {
+      "label": "Language & linguistics",
+      "lcc_prefixes": ["P1", "PA", "PE", "PF", "PG", "PH", "PJ", "PK", "PL", "PM"],
+      "tags": [
+        "Linguistics",
+        "Etymology",
+        "History of language"
+      ]
+    },
+    "history": {
+      "label": "History",
+      "lcc_prefixes": ["C", "D", "E", "F"],
+      "tags": [
+        "American history",
+        "British history",
+        "World history",
+        "Cultural history",
+        "Counterculture",
+        "Exploration"
+      ]
+    },
+    "media_tech": {
+      "label": "Media, technology & information",
+      "lcc_prefixes": ["TK", "T1"],
+      "tags": [
+        "Media literacy",
+        "Disinformation",
+        "Surveillance & privacy",
+        "Internet culture",
+        "Algorithms & AI",
+        "Cybersecurity"
+      ]
+    },
+    "social_political": {
+      "label": "Social & political",
+      "lcc_prefixes": ["H", "J", "K"],
+      "tags": [
+        "Protest & activism",
+        "Civil liberties",
+        "Free speech",
+        "Identity & tribalism",
+        "Social criticism"
+      ]
+    },
+    "science": {
+      "label": "Science & mathematics",
+      "lcc_prefixes": ["Q"],
+      "tags": [
+        "Evolution",
+        "Mathematics",
+        "Complexity & systems",
+        "Nature writing"
+      ]
+    },
+    "biography": {
+      "label": "Biography & memoir",
+      "lcc_prefixes": ["CT"],
+      "tags": [
+        "Literary biography",
+        "Beat biography",
+        "Music biography",
+        "Political memoir",
+        "Personal memoir",
+        "Intellectual biography"
+      ]
+    },
+    "arts_culture": {
+      "label": "Arts & culture",
+      "lcc_prefixes": ["GV", "ML", "N"],
+      "tags": [
+        "Music",
+        "Sports",
+        "Comedy & humor",
+        "Dance",
+        "Visual culture",
+        "Travel"
+      ]
+    },
+    "books_libraries": {
+      "label": "Books & libraries",
+      "lcc_prefixes": ["Z"],
+      "tags": [
+        "Library science",
+        "Book culture",
+        "Information science"
+      ]
+    },
+    "_unclassified": {
+      "label": "Unclassified (file into correct domain during review)",
+      "lcc_prefixes": [],
+      "tags": []
+    }
+  },
+
+  "form_tags": {
+    "description": "Describe the physical object or series, applied alongside genre tags. These are additive.",
+    "content_forms": [
+      "Reference",
+      "Anthology",
+      "How-to / guide",
+      "Primary source"
+    ],
+    "series": [
+      "Portable Library",
+      "Penguin Classics"
+    ],
+    "collectible": [
+      "First edition",
+      "Signed"
+    ]
+  },
+
+  "inference_rules": {
+    "lcc_mapping": "The LCC code determines the primary domain. Use the first matching prefix from the domain definitions above. If the LCC prefix doesn't match any domain, infer domain from title keywords and genre tags.",
+    "multi_tag": "Most books should receive 2-4 tags. Single-tag assignments are fine for clean cases (e.g., a pure Buddhism introduction). More than 5 tags suggests over-tagging — reconsider.",
+    "cross_domain": "Books frequently cross domains. A book about music and neuroscience gets tags from both Arts & culture and Psychology. Do not force a single domain.",
+    "author_knowledge": "Use knowledge of the author's intellectual identity to infer tags that metadata alone cannot provide. Examples: Sam Harris → Atheism; Kerouac → Counterculture; Oliver Sacks → Neuroscience. Only apply when the association is strong and well-known.",
+    "title_parsing": "Subtitles are rich signals. 'A Field Guide to...' → How-to / guide. 'A History of...' → Cultural history or relevant history tag. 'A Memoir' → Personal memoir.",
+    "fiction_nonfiction": "Fiction is a genre tag within the Literature domain. Do not create a separate Fiction/Nonfiction domain. Novels get 'Fiction' plus any relevant thematic tags (Existentialism, Counterculture, etc.).",
+    "form_tags_independent": "Form tags describe the object, not the content. A signed first edition of a Buddhism book gets 'Buddhism' + 'First edition' + 'Signed'. The form tags do not change based on subject.",
+    "new_tag_proposal": "If no existing tag fits, propose a new one. Format: '[Proposed] Tag name'. The reviewer approves or renames. Once approved, it is automatically added to the vocabulary JSON by the approve command.",
+    "vocabulary_growth": "The tag vocabulary is a living document. The _unclassified domain in the JSON holds newly approved tags that haven't been filed into a domain yet. Periodically review _unclassified and move tags to the correct domain, or create new domains as the collection grows.",
+    "publisher_check": "Only apply series form tags (Penguin Classics, Portable Library) when confirmed by publisher data. Do not infer from LCC code or genre.",
+    "fallback": "If LCC code is missing and no genre tags exist, rely on title + author + publisher. Flag confidence as LOW in the output."
+  },
+
+  "confidence_levels": {
+    "HIGH": "LCC code matches, multiple metadata signals agree, author is well-known",
+    "MEDIUM": "Some metadata signals present but incomplete — e.g., genre tags exist but no LCC, or LCC exists but no subject headings",
+    "LOW": "Minimal metadata — relying primarily on title parsing and author knowledge. Needs human review."
+  }
+}
