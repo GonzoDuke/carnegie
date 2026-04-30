@@ -208,8 +208,8 @@ export default function UploadPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-serif text-3xl mb-2">Upload bookshelf photos</h1>
-        <p className="text-sm text-ink/60 dark:text-cream-300/60 max-w-2xl">
+        <h1 className="font-serif text-5xl mb-3 tracking-tight">Upload bookshelf photos</h1>
+        <p className="text-base text-ink/70 dark:text-cream-300/70 max-w-3xl leading-relaxed">
           Drop one or more photos of a bookshelf. We&apos;ll locate each spine, read it,
           look up its metadata, infer tags, and let you review every result before any
           export. Nothing leaves your machine for LibraryThing without your explicit
@@ -222,11 +222,24 @@ export default function UploadPage() {
       <ProcessingQueue batches={state.batches} onRemove={handleRemove} />
 
       {progress && (
-        <div className="space-y-3">
+        <div className="bg-accent-soft/40 dark:bg-accent/10 border border-accent/30 dark:border-accent/40 rounded-2xl p-6 lg:p-8 space-y-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="relative flex h-3 w-3">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-accent opacity-60 animate-pulse-dot" />
+              <span className="relative inline-flex h-3 w-3 rounded-full bg-accent" />
+            </span>
+            <h2 className="font-serif text-2xl text-ink dark:text-cream-100">
+              Processing your shelf
+            </h2>
+            <span className="text-sm text-ink/60 dark:text-cream-300/60">
+              · this can take 30–90 seconds per photo
+            </span>
+          </div>
+
           <BatchProgress
             total={progress.photoTotal}
             done={progress.photoDone}
-            label="Photos processed"
+            label="Photos"
           />
           {progress.bookTotal > 0 && (
             <BatchProgress
@@ -235,8 +248,14 @@ export default function UploadPage() {
               label="Spines read"
             />
           )}
-          <div className="text-xs text-ink/60 dark:text-cream-300/60 italic">
-            {progress.currentLabel}
+
+          <div className="bg-cream-50 dark:bg-ink-soft/60 border border-cream-300 dark:border-ink-soft rounded-lg px-4 py-3">
+            <div className="text-xs uppercase tracking-wider text-ink/50 dark:text-cream-300/50 font-semibold mb-1">
+              Current step
+            </div>
+            <div className="text-base text-ink/85 dark:text-cream-200/85 font-mono">
+              {progress.currentLabel}
+            </div>
           </div>
         </div>
       )}

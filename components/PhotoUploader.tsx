@@ -85,9 +85,9 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
         Choose photos
       </button>
 
-      <div className="mt-6 text-[11px] text-ink/50 dark:text-cream-300/50 max-w-md mx-auto leading-relaxed">
+      <div className="mt-6 text-[11px] text-ink/50 dark:text-cream-300/50 max-w-md mx-auto leading-relaxed text-center">
         <strong className="text-ink/70 dark:text-cream-300/70">Tips for accurate reads:</strong>
-        <ul className="list-disc list-inside mt-1 space-y-0.5 text-left">
+        <ul className="mt-1 space-y-0.5">
           <li>Shoot in landscape, fill the frame with the shelf.</li>
           <li>Get within 2–3 feet so each spine has plenty of pixel detail.</li>
           <li>Even lighting — avoid glare on glossy spines.</li>

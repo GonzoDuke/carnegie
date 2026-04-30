@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { BookCard } from '@/components/BookCard';
 import { useStore } from '@/lib/store';
-import type { BookRecord } from '@/lib/types';
 
 type Filter = 'all' | 'pending' | 'approved' | 'rejected' | 'low';
 
@@ -57,8 +56,8 @@ export default function ReviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-serif text-3xl mb-2">Review &amp; approve</h1>
-        <p className="text-sm text-ink/60 dark:text-cream-300/60">
+        <h1 className="font-serif text-5xl mb-3 tracking-tight">Review &amp; approve</h1>
+        <p className="text-base text-ink/70 dark:text-cream-300/70 max-w-3xl leading-relaxed">
           Verify each book&apos;s metadata and tags. Edit fields by clicking them. Only
           approved books make it into the export.
         </p>
