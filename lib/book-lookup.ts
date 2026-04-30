@@ -304,6 +304,135 @@ function parsePublishDateYear(arr?: string[]): number {
   return earliest;
 }
 
+/**
+ * Edition-specific lookup. Used by the "Match a specific edition" Reread
+ * mode when the user has corrected year / publisher / ISBN to a specific
+ * printing they own. We trust those hints and scope the lookup tightly:
+ *
+ * 1. ISBN (when provided) is conclusive — query Open Library by ISBN.
+ * 2. Otherwise scope by year (`publish_year={year}`) and prefer docs
+ *    whose publisher matches the hint.
+ * 3. Fall back to the unscoped `lookupBook` if the scoped search misses.
+ */
+export async function lookupSpecificEdition(
+  title: string,
+  author: string,
+  hints: { year?: number; publisher?: string; isbn?: string }
+): Promise<BookLookupResult> {
+  // 1) ISBN path — by far the most specific signal.
+  if (hints.isbn) {
+    const cleaned = hints.isbn.replace(/[^\dxX]/g, '');
+    if (cleaned.length === 10 || cleaned.length === 13) {
+      try {
+        const url =
+          `https://openlibrary.org/search.json?isbn=${encodeURIComponent(cleaned)}` +
+          `&fields=key,title,author_name,isbn,publisher,first_publish_year,publish_year,publish_date,lcc,lc_classifications,subject`;
+        const res = await fetch(url, {
+          signal: AbortSignal.timeout(10000),
+          cache: 'no-store',
+          headers: DEFAULT_HEADERS,
+        });
+        if (res.ok) {
+          const data = (await res.json()) as { docs?: OpenLibraryDoc[] };
+          const doc = data.docs?.[0];
+          if (doc) {
+            const publicationYear =
+              doc.first_publish_year ||
+              parsePublishDateYear(doc.publish_date) ||
+              (doc.publish_year && doc.publish_year[0]) ||
+              hints.year ||
+              0;
+            const lcc = normalizeLcc(
+              (doc.lcc && doc.lcc[0]) ||
+                (doc.lc_classifications && doc.lc_classifications[0]) ||
+                ''
+            );
+            const finalLcc = lcc || normalizeLcc(await lookupLccByIsbn(cleaned));
+            return {
+              isbn: cleaned,
+              publisher: doc.publisher?.[0] ?? hints.publisher ?? '',
+              publicationYear,
+              lcc: finalLcc,
+              subjects: doc.subject?.slice(0, 10),
+              source: 'openlibrary',
+            };
+          }
+        }
+      } catch {
+        // fall through to year-scoped path
+      }
+    }
+  }
+
+  // 2) Year-scoped search (with publisher tie-breaker).
+  if (title && hints.year) {
+    try {
+      const params = new URLSearchParams();
+      params.set('title', title);
+      if (author) params.set('author', author);
+      params.set('publish_year', String(hints.year));
+      params.set('limit', '5');
+      params.set(
+        'fields',
+        'key,title,author_name,isbn,publisher,first_publish_year,publish_year,publish_date,lcc,lc_classifications,subject'
+      );
+      const res = await fetch(`https://openlibrary.org/search.json?${params.toString()}`, {
+        signal: AbortSignal.timeout(10000),
+        cache: 'no-store',
+        headers: DEFAULT_HEADERS,
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { docs?: OpenLibraryDoc[] };
+        const docs = data.docs ?? [];
+        // Prefer publisher match if hint provided.
+        const publisherHint = (hints.publisher ?? '').toLowerCase().trim();
+        const ranked = docs
+          .filter((d) => !isStudyGuide(d))
+          .map((d) => {
+            let score = scoreDoc(d, title, author);
+            if (publisherHint && d.publisher) {
+              const pubMatch = d.publisher.some((p) =>
+                p.toLowerCase().includes(publisherHint) ||
+                publisherHint.includes(p.toLowerCase())
+              );
+              if (pubMatch) score += 4;
+            }
+            return { d, score };
+          })
+          .sort((a, b) => b.score - a.score);
+        const best = ranked[0]?.d;
+        if (best) {
+          const isbn = pickIsbn(best.isbn);
+          const publicationYear =
+            best.first_publish_year ||
+            parsePublishDateYear(best.publish_date) ||
+            (best.publish_year && best.publish_year[0]) ||
+            hints.year;
+          let lcc = normalizeLcc(
+            (best.lcc && best.lcc[0]) ||
+              (best.lc_classifications && best.lc_classifications[0]) ||
+              ''
+          );
+          if (!lcc && isbn) lcc = normalizeLcc(await lookupLccByIsbn(isbn));
+          return {
+            isbn,
+            publisher: best.publisher?.[0] ?? hints.publisher ?? '',
+            publicationYear,
+            lcc,
+            subjects: best.subject?.slice(0, 10),
+            source: 'openlibrary',
+          };
+        }
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  // 3) Fall back to the unscoped chain.
+  return lookupBook(title, author);
+}
+
 export async function lookupBook(
   title: string,
   author: string

@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { lookupBook } from '@/lib/book-lookup';
+import { lookupBook, lookupSpecificEdition } from '@/lib/book-lookup';
 
 export const runtime = 'nodejs';
 
+interface LookupRequest {
+  title?: string;
+  author?: string;
+  /** When true, scope the lookup to the user's specific edition using the hints below. */
+  matchEdition?: boolean;
+  hints?: {
+    year?: number;
+    publisher?: string;
+    isbn?: string;
+  };
+}
+
 export async function POST(req: NextRequest) {
-  let body: { title?: string; author?: string };
+  let body: LookupRequest;
   try {
     body = await req.json();
   } catch {
@@ -19,10 +31,16 @@ export async function POST(req: NextRequest) {
   }
 
   const t0 = Date.now();
-  const result = await lookupBook(title, author);
+  const result = body.matchEdition
+    ? await lookupSpecificEdition(title, author, {
+        year: body.hints?.year,
+        publisher: body.hints?.publisher,
+        isbn: body.hints?.isbn,
+      })
+    : await lookupBook(title, author);
   const ms = Date.now() - t0;
   console.log(
-    `[lookup-book] "${title}"${author ? ` / ${author}` : ''} → ${result.source}` +
+    `[lookup-book${body.matchEdition ? ' edition' : ''}] "${title}"${author ? ` / ${author}` : ''} → ${result.source}` +
       `${result.isbn ? ` isbn=${result.isbn}` : ''}` +
       `${result.lcc ? ` lcc=${result.lcc}` : ''}` +
       ` (${ms}ms)`

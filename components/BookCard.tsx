@@ -6,7 +6,7 @@ import { useStore } from '@/lib/store';
 import { TagChip } from './TagChip';
 import { TagPicker } from './TagPicker';
 import { ConfidenceBadge } from './ConfidenceBadge';
-import { toAuthorLastFirst } from '@/lib/csv-export';
+import { toAuthorLastFirst, toTitleCase } from '@/lib/csv-export';
 
 interface BookCardProps {
   book: BookRecord;
@@ -20,11 +20,16 @@ export function BookCard({ book }: BookCardProps) {
   const [hint, setHint] = useState('');
   const [rereadError, setRereadError] = useState<string | null>(null);
 
-  async function doReread(useHint: boolean) {
+  type RereadMode = 'ai' | 'hint' | 'edition';
+  async function doReread(mode: RereadMode) {
     setRereadError(null);
-    const result = useHint
-      ? await rereadBook(book.id, { hint: { title: hint.trim(), author: book.author } })
-      : await rereadBook(book.id, {});
+    const opts =
+      mode === 'edition'
+        ? { matchEdition: true as const }
+        : mode === 'hint'
+          ? { hint: { title: hint.trim(), author: book.author } }
+          : {};
+    const result = await rereadBook(book.id, opts);
     if (!result.ok) {
       setRereadError(result.error ?? 'Reread failed.');
       return;
@@ -32,6 +37,14 @@ export function BookCard({ book }: BookCardProps) {
     setRereadOpen(false);
     setHint('');
   }
+
+  // The "Match a specific edition" button is only meaningful when the
+  // user has actually changed at least one of year/publisher/ISBN since
+  // the original lookup — otherwise we'd just hit the same lookup again.
+  const editionEdited =
+    book.publicationYear !== book.original.publicationYear ||
+    book.publisher !== book.original.publisher ||
+    book.isbn !== book.original.isbn;
 
   const borderClass =
     book.status === 'approved'
@@ -87,7 +100,7 @@ export function BookCard({ book }: BookCardProps) {
             value={book.title}
             modified={titleModified}
             original={book.original.title}
-            onSave={(v) => updateBook(book.id, { title: v })}
+            onSave={(v) => updateBook(book.id, { title: toTitleCase(v) })}
           />
           <div className="text-xs text-ink/60 dark:text-cream-300/60 mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
             <EditableField
@@ -316,7 +329,7 @@ export function BookCard({ book }: BookCardProps) {
                 Reread this spine
               </div>
               <button
-                onClick={() => doReread(false)}
+                onClick={() => doReread('ai')}
                 disabled={!book.ocrImage}
                 className="w-full text-left text-xs px-3 py-2 rounded border border-cream-300 dark:border-ink-soft hover:border-accent hover:text-accent disabled:opacity-50 transition"
                 title={
@@ -332,6 +345,25 @@ export function BookCard({ book }: BookCardProps) {
                     : 'Unavailable — high-res crop wasn’t preserved.'}
                 </div>
               </button>
+
+              <button
+                onClick={() => doReread('edition')}
+                disabled={!editionEdited}
+                className="w-full text-left text-xs px-3 py-2 rounded border border-cream-300 dark:border-ink-soft hover:border-accent hover:text-accent disabled:opacity-50 transition"
+                title={
+                  editionEdited
+                    ? 'Re-look up using the year, publisher, and ISBN currently in the form fields above. Title and author are kept as you’ve edited them.'
+                    : 'Edit at least one of year, publisher, or ISBN above first — otherwise this would re-run the same lookup.'
+                }
+              >
+                <div className="font-medium">Match a specific edition</div>
+                <div className="text-[10px] text-ink/50 dark:text-cream-300/50 mt-0.5">
+                  {editionEdited
+                    ? 'Uses your edited year / publisher / ISBN to scope the lookup.'
+                    : 'Edit year, publisher, or ISBN above to enable.'}
+                </div>
+              </button>
+
               <div className="text-[10px] text-center text-ink/40 dark:text-cream-300/40 uppercase tracking-wider">
                 or
               </div>
@@ -342,12 +374,12 @@ export function BookCard({ book }: BookCardProps) {
                   placeholder="Type the actual title…"
                   className="w-full px-2 py-1.5 text-xs bg-cream-100 dark:bg-ink rounded border border-cream-300 dark:border-ink-soft focus:outline-none focus:ring-1 focus:ring-accent"
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && hint.trim()) doReread(true);
+                    if (e.key === 'Enter' && hint.trim()) doReread('hint');
                     if (e.key === 'Escape') setRereadOpen(false);
                   }}
                 />
                 <button
-                  onClick={() => doReread(true)}
+                  onClick={() => doReread('hint')}
                   disabled={!hint.trim()}
                   className="mt-2 w-full text-xs px-3 py-1.5 rounded bg-accent text-cream-50 hover:bg-accent-deep disabled:opacity-50 transition"
                 >

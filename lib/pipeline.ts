@@ -5,7 +5,7 @@ import type {
   SpineRead,
   SpineBbox,
 } from './types';
-import { toAuthorLastFirst } from './csv-export';
+import { toAuthorLastFirst, toTitleCase } from './csv-export';
 
 export function makeId() {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -66,12 +66,21 @@ export async function readSpine(args: {
 
 export async function lookupBookClient(
   title: string,
-  author: string
+  author: string,
+  options?: {
+    matchEdition?: boolean;
+    hints?: { year?: number; publisher?: string; isbn?: string };
+  }
 ): Promise<BookLookupResult> {
   const res = await fetch('/api/lookup-book', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, author }),
+    body: JSON.stringify({
+      title,
+      author,
+      matchEdition: options?.matchEdition,
+      hints: options?.hints,
+    }),
   });
   if (!res.ok) {
     return { isbn: '', publisher: '', publicationYear: 0, lcc: '', source: 'none' };
@@ -475,10 +484,12 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
   const combinedConfidence =
     order[grounded.confidence] <= order[tags.confidence] ? grounded.confidence : tags.confidence;
 
+  const titleCased = toTitleCase(read.title);
+
   const book: BookRecord = {
     id: makeId(),
     spineRead,
-    title: read.title,
+    title: titleCased,
     author: read.author,
     authorLF: toAuthorLastFirst(read.author),
     isbn: lookup.isbn,
@@ -497,7 +508,7 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
     spineThumbnail,
     ocrImage: ocrCrop,
     original: {
-      title: read.title,
+      title: titleCased,
       author: read.author,
       isbn: lookup.isbn,
       publisher: lookup.publisher,
@@ -516,6 +527,12 @@ export interface RereadOptions {
   hint?: { title: string; author?: string };
   /** When no hint is provided, the existing OCR-quality crop is required. */
   ocrImage?: string;
+  /**
+   * Use the BookRecord's CURRENT (user-edited) title, author, year,
+   * publisher, and ISBN to scope the lookup to a specific edition.
+   * Skips Pass B entirely; trusts the user's edits as ground truth.
+   */
+  matchEdition?: boolean;
 }
 
 export interface RereadResult {
@@ -545,7 +562,13 @@ export async function rereadBook(
   let publisher = current.publisher;
   let lccFromSpine = '';
 
-  if (options.hint?.title) {
+  if (options.matchEdition) {
+    // Trust the user's edited fields as ground truth. Skip Pass B.
+    title = (current.title ?? '').trim();
+    author = (current.author ?? '').trim();
+    publisher = current.publisher;
+    confidence = 'HIGH';
+  } else if (options.hint?.title) {
     title = options.hint.title.trim();
     author = (options.hint.author ?? current.author ?? '').trim();
     // User-supplied → trust as HIGH; we'll demote later if lookup fails.
@@ -587,7 +610,16 @@ export async function rereadBook(
   };
   if (title) {
     try {
-      const r = await lookupBookClient(title, author);
+      const r = options.matchEdition
+        ? await lookupBookClient(title, author, {
+            matchEdition: true,
+            hints: {
+              year: current.publicationYear || undefined,
+              publisher: current.publisher || undefined,
+              isbn: current.isbn || undefined,
+            },
+          })
+        : await lookupBookClient(title, author);
       lookup = { ...r, publisher: r.publisher || publisher };
     } catch {
       // ignore
@@ -645,10 +677,12 @@ export async function rereadBook(
       ? grounded.confidence
       : tags.confidence;
 
+  const titleCased = toTitleCase(title);
+
   return {
     ok: true,
     patch: {
-      title,
+      title: titleCased,
       author,
       authorLF: toAuthorLastFirst(author),
       isbn: lookup.isbn,
@@ -664,7 +698,7 @@ export async function rereadBook(
       lccSource,
       // Reset the "modified" baseline so the dots reflect changes from the new read.
       original: {
-        title,
+        title: titleCased,
         author,
         isbn: lookup.isbn,
         publisher: lookup.publisher,
