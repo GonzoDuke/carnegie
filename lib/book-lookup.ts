@@ -6,6 +6,71 @@ const DEFAULT_HEADERS: Record<string, string> = {
   Accept: 'application/json',
 };
 
+const LOC_HEADERS: Record<string, string> = {
+  'User-Agent': UA,
+  Accept: 'application/xml',
+};
+
+/**
+ * Open Library returns LCC in a padded internal form like
+ *   "BL-0053.00000000.J36 2012"
+ *   "Q--0335.00000000.M6 2024"
+ *   "E--0169.12000000.K556 2022"
+ * Convert to canonical Library of Congress format:
+ *   "BL53 .J36 2012", "Q335 .M6 2024", "E169.12 .K556 2022".
+ *
+ * Inputs already in canonical or unparseable form pass through trimmed.
+ */
+export function normalizeLcc(s: string | undefined | null): string {
+  if (!s) return '';
+  const m = s.match(/^([A-Z]{1,3})[-\s]+(\d+)\.(\d+)\.(.+)$/);
+  if (!m) return s.trim();
+  const klass = m[1];
+  const intPart = String(parseInt(m[2], 10));
+  const decPart = m[3].replace(/0+$/, '');
+  const num = decPart ? `${intPart}.${decPart}` : intPart;
+  const cutter = m[4].trim();
+  return `${klass}${num} .${cutter}`;
+}
+
+/**
+ * Library of Congress SRU lookup by ISBN. Returns canonical-format LCC or
+ * empty string. Free, no API key, ~0.5–2s typical.
+ *
+ * Example response (excerpted):
+ *   <datafield tag="050" ind1="0" ind2="0">
+ *     <subfield code="a">CT275.H62575</subfield>
+ *     <subfield code="b">A3 2010</subfield>
+ *   </datafield>
+ */
+export async function lookupLccByIsbn(isbn: string): Promise<string> {
+  if (!isbn) return '';
+  const cleaned = isbn.replace(/[^\dxX]/g, '');
+  if (!cleaned) return '';
+  try {
+    const url =
+      `https://lx2.loc.gov/sru/voyager?version=1.1&operation=searchRetrieve` +
+      `&query=bath.isbn=${cleaned}&maximumRecords=1&recordSchema=marcxml`;
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(8000),
+      cache: 'no-store',
+      headers: LOC_HEADERS,
+    });
+    if (!res.ok) return '';
+    const xml = await res.text();
+    const fieldMatch = xml.match(
+      /<datafield[^>]*tag="050"[^>]*>([\s\S]*?)<\/datafield>/
+    );
+    if (!fieldMatch) return '';
+    const block = fieldMatch[1];
+    const a = block.match(/<subfield[^>]*code="a"[^>]*>([^<]+)<\/subfield>/)?.[1]?.trim() ?? '';
+    const b = block.match(/<subfield[^>]*code="b"[^>]*>([^<]+)<\/subfield>/)?.[1]?.trim() ?? '';
+    return [a, b].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+  } catch {
+    return '';
+  }
+}
+
 interface OpenLibraryDoc {
   key?: string;
   title?: string;
@@ -247,6 +312,14 @@ export async function lookupBook(
     return { isbn: '', publisher: '', publicationYear: 0, lcc: '', source: 'none' };
   }
 
+  let result: BookLookupResult = {
+    isbn: '',
+    publisher: '',
+    publicationYear: 0,
+    lcc: '',
+    source: 'none',
+  };
+
   // 1) Open Library
   try {
     const params = new URLSearchParams();
@@ -281,7 +354,7 @@ export async function lookupBook(
           lcc = await fetchWorkLcc(best.key);
         }
         if (isbn || publisher || lcc || publicationYear) {
-          return {
+          result = {
             isbn,
             publisher,
             publicationYear,
@@ -296,8 +369,8 @@ export async function lookupBook(
     // fall through to Google Books
   }
 
-  // 2) Google Books fallback
-  try {
+  // 2) Google Books fallback (only if Open Library didn't yield a usable result)
+  if (result.source === 'none') try {
     const q = `intitle:${encodeURIComponent(title)}${
       author ? `+inauthor:${encodeURIComponent(author)}` : ''
     }`;
@@ -339,7 +412,7 @@ export async function lookupBook(
         const publicationYear =
           enriched.firstPublishYear || (Number.isFinite(editionYear) ? editionYear : 0);
 
-        return {
+        result = {
           isbn,
           publisher,
           publicationYear,
@@ -353,5 +426,12 @@ export async function lookupBook(
     // ignore
   }
 
-  return { isbn: '', publisher: '', publicationYear: 0, lcc: '', source: 'none' };
+  // 3) Final post-processing: canonicalize LCC + LoC SRU fallback
+  result.lcc = normalizeLcc(result.lcc);
+  if (result.isbn && !result.lcc) {
+    const sruLcc = await lookupLccByIsbn(result.isbn);
+    if (sruLcc) result.lcc = normalizeLcc(sruLcc);
+  }
+
+  return result;
 }

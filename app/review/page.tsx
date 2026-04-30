@@ -6,6 +6,7 @@ import { BookCard } from '@/components/BookCard';
 import { useStore } from '@/lib/store';
 
 type Filter = 'all' | 'pending' | 'approved' | 'rejected' | 'low';
+type Sort = 'position' | 'confidence-desc' | 'confidence-asc';
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -15,9 +16,18 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: 'low', label: 'Low confidence' },
 ];
 
+const SORTS: { id: Sort; label: string; title: string }[] = [
+  { id: 'position', label: 'Position', title: 'Order books left-to-right by where they were on the shelf' },
+  { id: 'confidence-desc', label: 'Confidence ↓', title: 'High confidence first' },
+  { id: 'confidence-asc', label: 'Confidence ↑', title: 'Low confidence first' },
+];
+
+const CONFIDENCE_RANK = { LOW: 0, MEDIUM: 1, HIGH: 2 } as const;
+
 export default function ReviewPage() {
   const { state, updateBook } = useStore();
   const [filter, setFilter] = useState<Filter>('all');
+  const [sort, setSort] = useState<Sort>('position');
 
   const counts = useMemo(() => {
     const c = { total: 0, pending: 0, approved: 0, rejected: 0, low: 0 };
@@ -30,12 +40,22 @@ export default function ReviewPage() {
   }, [state.allBooks]);
 
   const visibleBooks = useMemo(() => {
-    return state.allBooks.filter((b) => {
+    const filtered = state.allBooks.filter((b) => {
       if (filter === 'all') return true;
       if (filter === 'low') return b.confidence === 'LOW';
       return b.status === filter;
     });
-  }, [state.allBooks, filter]);
+    if (sort === 'position') {
+      return [...filtered].sort(
+        (a, b) => a.spineRead.position - b.spineRead.position
+      );
+    }
+    const dir = sort === 'confidence-desc' ? -1 : 1;
+    return [...filtered].sort((a, b) => {
+      const d = (CONFIDENCE_RANK[a.confidence] - CONFIDENCE_RANK[b.confidence]) * dir;
+      return d !== 0 ? d : a.spineRead.position - b.spineRead.position;
+    });
+  }, [state.allBooks, filter, sort]);
 
   function approveAllHigh() {
     state.allBooks
@@ -72,8 +92,8 @@ export default function ReviewPage() {
         <Stat label="Low confidence" value={counts.low} tone="amber" />
       </div>
 
-      {/* Filter row + bulk actions */}
-      <div className="flex flex-wrap items-center gap-2 pb-3 border-b border-cream-300 dark:border-ink-soft">
+      {/* Filter + sort row + bulk actions */}
+      <div className="flex flex-wrap items-center gap-3 pb-3 border-b border-cream-300 dark:border-ink-soft">
         <div className="flex gap-1 flex-wrap">
           {FILTERS.map((f) => (
             <button
@@ -89,6 +109,27 @@ export default function ReviewPage() {
             </button>
           ))}
         </div>
+
+        <div className="flex items-center gap-1 ml-2">
+          <span className="text-[11px] uppercase tracking-wider text-ink/40 dark:text-cream-300/40 font-semibold mr-1">
+            Sort
+          </span>
+          {SORTS.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setSort(s.id)}
+              title={s.title}
+              className={`text-xs px-3 py-1.5 rounded-md transition ${
+                sort === s.id
+                  ? 'bg-accent text-cream-50'
+                  : 'bg-cream-100 dark:bg-ink-soft text-ink/70 dark:text-cream-300/70 hover:bg-accent-soft dark:hover:bg-accent/20'
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex-1" />
         <button
           onClick={approveAllHigh}
