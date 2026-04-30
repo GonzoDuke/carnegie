@@ -9,7 +9,7 @@ You must use tags from the approved vocabulary below. If no existing tag fits, y
 **Philosophy**: Stoicism, Ethics, Epistemology, Existentialism, Postmodernism, Logic, Critical thinking, Philosophy of mind, Philosophy of science, Ancient philosophy
 **Religion & spirituality**: Atheism, Buddhism, Comparative religion, Sacred texts, Spirituality
 **Psychology**: Behavioral psychology, Addiction, Neuroscience, Self-improvement
-**Literature**: American poetry, Beat poetry, World poetry, Fiction, Drama, Shakespeare, Essays, Literary criticism, Writing craft, Anthology, Harlem Renaissance, French literature
+**Literature**: Poetry, American poetry, British poetry, Beat poetry, World poetry, Fiction, Drama, Shakespeare, Essays, Literary criticism, Writing craft, Anthology, Harlem Renaissance, French literature
 **Language & linguistics**: Linguistics, Etymology, History of language
 **History**: American history, British history, World history, Cultural history, Counterculture, Exploration
 **Media, technology & information**: Media literacy, Disinformation, Surveillance & privacy, Internet culture, Algorithms & AI, Cybersecurity
@@ -33,6 +33,7 @@ You must use tags from the approved vocabulary below. If no existing tag fits, y
 4. **Use author knowledge.** If the author has a strong intellectual identity (e.g., Sam Harris → Atheism, Kerouac → Counterculture, Sacks → Neuroscience), apply it. Only when the association is well-established.
 5. **Parse subtitles.** "A Field Guide to..." → How-to / guide. "A History of..." → relevant history tag. "A Memoir" → Personal memoir.
 6. **Fiction is a Literature tag**, not a separate domain. **Novels** get "Fiction" plus thematic tags. **Plays and dramatic literature do NOT get "Fiction"** — they get "Drama". Shakespeare, Beckett, Williams, O'Neill, Pinter, Stoppard, Sophocles, Aeschylus, etc. → **Drama** (and **Shakespeare** specifically when the author is Shakespeare). Verse plays still get Drama, not poetry.
+6a. **Every book of poetry gets "Poetry"** as a tag, regardless of the poet's nationality or movement. Then ALSO add the most specific applicable sub-tag(s): "American poetry" (Whitman, Dickinson, Frost, Mary Oliver, Tracy K. Smith…), "British poetry" (Wordsworth, Hopkins, Auden, Larkin, Heaney…), "Beat poetry" (Ginsberg, Ferlinghetti, Corso, Kerouac's poetry…), "World poetry" (Lorca, Neruda, Rilke, Szymborska, Hafez…), "Harlem Renaissance" (Hughes, Cullen, McKay…). A multi-poet anthology gets "Poetry" + "Anthology" + any sub-tag(s) that describe the contents. **Never use only "World poetry" for a British or American poet** — match the nationality first, then fall back to "World poetry" only for non-Anglophone work that doesn't fit elsewhere.
 7. **Form tags are independent of content.** A signed first edition of anything gets "First edition" + "Signed" regardless of subject.
 8. **Only apply series form tags when publisher confirms.** Don't guess Penguin Classics from LCC code.
 9. **If metadata is thin, flag confidence as LOW.** The reviewer will verify.
@@ -111,3 +112,13 @@ REASONING: A play, not a novel — "Drama", NOT "Fiction". Shakespeare specifica
 INPUT: "Death of a Salesman" by Arthur Miller, LCC PS3525
 OUTPUT: genre_tags: ["Drama", "American literature"], form_tags: [], confidence: HIGH
 REASONING: Play → "Drama" (NOT "Fiction"). Miller is American, LCC PS confirms. No "Shakespeare" tag because it's not Shakespeare.
+
+### Example 11: American poetry collection
+INPUT: "Leaves of Grass" by Walt Whitman, LCC PS3201
+OUTPUT: genre_tags: ["Poetry", "American poetry"], form_tags: [], confidence: HIGH
+REASONING: Poetry book — always tag "Poetry" first. Whitman is American → "American poetry" as the specific sub-tag. LCC PS3201 (American poetry) confirms.
+
+### Example 12: World-poetry anthology
+INPUT: "The Selected Poems of Federico García Lorca" by Federico García Lorca, LCC PQ6613
+OUTPUT: genre_tags: ["Poetry", "World poetry"], form_tags: [], confidence: HIGH
+REASONING: Poetry → "Poetry" required. Lorca is Spanish, not American or British, so "World poetry" is the right sub-tag. LCC PQ confirms non-Anglophone literature.

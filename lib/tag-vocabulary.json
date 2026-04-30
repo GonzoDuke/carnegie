@@ -45,7 +45,9 @@
       "label": "Literature",
       "lcc_prefixes": ["PN", "PQ", "PR", "PS"],
       "tags": [
+        "Poetry",
         "American poetry",
+        "British poetry",
         "Beat poetry",
         "World poetry",
         "Fiction",
