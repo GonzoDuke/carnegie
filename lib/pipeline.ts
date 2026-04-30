@@ -43,6 +43,7 @@ interface ReadSpineResponse {
   title: string;
   author: string;
   publisher: string;
+  lcc: string;
   confidence: 'HIGH' | 'MEDIUM' | 'LOW';
   note?: string;
 }
@@ -58,7 +59,7 @@ export async function readSpine(args: {
     body: JSON.stringify(args),
   });
   if (!res.ok) {
-    return { title: '', author: '', publisher: '', confidence: 'LOW', note: 'Read failed' };
+    return { title: '', author: '', publisher: '', lcc: '', confidence: 'LOW', note: 'Read failed' };
   }
   return (await res.json()) as ReadSpineResponse;
 }
@@ -286,7 +287,7 @@ function isPeriodical(title: string, lookup: BookLookupResult): boolean {
  * - genuine no-match cases (keep with LOW + warning, so reviewer can fix)
  */
 export function groundSpineRead(
-  spine: { title: string; author: string; confidence: 'HIGH' | 'MEDIUM' | 'LOW' },
+  spine: { title: string; author: string; lcc?: string; confidence: 'HIGH' | 'MEDIUM' | 'LOW' },
   lookup: BookLookupResult,
   lookupTitle?: string // The title Open Library / Google Books actually returned
 ): GroundResult {
@@ -347,7 +348,10 @@ export function groundSpineRead(
 
   // 5) Standard non-fatal warnings.
   if (!lookup.isbn) warnings.push('No ISBN found — metadata may be incomplete.');
-  if (!lookup.lcc) warnings.push('LCC code missing — tags inferred from title and author only.');
+  // LCC missing warning suppressed when the spine itself provided one.
+  if (!lookup.lcc && !spine.lcc) {
+    warnings.push('LCC code missing — tags inferred from title and author only.');
+  }
 
   return { keep: true, warnings, confidence: spine.confidence };
 }
@@ -388,6 +392,7 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
     title: read.title,
     author: read.author,
     publisher: read.publisher,
+    lcc: read.lcc,
     confidence: read.confidence,
     note: read.note,
     bbox,
@@ -417,10 +422,24 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
   }
 
   const grounded = groundSpineRead(
-    { title: read.title, author: read.author, confidence: read.confidence },
+    {
+      title: read.title,
+      author: read.author,
+      lcc: read.lcc,
+      confidence: read.confidence,
+    },
     lookup,
     lookupMatchedTitle
   );
+
+  // Spine-printed LCC wins over the lookup-derived one — it's the LoC's
+  // own classification for the exact physical edition the user owns.
+  const finalLcc = read.lcc || lookup.lcc;
+  const lccSource: 'spine' | 'lookup' | 'none' = read.lcc
+    ? 'spine'
+    : lookup.lcc
+      ? 'lookup'
+      : 'none';
 
   // Tag inference — only if we're keeping the entry and have a title.
   let tags: InferTagsResult = {
@@ -437,7 +456,7 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
         isbn: lookup.isbn,
         publisher: lookup.publisher,
         publicationYear: lookup.publicationYear,
-        lcc: lookup.lcc,
+        lcc: finalLcc,
         subjectHeadings: lookup.subjects,
       });
     } catch {
@@ -459,7 +478,7 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
     isbn: lookup.isbn,
     publisher: lookup.publisher,
     publicationYear: lookup.publicationYear,
-    lcc: lookup.lcc,
+    lcc: finalLcc,
     genreTags: tags.genreTags,
     formTags: tags.formTags,
     confidence: combinedConfidence,
@@ -468,6 +487,7 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
     warnings: grounded.warnings,
     sourcePhoto,
     lookupSource: lookup.source,
+    lccSource,
     spineThumbnail,
     original: {
       title: read.title,
@@ -475,7 +495,7 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
       isbn: lookup.isbn,
       publisher: lookup.publisher,
       publicationYear: lookup.publicationYear,
-      lcc: lookup.lcc,
+      lcc: finalLcc,
     },
   };
 

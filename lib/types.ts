@@ -13,6 +13,8 @@ export interface SpineRead {
   title?: string;
   author?: string;
   publisher?: string;
+  /** LCC read directly from the physical spine (canonical format), if visible. */
+  lcc?: string;
   confidence: Confidence;
   note?: string;
   bbox?: SpineBbox;
@@ -45,6 +47,8 @@ export interface BookRecord {
   warnings: string[];
   sourcePhoto: string;
   lookupSource: 'openlibrary' | 'googlebooks' | 'none';
+  /** Where the LCC came from. 'spine' wins over 'lookup'. */
+  lccSource: 'spine' | 'lookup' | 'none';
   /** Cropped image of just this spine, as a data URI. Lets the reviewer see what the model saw. */
   spineThumbnail?: string;
   /** Snapshot of metadata as it came from spine read + lookup, before any user edits. */

@@ -130,6 +130,14 @@ export function BookCard({ book }: BookCardProps) {
               placeholder="No LCC"
               fontFamily="mono"
             />
+            {book.lccSource === 'spine' && (
+              <span
+                className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent-soft dark:bg-accent/30 text-accent dark:text-accent-soft font-semibold"
+                title="LCC was read directly off the physical spine — authoritative for this edition"
+              >
+                from spine
+              </span>
+            )}
           </div>
         </div>
         <ConfidenceBadge level={book.confidence} />

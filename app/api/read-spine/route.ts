@@ -10,6 +10,7 @@ Extract:
 - title: the title as printed on the spine
 - author: the author as printed on the spine (people's names; for editors of anthologies, prefix with "ed. ")
 - publisher: the publisher logo or text if visible at the foot of the spine
+- lcc: the Library of Congress Classification call number, ONLY if a real LCC is printed or stickered on this physical spine. See LCC RULES below.
 - confidence: HIGH if both title and author are clearly legible; MEDIUM if one is partly obscured; LOW if you are guessing
 
 STRICT RULES:
@@ -19,13 +20,30 @@ STRICT RULES:
 - The author and title may be stacked on the same spine. Both belong to ONE book.
 - Author names: return as printed (e.g., "Albert Camus", not "Camus, Albert").
 
+LCC RULES (very strict):
+- Return an LCC ONLY if it is actually printed, stamped, or applied as a library classification sticker on this physical spine. Common on ex-library copies, university press editions, and older Modern Library hardbacks. Most modern paperbacks have NONE — return empty string in that case.
+- Always return in canonical single-line format. The model is responsible for normalizing whatever you see on the spine.
+  - Class letters (1–3 uppercase): e.g., PR, BL, QA, PS, BJ, CT, HM
+  - Followed immediately by the class number, no spaces: PR2807, BJ1031, QA76.73
+  - Cutter number(s): preceded by a single space and a period, e.g., " .H3", " .M387", " .L33"
+  - Optional date or volume marker: separated by a single space, e.g., " 1990", " 2010"
+  - If the spine shows the parts on separate lines or with extra spacing (PR / 2807 / .H3 / 1990), JOIN them into the canonical single-line form below.
+- Examples of correctly-normalized output:
+  - "PR2807 .H3 1990"
+  - "BJ1031 .H37 2010"
+  - "QA76.73 .P98 K39 2024"
+  - "PS3525 .I5156 D4 1998"
+- If you cannot confidently identify EVERY component (class letters AND number AND cutter), return an empty string. Do NOT return partial LCCs. Do NOT guess the cutter from the author's name — capture only what is actually printed.
+- Do NOT confuse LCC with: ISBN (13 digits, often with barcodes); publisher series numbers like "70" on Modern Library spines; Dewey Decimal numbers (these are ALL-NUMERIC, e.g., 822.33). LCC ALWAYS starts with one to three uppercase letters.
+
 Return ONLY a JSON object (no prose, no fences):
-{"title": "...", "author": "...", "publisher": "...", "confidence": "HIGH|MEDIUM|LOW", "note": "..."}`;
+{"title": "...", "author": "...", "publisher": "...", "lcc": "...", "confidence": "HIGH|MEDIUM|LOW", "note": "..."}`;
 
 interface ReadResponse {
   title: string;
   author: string;
   publisher: string;
+  lcc: string;
   confidence: 'HIGH' | 'MEDIUM' | 'LOW';
   note?: string;
 }
@@ -110,6 +128,7 @@ export async function POST(req: NextRequest) {
       title: String(parsed.title ?? '').trim(),
       author: String(parsed.author ?? '').trim(),
       publisher: String(parsed.publisher ?? '').trim(),
+      lcc: String(parsed.lcc ?? '').trim(),
       confidence:
         parsed.confidence === 'HIGH' || parsed.confidence === 'MEDIUM' || parsed.confidence === 'LOW'
           ? parsed.confidence
@@ -118,7 +137,7 @@ export async function POST(req: NextRequest) {
     };
 
     console.log(
-      `[read-spine] #${body.position ?? '?'} → "${result.title}" / "${result.author}" (${result.confidence}, ${Date.now() - t0}ms)`
+      `[read-spine] #${body.position ?? '?'} → "${result.title}" / "${result.author}"${result.lcc ? ` lcc=${result.lcc}` : ''} (${result.confidence}, ${Date.now() - t0}ms)`
     );
 
     return NextResponse.json(result);
