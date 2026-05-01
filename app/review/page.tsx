@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { BookCard } from '@/components/BookCard';
 import { SpineSelector } from '@/components/SpineSelector';
 import { useStore } from '@/lib/store';
+import { VOCAB, type DomainKey } from '@/lib/tag-domains';
 import type { PhotoBatch } from '@/lib/types';
 
 type Filter = 'all' | 'pending' | 'approved' | 'rejected' | 'low';
@@ -27,10 +28,53 @@ const SORTS: { id: Sort; label: string; title: string }[] = [
 const CONFIDENCE_RANK = { LOW: 0, MEDIUM: 1, HIGH: 2 } as const;
 
 export default function ReviewPage() {
-  const { state, updateBook, addBook, getPendingFile } = useStore();
+  const { state, updateBook, addBook, getPendingFile, bulkRetag } = useStore();
   const [filter, setFilter] = useState<Filter>('all');
   const [sort, setSort] = useState<Sort>('position');
   const [addingFor, setAddingFor] = useState<PhotoBatch | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [retagBusy, setRetagBusy] = useState(false);
+  const [retagDomainOpen, setRetagDomainOpen] = useState(false);
+  const [retagToast, setRetagToast] = useState<string | null>(null);
+
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function runBulkRetag(ids: string[], scopeLabel: string) {
+    if (ids.length === 0 || retagBusy) return;
+    const ok = window.confirm(
+      `This will replace existing tags on ${ids.length} ${
+        ids.length === 1 ? 'book' : 'books'
+      } (${scopeLabel}) with fresh inferences from the current vocabulary.\n\n` +
+        'Books where you manually edited tags will MERGE — your additions are kept.\n\n' +
+        'Continue?'
+    );
+    if (!ok) return;
+    setRetagBusy(true);
+    setRetagToast(null);
+    const result = await bulkRetag(ids);
+    setRetagBusy(false);
+    setRetagDomainOpen(false);
+    setRetagToast(
+      result.errors > 0
+        ? `Re-tagged ${result.done} of ${ids.length} (${result.errors} failed)`
+        : `Re-tagged ${result.done} ${result.done === 1 ? 'book' : 'books'}`
+    );
+    setTimeout(() => setRetagToast(null), 5000);
+  }
+
+  function bookMatchesDomain(bookLcc: string, domainKey: DomainKey): boolean {
+    if (!bookLcc || domainKey === '_unclassified') return false;
+    const prefix = bookLcc.toUpperCase().match(/^[A-Z]{1,3}/)?.[0];
+    if (!prefix) return false;
+    return VOCAB.domains[domainKey].lcc_prefixes.some((p) => prefix.startsWith(p));
+  }
 
   const counts = useMemo(() => {
     const c = { total: 0, pending: 0, approved: 0, rejected: 0, low: 0 };
@@ -141,6 +185,60 @@ export default function ReviewPage() {
         </div>
 
         <div className="flex-1" />
+
+        {/* Bulk re-tag controls */}
+        <div className="relative">
+          <button
+            onClick={() =>
+              runBulkRetag(
+                state.allBooks.filter((b) => b.status === 'approved').map((b) => b.id),
+                'all approved'
+              )
+            }
+            disabled={
+              retagBusy ||
+              state.allBooks.filter((b) => b.status === 'approved').length === 0
+            }
+            className="text-xs px-3 py-1.5 rounded-md border border-fern/40 text-fern dark:text-brass hover:bg-fern/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Re-run tag inference on every approved book using the current vocabulary"
+          >
+            ↻ Re-tag all approved
+          </button>
+        </div>
+        <div className="relative">
+          <button
+            onClick={() => setRetagDomainOpen((v) => !v)}
+            disabled={retagBusy}
+            className="text-xs px-3 py-1.5 rounded-md border border-fern/40 text-fern dark:text-brass hover:bg-fern/10 transition disabled:opacity-40"
+          >
+            ↻ Re-tag by domain ▾
+          </button>
+          {retagDomainOpen && (
+            <div className="absolute right-0 top-full mt-1 z-20 w-72 bg-cream-50 dark:bg-ink-soft border border-cream-300 dark:border-ink-soft rounded-md shadow-lg p-2 space-y-0.5">
+              {(Object.entries(VOCAB.domains) as [DomainKey, typeof VOCAB.domains[DomainKey]][])
+                .filter(([k]) => k !== '_unclassified')
+                .map(([key, def]) => {
+                  const matchingIds = state.allBooks
+                    .filter((b) => bookMatchesDomain(b.lcc, key))
+                    .map((b) => b.id);
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => runBulkRetag(matchingIds, def.label)}
+                      disabled={matchingIds.length === 0}
+                      className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-accent-soft dark:hover:bg-accent/20 disabled:opacity-40 disabled:cursor-not-allowed transition flex justify-between items-center"
+                    >
+                      <span>{def.label}</span>
+                      <span className="text-[10px] text-ink/45 dark:text-cream-300/45 font-mono">
+                        {matchingIds.length}
+                      </span>
+                    </button>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+
         <button
           onClick={approveAllHigh}
           className="text-xs px-3 py-1.5 rounded-md bg-brass-soft text-brass-deep hover:bg-brass hover:text-accent-deep transition font-medium"
@@ -148,6 +246,13 @@ export default function ReviewPage() {
           Approve all HIGH confidence
         </button>
       </div>
+
+      {/* Retag toast */}
+      {retagToast && (
+        <div className="bg-brass-soft dark:bg-brass/15 border border-brass/40 rounded-md px-4 py-2 text-sm text-brass-deep dark:text-brass">
+          {retagToast}
+        </div>
+      )}
 
       {/* Book list — grouped by batch label */}
       <div className="space-y-6">
@@ -206,7 +311,13 @@ export default function ReviewPage() {
                   )}
                   <div className="space-y-3">
                     {groupBooks.map((book) => (
-                      <BookCard key={book.id} book={book} />
+                      <BookCard
+                        key={book.id}
+                        book={book}
+                        selectable
+                        selected={selected.has(book.id)}
+                        onToggleSelected={toggleSelected}
+                      />
                     ))}
                   </div>
                   {groupBatches.length > 0 && (
@@ -233,8 +344,56 @@ export default function ReviewPage() {
         )}
       </div>
 
-      {/* Bottom bulk action + nav */}
-      {counts.pending > 0 && (
+      {/* Floating selection action bar — only when ≥ 1 books are checkbox-selected */}
+      {selected.size > 0 && (
+        <div className="sticky bottom-4 flex justify-center z-10">
+          <div className="flex items-center gap-2 bg-accent text-limestone rounded-full pl-5 pr-2 py-2 shadow-lg">
+            <span className="text-sm font-medium">{selected.size} selected</span>
+            <span className="opacity-50">·</span>
+            <button
+              onClick={() =>
+                runBulkRetag(Array.from(selected), `${selected.size} selected`)
+              }
+              disabled={retagBusy}
+              className="text-xs px-3 py-1.5 rounded-full bg-brass text-accent-deep font-medium hover:bg-brass-deep hover:text-limestone transition disabled:opacity-50"
+            >
+              ↻ Re-tag
+            </button>
+            <button
+              onClick={() => {
+                Array.from(selected).forEach((id) =>
+                  updateBook(id, { status: 'approved' })
+                );
+                setSelected(new Set());
+              }}
+              className="text-xs px-3 py-1.5 rounded-full bg-fern text-limestone hover:bg-accent-deep transition"
+            >
+              Approve
+            </button>
+            <button
+              onClick={() => {
+                Array.from(selected).forEach((id) =>
+                  updateBook(id, { status: 'rejected' })
+                );
+                setSelected(new Set());
+              }}
+              className="text-xs px-3 py-1.5 rounded-full bg-mahogany/30 text-limestone hover:bg-mahogany transition"
+            >
+              Reject
+            </button>
+            <button
+              onClick={() => setSelected(new Set())}
+              className="text-xs px-2 py-1.5 rounded-full text-limestone/70 hover:text-limestone transition"
+              aria-label="Clear selection"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom bulk action + nav — hidden when selection bar is active */}
+      {counts.pending > 0 && selected.size === 0 && (
         <div className="sticky bottom-4 flex justify-center">
           <button
             onClick={approveRemaining}

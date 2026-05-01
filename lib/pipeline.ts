@@ -596,10 +596,98 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
       publisher: lookup.publisher,
       publicationYear: lookup.publicationYear,
       lcc: finalLcc,
+      genreTags: [...tags.genreTags],
+      formTags: [...tags.formTags],
     },
   };
 
   return { book, kept: grounded.keep };
+}
+
+// ----- Bulk re-tag a single book -----
+
+/**
+ * Run /api/infer-tags against the book's current metadata and produce a
+ * patch that updates the tag fields. If the user has manually edited
+ * tags since the last inference, MERGE rather than replace: keep all
+ * current user-curated tags, then add any newly-inferred tags that
+ * aren't already present. Otherwise replace wholesale (the user hasn't
+ * touched anything, so a fresh inference is strictly better).
+ */
+export async function retagBook(book: BookRecord): Promise<{
+  ok: boolean;
+  patch?: Partial<BookRecord>;
+  error?: string;
+}> {
+  if (!book.title) return { ok: false, error: 'No title.' };
+  let inferred: InferTagsResult;
+  try {
+    inferred = await inferTagsClient({
+      title: book.title,
+      author: book.author,
+      isbn: book.isbn,
+      publisher: book.publisher,
+      publicationYear: book.publicationYear,
+      lcc: book.lcc,
+      // Subject headings aren't stored on the BookRecord; let the model work
+      // from title/author/LCC + its general knowledge.
+    });
+  } catch (err: any) {
+    return { ok: false, error: err?.message ?? 'Tag inference failed.' };
+  }
+
+  // Detect whether the user has manually edited tags since the original
+  // inference. The original.genreTags/formTags fields are populated for
+  // books processed by v1.1 onward; older books in localStorage may not
+  // have them — treat absent baselines as "untouched, replace freely".
+  const baselineGenre = book.original.genreTags;
+  const baselineForm = book.original.formTags;
+  const userEditedGenre =
+    baselineGenre !== undefined && !sameStringSet(book.genreTags, baselineGenre);
+  const userEditedForm =
+    baselineForm !== undefined && !sameStringSet(book.formTags, baselineForm);
+
+  const finalGenre = userEditedGenre
+    ? mergeUnique(book.genreTags, inferred.genreTags)
+    : inferred.genreTags;
+  const finalForm = userEditedForm
+    ? mergeUnique(book.formTags, inferred.formTags)
+    : inferred.formTags;
+
+  return {
+    ok: true,
+    patch: {
+      genreTags: finalGenre,
+      formTags: finalForm,
+      reasoning: inferred.reasoning,
+      // Reset the tag baseline so subsequent re-tags compare against
+      // this fresh inference, not the original from initial processing.
+      original: {
+        ...book.original,
+        genreTags: [...inferred.genreTags],
+        formTags: [...inferred.formTags],
+      },
+    },
+  };
+}
+
+function sameStringSet(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const sa = new Set(a);
+  for (const x of b) if (!sa.has(x)) return false;
+  return true;
+}
+
+function mergeUnique(existing: string[], incoming: string[]): string[] {
+  const seen = new Set(existing.map((t) => t.toLowerCase()));
+  const merged = [...existing];
+  for (const t of incoming) {
+    if (!seen.has(t.toLowerCase())) {
+      merged.push(t);
+      seen.add(t.toLowerCase());
+    }
+  }
+  return merged;
 }
 
 // ----- Manual add (used by "Add missing book" on Review) -----
@@ -726,6 +814,8 @@ export async function addManualBook(opts: AddManualBookOptions): Promise<BookRec
       publisher: lookup.publisher,
       publicationYear: lookup.publicationYear,
       lcc: finalLcc,
+      genreTags: [...tags.genreTags],
+      formTags: [...tags.formTags],
     },
   };
 }

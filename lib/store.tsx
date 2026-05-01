@@ -17,6 +17,7 @@ import {
   detectSpines,
   loadImage,
   rereadBook as runReread,
+  retagBook as runRetag,
   type RereadOptions,
 } from './pipeline';
 
@@ -130,6 +131,9 @@ interface StoreApi {
 
   /** Re-run the per-book pipeline. Optional hint skips Pass B and uses the typed title/author. */
   rereadBook: (id: string, options: RereadOptions) => Promise<{ ok: boolean; error?: string }>;
+
+  /** Re-run tag inference on a batch of books in parallel. Preserves user-edited tags via merge. */
+  bulkRetag: (ids: string[]) => Promise<{ done: number; errors: number }>;
 }
 
 const StoreCtx = createContext<StoreApi | null>(null);
@@ -381,6 +385,56 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  /**
+   * Re-tag a list of books in parallel (concurrency cap of 4 — same as the
+   * spine-processing pool, balances throughput against API rate limits).
+   * Each book gets a `retagging: true` flag while in flight so the
+   * BookCard can show a brief flash on completion.
+   */
+  const bulkRetag = useCallback(async (ids: string[]) => {
+    if (ids.length === 0) return { done: 0, errors: 0 };
+
+    // Mark every targeted book as retagging up front.
+    for (const id of ids) {
+      dispatch({ type: 'UPDATE_BOOK', id, patch: { retagging: true } });
+    }
+
+    let done = 0;
+    let errors = 0;
+    let nextIndex = 0;
+    const CONCURRENCY = 4;
+
+    async function runWorker() {
+      while (true) {
+        const i = nextIndex++;
+        if (i >= ids.length) return;
+        const id = ids[i];
+        const current = stateRef.current.allBooks.find((b) => b.id === id);
+        if (!current) {
+          errors += 1;
+          continue;
+        }
+        try {
+          const result = await runRetag(current);
+          if (result.ok && result.patch) {
+            dispatch({ type: 'UPDATE_BOOK', id, patch: { ...result.patch, retagging: false } });
+            done += 1;
+          } else {
+            dispatch({ type: 'UPDATE_BOOK', id, patch: { retagging: false } });
+            errors += 1;
+          }
+        } catch {
+          dispatch({ type: 'UPDATE_BOOK', id, patch: { retagging: false } });
+          errors += 1;
+        }
+      }
+    }
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, ids.length) }, runWorker)
+    );
+    return { done, errors };
+  }, []);
+
   const api = useMemo<StoreApi>(
     () => ({
       state,
@@ -406,8 +460,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       getPendingFile: (batchId) => pendingFiles.current.get(batchId) ?? null,
       processQueue,
       rereadBook,
+      bulkRetag,
     }),
-    [state, processQueue, rereadBook]
+    [state, processQueue, rereadBook, bulkRetag]
   );
 
   return <StoreCtx.Provider value={api}>{children}</StoreCtx.Provider>;

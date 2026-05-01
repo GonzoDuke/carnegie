@@ -72,6 +72,8 @@ export interface BookRecord {
   ocrImage?: string;
   /** True while a reread is in flight, so the BookCard can disable controls + show a spinner. */
   rereading?: boolean;
+  /** True while a bulk re-tag is in flight, so the BookCard can flash on completion. */
+  retagging?: boolean;
   /** Snapshot of metadata as it came from spine read + lookup, before any user edits. */
   original: {
     title: string;
@@ -80,6 +82,9 @@ export interface BookRecord {
     publisher: string;
     publicationYear: number;
     lcc: string;
+    /** Tags as first inferred. Used by Bulk re-tag to detect manual edits. */
+    genreTags?: string[];
+    formTags?: string[];
   };
 }
 

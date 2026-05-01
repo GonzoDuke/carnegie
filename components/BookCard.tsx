@@ -10,9 +10,13 @@ import { toAuthorLastFirst, toTitleCase } from '@/lib/csv-export';
 
 interface BookCardProps {
   book: BookRecord;
+  /** When true, render a checkbox in the top-left corner. */
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelected?: (id: string) => void;
 }
 
-export function BookCard({ book }: BookCardProps) {
+export function BookCard({ book, selectable, selected, onToggleSelected }: BookCardProps) {
   const { updateBook, rereadBook } = useStore();
   const [showReasoning, setShowReasoning] = useState(false);
   const [picker, setPicker] = useState<'genre' | 'form' | null>(null);
@@ -82,10 +86,26 @@ export function BookCard({ book }: BookCardProps) {
 
   return (
     <article
-      className={`relative bg-cream-50 dark:bg-ink-soft/60 border ${borderClass} rounded-lg p-5 shadow-sm transition-all duration-200 ease-gentle`}
+      className={`relative bg-cream-50 dark:bg-ink-soft/60 border ${borderClass} rounded-lg p-5 shadow-sm transition-all duration-200 ease-gentle ${
+        book.retagging ? 'ring-2 ring-brass animate-pulse-dot' : ''
+      } ${selected ? 'ring-2 ring-brass' : ''}`}
     >
+      {selectable && onToggleSelected && (
+        <label
+          className="absolute top-3 left-3 flex items-center cursor-pointer z-[1]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <input
+            type="checkbox"
+            checked={!!selected}
+            onChange={() => onToggleSelected(book.id)}
+            className="accent-brass w-4 h-4 cursor-pointer"
+            aria-label={`Select ${book.title || 'this book'}`}
+          />
+        </label>
+      )}
       {/* Header */}
-      <div className="flex items-start gap-3">
+      <div className={`flex items-start gap-3 ${selectable ? 'pl-7' : ''}`}>
         {book.spineThumbnail && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
