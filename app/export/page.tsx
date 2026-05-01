@@ -147,6 +147,75 @@ export default function ExportPage() {
     [booksToExport]
   );
 
+  // GitHub commit availability — checked once per page load. When the env
+  // is wired with GITHUB_TOKEN, we offer a single-click "Commit to repo"
+  // path and fall back to download only on failure or by user choice.
+  const [commitInfo, setCommitInfo] = useState<{
+    available: boolean;
+    repo?: string;
+    branch?: string;
+  } | null>(null);
+  const [commitState, setCommitState] = useState<
+    | { kind: 'idle' }
+    | { kind: 'pending' }
+    | { kind: 'done'; newTagCount: number; commits: Array<{ path: string; url?: string }> }
+    | { kind: 'error'; message: string }
+  >({ kind: 'idle' });
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/commit-vocabulary')
+      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
+      .then((data) => {
+        if (!cancelled) setCommitInfo(data);
+      })
+      .catch(() => {
+        if (!cancelled) setCommitInfo({ available: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function commitVocabularyToRepo() {
+    if (promotions.length === 0) return;
+    setCommitState({ kind: 'pending' });
+    const date = new Date();
+    try {
+      const res = await fetch('/api/commit-vocabulary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vocabularyJson: buildUpdatedVocabularyJson(promotions),
+          changelogEntries: buildChangelogEntries(promotions, date),
+          newTagCount: promotions.length,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        // 501 = token missing; surface a clear "fall back to download" hint.
+        if (res.status === 501) {
+          setCommitInfo({ available: false });
+          setCommitState({
+            kind: 'error',
+            message:
+              'GITHUB_TOKEN is not configured on the server. Use the download workflow instead.',
+          });
+          return;
+        }
+        throw new Error(data.details ?? data.error ?? `Commit failed (${res.status})`);
+      }
+      setCommitState({
+        kind: 'done',
+        newTagCount: data.newTagCount,
+        commits: data.commits ?? [],
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setCommitState({ kind: 'error', message });
+    }
+  }
+
   function downloadVocabularyUpdates() {
     if (promotions.length === 0) return;
     const date = new Date();
@@ -410,20 +479,115 @@ export default function ExportPage() {
               </li>
             ))}
           </ul>
-          <button
-            onClick={downloadVocabularyUpdates}
-            className="text-sm px-4 py-2 rounded-md bg-brass text-accent-deep hover:bg-brass-deep hover:text-limestone font-medium transition"
-          >
-            Download vocabulary updates ({promotions.length})
-          </button>
-          <div className="text-[11px] text-ink/45 dark:text-cream-300/45 italic">
-            Two files will download: the new{' '}
-            <span className="font-mono">tag-vocabulary.json</span> (replace the
-            one in <span className="font-mono">/lib</span>) and a dated{' '}
-            <span className="font-mono">vocabulary-changelog-additions-*.md</span>{' '}
-            (append to <span className="font-mono">vocabulary-changelog.md</span>).
-            The CSV itself ships without the <span className="font-mono">[Proposed]</span> prefix either way.
-          </div>
+          {/* Action row — auto-commit when GITHUB_TOKEN is set, otherwise
+              fall back to the manual download workflow. */}
+          {commitInfo?.available ? (
+            <div className="space-y-3">
+              {commitState.kind === 'done' ? (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-800/50 rounded-md px-4 py-3 text-sm text-green-900 dark:text-green-100 leading-relaxed">
+                  Vocabulary updated — {commitState.newTagCount} new{' '}
+                  {commitState.newTagCount === 1 ? 'tag' : 'tags'} committed to{' '}
+                  <span className="font-mono">{commitInfo.repo}</span>
+                  {commitInfo.branch ? (
+                    <>
+                      {' '}on <span className="font-mono">{commitInfo.branch}</span>
+                    </>
+                  ) : null}
+                  .
+                  {commitState.commits.length > 0 && (
+                    <span className="block mt-1 text-xs text-green-800/80 dark:text-green-200/70">
+                      {commitState.commits.map((c, i) => (
+                        <span key={c.path} className="inline-block mr-3">
+                          {c.url ? (
+                            <a
+                              href={c.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline underline-offset-2 hover:text-green-700 dark:hover:text-green-50"
+                            >
+                              {c.path}
+                            </a>
+                          ) : (
+                            <span className="font-mono">{c.path}</span>
+                          )}
+                          {i < commitState.commits.length - 1 ? '' : ''}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                  <span className="block mt-1 text-xs italic text-green-800/70 dark:text-green-200/60">
+                    Vercel auto-redeploys from the commit; the next batch will use the
+                    updated vocabulary.
+                  </span>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={commitVocabularyToRepo}
+                    disabled={commitState.kind === 'pending'}
+                    className="text-sm px-4 py-2 rounded-md bg-brass text-accent-deep hover:bg-brass-deep hover:text-limestone font-medium transition disabled:opacity-60 disabled:cursor-progress"
+                  >
+                    {commitState.kind === 'pending'
+                      ? 'Committing…'
+                      : `Commit ${promotions.length} new ${promotions.length === 1 ? 'tag' : 'tags'} to repo`}
+                  </button>
+                  <button
+                    onClick={downloadVocabularyUpdates}
+                    className="text-xs px-3 py-1.5 rounded-md border border-brass/50 text-brass-deep dark:text-brass hover:bg-brass/10 font-medium transition"
+                    title="Download the files manually instead of committing through the API."
+                  >
+                    Download files instead
+                  </button>
+                </div>
+              )}
+
+              {commitState.kind === 'error' && (
+                <div className="bg-mahogany/10 dark:bg-tartan/30 border border-mahogany/40 dark:border-tartan/50 rounded-md px-4 py-3 text-sm text-mahogany dark:text-orange-100">
+                  <div className="font-semibold mb-1">Couldn&rsquo;t commit to GitHub</div>
+                  <div className="text-xs leading-relaxed font-mono break-all">
+                    {commitState.message}
+                  </div>
+                  <button
+                    onClick={downloadVocabularyUpdates}
+                    className="mt-2 text-xs underline underline-offset-2 hover:text-mahogany/80"
+                  >
+                    Download files instead →
+                  </button>
+                </div>
+              )}
+
+              <div className="text-[11px] text-ink/45 dark:text-cream-300/45 italic leading-relaxed">
+                Commits go to{' '}
+                <span className="font-mono">{commitInfo.repo}</span>
+                {commitInfo.branch ? (
+                  <>
+                    {' '}on <span className="font-mono">{commitInfo.branch}</span>
+                  </>
+                ) : null}
+                : one for{' '}
+                <span className="font-mono">lib/tag-vocabulary.json</span>, one for{' '}
+                <span className="font-mono">lib/vocabulary-changelog.md</span>.
+              </div>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={downloadVocabularyUpdates}
+                className="text-sm px-4 py-2 rounded-md bg-brass text-accent-deep hover:bg-brass-deep hover:text-limestone font-medium transition"
+              >
+                Download vocabulary updates ({promotions.length})
+              </button>
+              <div className="text-[11px] text-ink/45 dark:text-cream-300/45 italic">
+                Two files will download: the new{' '}
+                <span className="font-mono">tag-vocabulary.json</span> (replace the
+                one in <span className="font-mono">/lib</span>) and a dated{' '}
+                <span className="font-mono">vocabulary-changelog-additions-*.md</span>{' '}
+                (append to <span className="font-mono">vocabulary-changelog.md</span>).
+                Set <span className="font-mono">GITHUB_TOKEN</span> on the server to enable
+                one-click commits instead.
+              </div>
+            </>
+          )}
         </div>
       )}
 
