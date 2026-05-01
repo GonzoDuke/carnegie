@@ -82,8 +82,16 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
       ? 'border-red-300 dark:border-red-800 opacity-60'
       : 'border-cream-300 dark:border-ink-soft';
 
+  // Brief brass-glow pulse the first time the user approves a card. Reset
+  // the flag after the keyframe finishes so toggling off-and-on re-fires it.
+  const [justApproved, setJustApproved] = useState(false);
   function setStatus(next: 'approved' | 'rejected') {
-    updateBook(book.id, { status: book.status === next ? 'pending' : next });
+    const isToggleOn = book.status !== next;
+    if (next === 'approved' && isToggleOn) {
+      setJustApproved(true);
+      window.setTimeout(() => setJustApproved(false), 340);
+    }
+    updateBook(book.id, { status: isToggleOn ? next : 'pending' });
   }
 
   function addTag(variant: 'genre' | 'form', tag: string) {
@@ -120,7 +128,9 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
     <article
       className={`relative bg-cream-50 dark:bg-ink-soft/60 border ${borderClass} rounded-lg py-5 px-6 shadow-sm transition-all duration-200 ease-gentle ${
         book.retagging ? 'ring-2 ring-brass animate-pulse-dot' : ''
-      } ${selected ? 'ring-2 ring-brass' : ''}`}
+      } ${selected ? 'ring-2 ring-brass' : ''} ${
+        justApproved ? 'animate-approve-pulse' : ''
+      }`}
     >
       {selectable && onToggleSelected && (
         <label
@@ -558,10 +568,10 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
           <button
             onClick={() => setStatus('rejected')}
             disabled={book.rereading}
-            className={`text-xs px-3 py-1.5 rounded-md border transition disabled:opacity-50 ${
+            className={`text-xs px-3 py-1.5 rounded-md border transition-all duration-150 ease-out disabled:opacity-50 ${
               book.status === 'rejected'
                 ? 'bg-mahogany/15 dark:bg-tartan/40 border-mahogany/50 dark:border-tartan/70 text-mahogany dark:text-orange-100'
-                : 'border-cream-300 dark:border-ink-soft hover:border-mahogany dark:hover:border-tartan hover:text-mahogany dark:hover:text-orange-200'
+                : 'border-cream-300 dark:border-ink-soft hover:bg-mahogany/10 dark:hover:bg-tartan/30 hover:border-mahogany dark:hover:border-tartan hover:text-mahogany dark:hover:text-orange-200'
             }`}
           >
             {book.status === 'rejected' ? '✓ Rejected' : 'Reject'}
@@ -569,10 +579,10 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
           <button
             onClick={() => setStatus('approved')}
             disabled={book.rereading}
-            className={`text-xs px-3 py-1.5 rounded-md border transition disabled:opacity-50 ${
+            className={`text-xs px-3 py-1.5 rounded-md border transition-all duration-150 ease-out disabled:opacity-50 ${
               book.status === 'approved'
-                ? 'bg-brass/30 dark:bg-brass/40 border-brass text-accent-deep dark:text-brass-soft font-medium'
-                : 'border-cream-300 dark:border-ink-soft hover:bg-brass-soft hover:border-brass hover:text-accent-deep'
+                ? 'bg-brass border-brass text-accent-deep font-medium shadow-sm'
+                : 'border-brass/60 text-brass-deep dark:text-brass hover:bg-brass hover:text-accent-deep hover:border-brass'
             }`}
           >
             {book.status === 'approved' ? '✓ Approved' : 'Approve'}

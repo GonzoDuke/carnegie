@@ -132,6 +132,23 @@ body {
   color: #B4A99A;
 }
 
+/* Approve-button micro-interaction — when a card transitions into the
+   approved state we play a brief brass glow + bump so the action feels
+   acknowledged. Triggered by toggling the `data-just-approved` attribute. */
+@keyframes approve-pulse {
+  0%   { transform: scale(1); box-shadow: 0 0 0 0 rgba(201, 169, 110, 0); }
+  40%  { transform: scale(1.02); box-shadow: 0 0 0 4px rgba(201, 169, 110, 0.45); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(201, 169, 110, 0); }
+}
+.animate-approve-pulse { animation: approve-pulse 320ms ease-out both; }
+
+/* Tag chip × icon — quick scale-in on group-hover so the affordance reads. */
+@keyframes tag-x-in {
+  from { transform: scale(0.8); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+.tag-x-anim { animation: tag-x-in 100ms ease-out both; }
+
 /* Camera modal — gentle ease-in/out scaffolding for the in-app camera.
    Mount: scaled slightly down + transparent → settle; unmount mirrors it.
    Used by the camera capture experience in PhotoUploader.tsx. */

@@ -66,7 +66,7 @@ export function TagChip({ tag, variant, onRemove, size = 'md' }: TagChipProps) {
           type="button"
           aria-label={`Remove ${tag}`}
           onClick={onRemove}
-          className="opacity-0 group-hover:opacity-70 hover:!opacity-100 transition w-3.5 h-3.5 leading-none flex items-center justify-center text-[14px]"
+          className="opacity-0 scale-90 group-hover:opacity-70 group-hover:scale-100 hover:!opacity-100 transition-all duration-100 ease-out w-3.5 h-3.5 leading-none flex items-center justify-center text-[14px]"
         >
           ×
         </button>
