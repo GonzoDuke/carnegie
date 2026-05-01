@@ -21,6 +21,7 @@ import {
   type RereadOptions,
 } from './pipeline';
 import { toTitleCase } from './csv-export';
+import { flagIfPreviouslyExported, loadLedger } from './export-ledger';
 
 export interface ProcessingState {
   /** True from "process all" click until the loop returns. */
@@ -331,7 +332,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           );
 
           const finalBooks = dedupeBooks(keptBooks);
+          // Cross-check each book against the export ledger. Matches get
+          // auto-rejected with a warning so the user can spot already-shipped
+          // titles immediately. Loaded fresh per batch so the check picks up
+          // any export that completed mid-session.
+          const ledger = loadLedger();
           for (const book of finalBooks) {
+            flagIfPreviouslyExported(book, ledger);
             dispatch({ type: 'ADD_BOOK', batchId: batch.id, book });
           }
 

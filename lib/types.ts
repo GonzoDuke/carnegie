@@ -76,6 +76,13 @@ export interface BookRecord {
   rereading?: boolean;
   /** True while a bulk re-tag is in flight, so the BookCard can flash on completion. */
   retagging?: boolean;
+  /**
+   * Set when this book matches an entry in the export ledger — meaning it was
+   * shipped to LibraryThing in a prior session. Drives a warning banner on
+   * the BookCard and auto-rejects the row by default. The user can still
+   * approve to export a second copy.
+   */
+  previouslyExported?: { date: string; batchLabel?: string };
   /** Snapshot of metadata as it came from spine read + lookup, before any user edits. */
   original: {
     title: string;

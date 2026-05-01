@@ -5,6 +5,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { ExportPreview } from '@/components/ExportPreview';
 import { exportFilename, generateCsv, type CsvOptions } from '@/lib/csv-export';
+import { appendToLedger } from '@/lib/export-ledger';
 import {
   buildChangelogEntries,
   buildUpdatedVocabularyJson,
@@ -106,6 +107,10 @@ export default function ExportPage() {
     } else {
       downloadOne(booksToExport);
     }
+    // Record everything we just shipped so future batches can flag duplicates.
+    // Triggering the download triggers the ledger write — there's no separate
+    // "confirm import" step, so this is the most reliable signal we have.
+    appendToLedger(booksToExport);
   }
 
   // Vocabulary updates — proposed tags from this export set, ready to be

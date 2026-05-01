@@ -226,8 +226,34 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
         </div>
       </div>
 
+      {/* Previously exported — distinct, prominent banner. Takes precedence
+          over the generic warning treatment because it's actionable on its own
+          (the user just needs to decide: dupe, or genuine second copy). */}
+      {book.previouslyExported && (
+        <div className="mt-3 px-3 py-2 rounded text-xs bg-tartan/10 dark:bg-tartan/40 text-tartan dark:text-orange-100 border border-tartan/40 dark:border-tartan/60 flex items-start gap-2">
+          <span aria-hidden className="font-semibold tracking-wider uppercase text-[10px] mt-0.5">
+            Duplicate
+          </span>
+          <span className="leading-relaxed">
+            Previously exported on{' '}
+            <span className="font-mono">{book.previouslyExported.date}</span>
+            {book.previouslyExported.batchLabel ? (
+              <>
+                {' '}in batch{' '}
+                <span className="font-semibold">
+                  &ldquo;{book.previouslyExported.batchLabel}&rdquo;
+                </span>
+              </>
+            ) : (
+              <> in an unlabeled batch</>
+            )}
+            . Auto-rejected — approve to ship as a second copy.
+          </span>
+        </div>
+      )}
+
       {/* Warning banner */}
-      {(lowConfidence || hasWarnings) && (
+      {(lowConfidence || hasWarnings) && !book.previouslyExported && (
         <div
           className={`mt-3 px-3 py-2 rounded text-xs ${
             lowConfidence
@@ -298,6 +324,22 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
             />
           )}
         </div>
+      </div>
+
+      {/* Location — editable batch label, controls grouping + LT Collections */}
+      <div className="mt-3 flex items-center gap-2 text-xs">
+        <span className="text-[10px] uppercase tracking-wider text-ink/45 dark:text-cream-300/45 font-semibold">
+          Location
+        </span>
+        <EditableField
+          label="Location"
+          value={book.batchLabel ?? ''}
+          original={book.batchLabel ?? ''}
+          modified={false}
+          onSave={(v) => updateBook(book.id, { batchLabel: v.trim() || undefined })}
+          placeholder="Add a shelf, box, or room"
+          fontFamily="sans"
+        />
       </div>
 
       {/* Notes — per-book free-form, batch notes shown read-only above */}

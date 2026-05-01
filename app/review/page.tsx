@@ -7,6 +7,7 @@ import { SpineSelector } from '@/components/SpineSelector';
 import { useStore } from '@/lib/store';
 import { VOCAB, type DomainKey } from '@/lib/tag-domains';
 import type { PhotoBatch } from '@/lib/types';
+import { flagIfPreviouslyExported } from '@/lib/export-ledger';
 
 type Filter = 'all' | 'pending' | 'approved' | 'rejected' | 'low';
 type Sort = 'position' | 'confidence-desc' | 'confidence-asc';
@@ -417,7 +418,7 @@ export default function ReviewPage() {
         <SpineSelector
           batch={addingFor}
           sourceFile={getPendingFile(addingFor.id)}
-          onAdd={(book) => addBook(addingFor.id, book)}
+          onAdd={(book) => addBook(addingFor.id, flagIfPreviouslyExported(book))}
           onClose={() => setAddingFor(null)}
         />
       )}
