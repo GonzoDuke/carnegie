@@ -75,6 +75,42 @@ body {
 }
 .animate-toast { animation: toast 2s ease-out forwards; }
 
+/* Camera modal — gentle ease-in/out scaffolding for the in-app camera.
+   Mount: scaled slightly down + transparent → settle; unmount mirrors it.
+   Used by the camera capture experience in PhotoUploader.tsx. */
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes modal-out {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.97); }
+}
+@keyframes backdrop-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes backdrop-out { from { opacity: 1; } to { opacity: 0; } }
+.animate-modal-in    { animation: modal-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-modal-out   { animation: modal-out 180ms ease-in both; }
+.animate-backdrop-in  { animation: backdrop-in 220ms ease-out both; }
+.animate-backdrop-out { animation: backdrop-out 180ms ease-in both; }
+
+/* Camera thumbnail — slides in from below (or right on wide layouts) when
+   a fresh capture lands in the strip. Each new thumb mounts with this
+   class, so the strip "fills up" rather than blinking new entries in. */
+@keyframes thumb-slide-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.94); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-thumb-in { animation: thumb-slide-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Shutter click — tiny dimming pulse over the live video, much subtler
+   than a full white strobe. ~90ms total, peaks at 25% opacity. */
+@keyframes shutter-click {
+  0%   { opacity: 0; }
+  35%  { opacity: 0.25; }
+  100% { opacity: 0; }
+}
+.animate-shutter-click { animation: shutter-click 90ms ease-out forwards; }
+
 /* Scrollbar polish */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }

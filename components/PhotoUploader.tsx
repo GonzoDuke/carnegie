@@ -7,21 +7,29 @@ interface PhotoUploaderProps {
   disabled?: boolean;
 }
 
+interface SessionThumb {
+  id: number;
+  url: string;
+  name: string;
+}
+
 export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const stripRef = useRef<HTMLDivElement>(null);
   const [isDragging, setDragging] = useState(false);
 
-  // In-app camera state. We stream the rear camera into a fullscreen <video>
-  // and grab frames on shutter press. This avoids the OS file picker that
-  // some Android browsers (notably Samsung Chrome) flash before launching
-  // the camera when using <input capture="environment">.
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  // Camera lifecycle: mounted = the modal is in the DOM; isExiting flips
+  // true during the close animation so we keep the element rendered for
+  // the duration of the exit keyframes before unmounting.
+  const [isMounted, setIsMounted] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [shutterFlash, setShutterFlash] = useState(false);
+  const [shutterPulseKey, setShutterPulseKey] = useState(0);
   const captureCount = useRef(0);
   const [captureUiCount, setCaptureUiCount] = useState(0);
+  const [thumbs, setThumbs] = useState<SessionThumb[]>([]);
   const [showLandscapeToast, setShowLandscapeToast] = useState(false);
 
   const handleFiles = useCallback(
@@ -38,7 +46,7 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
   );
 
   // Stop the active camera stream and release the hardware. Safe to call
-  // multiple times; tracks that are already stopped are no-ops.
+  // multiple times — already-stopped tracks are no-ops.
   const stopStream = useCallback(() => {
     const s = streamRef.current;
     if (s) {
@@ -50,18 +58,30 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
     }
   }, []);
 
+  // Free the in-memory thumbnail URLs created by URL.createObjectURL so
+  // the browser can reclaim the bytes once the camera modal is closed.
+  const revokeThumbs = useCallback((list: SessionThumb[]) => {
+    list.forEach((t) => {
+      try {
+        URL.revokeObjectURL(t.url);
+      } catch {
+        // ignore — the URL was already revoked or never valid
+      }
+    });
+  }, []);
+
   const startCapture = useCallback(async () => {
     if (disabled) return;
     captureCount.current = 0;
     setCaptureUiCount(0);
+    setThumbs([]);
     setCameraError(null);
-    setIsCameraOpen(true);
+    setIsExiting(false);
+    setIsMounted(true);
     setShowLandscapeToast(true);
     window.setTimeout(() => setShowLandscapeToast(false), 2000);
 
     try {
-      // Prefer the rear camera. Some devices ignore facingMode unless we ask
-      // for an ideal resolution alongside it, hence the width/height hints.
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: 'environment' },
@@ -74,7 +94,6 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
       const v = videoRef.current;
       if (v) {
         v.srcObject = stream;
-        // Some browsers need an explicit play() after srcObject assignment.
         await v.play().catch(() => {});
       }
     } catch (err) {
@@ -90,15 +109,22 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
     }
   }, [disabled]);
 
-  const stopCapture = useCallback(() => {
-    stopStream();
-    setIsCameraOpen(false);
-    setCameraError(null);
-  }, [stopStream]);
+  // Two-phase close so the exit animation can play. We flip isExiting,
+  // wait for the keyframe to finish, then unmount and free resources.
+  const closeCamera = useCallback(() => {
+    setIsExiting(true);
+    window.setTimeout(() => {
+      stopStream();
+      setIsMounted(false);
+      setIsExiting(false);
+      setCameraError(null);
+      setThumbs((prev) => {
+        revokeThumbs(prev);
+        return [];
+      });
+    }, 200);
+  }, [revokeThumbs, stopStream]);
 
-  // Grab the current video frame into a JPEG File. We use the native video
-  // dimensions so the capture matches the sensor resolution rather than the
-  // CSS-scaled element size.
   const takePhoto = useCallback(() => {
     const v = videoRef.current;
     if (!v || !v.videoWidth || !v.videoHeight) return;
@@ -109,8 +135,9 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
     if (!ctx) return;
     ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
 
-    setShutterFlash(true);
-    window.setTimeout(() => setShutterFlash(false), 120);
+    // Bump the key to retrigger the shutter-click keyframe even if it's
+    // already running from a rapid double-tap.
+    setShutterPulseKey((k) => k + 1);
 
     canvas.toBlob(
       (blob) => {
@@ -124,18 +151,31 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
         );
         onFiles([file]);
         setCaptureUiCount(n);
+        const url = URL.createObjectURL(blob);
+        setThumbs((prev) => [...prev, { id: n, url, name: file.name }]);
+        // Scroll the strip so the freshest thumb stays in view.
+        window.setTimeout(() => {
+          const el = stripRef.current;
+          if (!el) return;
+          // On wide layouts the strip is vertical, on narrow it's horizontal.
+          el.scrollTo({
+            top: el.scrollHeight,
+            left: el.scrollWidth,
+            behavior: 'smooth',
+          });
+        }, 30);
       },
       'image/jpeg',
       0.92
     );
   }, [onFiles]);
 
-  // Release the camera if the component unmounts or the page is hidden
-  // (tab switch, screen lock). Without this the indicator light can stay on.
+  // Release the camera if the page hides (tab switch, screen lock) or the
+  // component unmounts. Without this the camera indicator can stay lit.
   useEffect(() => {
     const onVisibility = () => {
-      if (document.hidden && isCameraOpen) {
-        stopCapture();
+      if (document.hidden && isMounted && !isExiting) {
+        closeCamera();
       }
     };
     document.addEventListener('visibilitychange', onVisibility);
@@ -143,7 +183,17 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
       document.removeEventListener('visibilitychange', onVisibility);
       stopStream();
     };
-  }, [isCameraOpen, stopCapture, stopStream]);
+  }, [closeCamera, isExiting, isMounted, stopStream]);
+
+  // Allow Escape to close the camera, matching standard modal expectations.
+  useEffect(() => {
+    if (!isMounted || isExiting) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeCamera();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [closeCamera, isExiting, isMounted]);
 
   return (
     <>
@@ -232,67 +282,132 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
         </div>
       )}
 
-      {/* Fullscreen in-app camera. The live <video> fills the viewport and the
-          shutter / done controls float over it. We never hand off to the OS
-          camera app, so no file picker can flash up first on Samsung Chrome. */}
-      {isCameraOpen && (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col">
-          <video
-            ref={videoRef}
-            playsInline
-            autoPlay
-            muted
-            className="absolute inset-0 w-full h-full object-contain bg-black"
+      {/* Camera modal. The upload page stays visible behind a dimmed
+          backdrop; the modal occupies ~70% of the viewport with rounded
+          corners and the same limestone/ink card surface used elsewhere. */}
+      {isMounted && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Take photos with the rear camera"
+        >
+          <div
+            className={`absolute inset-0 bg-black/55 backdrop-blur-sm ${
+              isExiting ? 'animate-backdrop-out' : 'animate-backdrop-in'
+            }`}
           />
 
-          {shutterFlash && (
-            <div className="absolute inset-0 bg-white/80 pointer-events-none" />
-          )}
+          <div
+            className={`relative w-[min(94vw,1100px)] h-[min(78vh,820px)] rounded-2xl overflow-hidden shadow-2xl bg-cream-50 dark:bg-ink-soft border border-cream-300 dark:border-brass/20 flex flex-col md:flex-row ${
+              isExiting ? 'animate-modal-out' : 'animate-modal-in'
+            }`}
+          >
+            {/* Live preview pane */}
+            <div className="relative flex-1 min-h-0 bg-black flex flex-col">
+              <video
+                ref={videoRef}
+                playsInline
+                autoPlay
+                muted
+                className="absolute inset-0 w-full h-full object-contain bg-black"
+              />
 
-          {cameraError && (
-            <div className="absolute inset-0 flex items-center justify-center p-6">
-              <div className="max-w-md text-center bg-ink/90 text-cream-50 rounded-lg p-6 shadow-2xl">
-                <p className="text-sm mb-4">{cameraError}</p>
+              {/* Subtle shutter flash — keyed so rapid taps re-fire the keyframe */}
+              <div
+                key={shutterPulseKey}
+                className={`absolute inset-0 bg-white pointer-events-none ${
+                  shutterPulseKey > 0 ? 'animate-shutter-click' : 'opacity-0'
+                }`}
+              />
+
+              {/* Top bar inside preview: counter + Done text link */}
+              <div className="absolute top-0 inset-x-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/55 to-transparent">
+                <span className="text-[12px] uppercase tracking-wider text-cream-200 font-medium">
+                  {captureUiCount === 0
+                    ? 'Aim at a shelf'
+                    : `${captureUiCount} photo${captureUiCount === 1 ? '' : 's'} taken`}
+                </span>
                 <button
                   type="button"
-                  onClick={stopCapture}
-                  className="px-4 py-2 rounded-md bg-brass text-accent-deep hover:bg-brass-deep hover:text-limestone font-medium text-sm transition"
+                  onClick={closeCamera}
+                  className="text-sm text-brass hover:text-limestone underline-offset-4 hover:underline transition"
                 >
-                  Close
+                  Done
                 </button>
               </div>
+
+              {/* Camera-error overlay */}
+              {cameraError && (
+                <div className="absolute inset-0 flex items-center justify-center p-6 bg-black/60">
+                  <div className="max-w-sm text-center bg-cream-50 dark:bg-ink text-ink dark:text-cream-50 rounded-lg p-5 shadow-xl">
+                    <p className="text-sm mb-4">{cameraError}</p>
+                    <button
+                      type="button"
+                      onClick={closeCamera}
+                      className="text-sm text-brass hover:underline underline-offset-4"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Bottom bar: subtle brass-outlined shutter */}
+              {!cameraError && (
+                <div className="absolute bottom-0 inset-x-0 flex items-center justify-center pb-5 pt-10 bg-gradient-to-t from-black/55 to-transparent">
+                  <button
+                    type="button"
+                    onClick={takePhoto}
+                    aria-label="Take photo"
+                    className="group relative w-14 h-14 rounded-full border-2 border-brass/80 hover:border-brass active:scale-95 transition-transform flex items-center justify-center"
+                  >
+                    <span className="w-9 h-9 rounded-full bg-brass/90 group-hover:bg-brass transition-colors" />
+                  </button>
+                </div>
+              )}
             </div>
-          )}
 
-          {/* Top bar: counter + close */}
-          <div className="absolute top-0 inset-x-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/70 to-transparent">
-            <span className="text-sm text-white font-medium">
-              {captureUiCount === 0
-                ? 'Aim at a shelf'
-                : `${captureUiCount} photo${captureUiCount === 1 ? '' : 's'} taken`}
-            </span>
-            <button
-              type="button"
-              onClick={stopCapture}
-              className="px-4 py-2 rounded-md bg-brass text-accent-deep hover:bg-brass-deep hover:text-limestone font-medium text-sm transition"
-            >
-              Done
-            </button>
-          </div>
+            {/* Thumbnail strip — vertical on wide layouts, horizontal below */}
+            <div className="md:w-44 md:border-l md:border-t-0 border-t border-cream-300 dark:border-brass/20 bg-cream-100 dark:bg-ink/60 flex flex-col">
+              <div className="hidden md:flex items-center justify-between px-3 py-2 border-b border-cream-300 dark:border-brass/20">
+                <span className="text-[10px] uppercase tracking-wider text-ink/60 dark:text-cream-300/70 font-medium">
+                  Captured
+                </span>
+                <span className="text-[10px] text-ink/50 dark:text-cream-300/50">
+                  {captureUiCount}
+                </span>
+              </div>
 
-          {/* Bottom bar: shutter button */}
-          {!cameraError && (
-            <div className="absolute bottom-0 inset-x-0 flex items-center justify-center pb-8 pt-12 bg-gradient-to-t from-black/70 to-transparent">
-              <button
-                type="button"
-                onClick={takePhoto}
-                aria-label="Take photo"
-                className="w-20 h-20 rounded-full bg-white border-4 border-white/40 shadow-2xl active:scale-95 transition-transform flex items-center justify-center"
+              <div
+                ref={stripRef}
+                className="flex-1 min-h-0 px-2 py-2 overflow-auto flex md:flex-col gap-2"
               >
-                <span className="w-16 h-16 rounded-full bg-white border-2 border-black/20" />
-              </button>
+                {thumbs.length === 0 ? (
+                  <div className="m-auto text-[11px] text-ink/45 dark:text-cream-300/45 text-center px-2 leading-snug">
+                    Photos you take will appear here.
+                  </div>
+                ) : (
+                  thumbs.map((t) => (
+                    <div
+                      key={t.id}
+                      className="relative shrink-0 animate-thumb-in rounded-md overflow-hidden border border-cream-300 dark:border-brass/30 shadow-sm w-20 h-20 md:w-full md:h-auto md:aspect-square bg-black"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={t.url}
+                        alt={t.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <span className="absolute bottom-0 right-0 text-[9px] font-mono px-1 py-0.5 bg-black/55 text-cream-100 rounded-tl-sm">
+                        {String(t.id).padStart(3, '0')}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-          )}
+          </div>
         </div>
       )}
     </>
