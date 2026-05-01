@@ -6,7 +6,11 @@ import { useStore } from '@/lib/store';
 import { ExportPreview } from '@/components/ExportPreview';
 import { exportFilename, generateCsv, type CsvOptions } from '@/lib/csv-export';
 import { generateBackupJson } from '@/lib/json-backup';
-import { appendToLedger } from '@/lib/export-ledger';
+import {
+  appendToLedger,
+  bookToLedgerEntry,
+  pushLedgerDelta,
+} from '@/lib/export-ledger';
 import {
   buildChangelogEntries,
   buildUpdatedVocabularyJson,
@@ -138,7 +142,44 @@ export default function ExportPage() {
     // Triggering the download triggers the ledger write — there's no separate
     // "confirm import" step, so this is the most reliable signal we have.
     appendToLedger(booksToExport);
+    // Fan the same delta out to the repo so other devices see the export
+    // on their next load. Fire-and-forget — the local cache is already
+    // updated, so the user can keep working even if the network call is
+    // slow or fails. State surfaces through ledgerSyncState below.
+    setLedgerSyncState({ kind: 'pending' });
+    const date = new Date();
+    pushLedgerDelta({ add: booksToExport.map((b) => bookToLedgerEntry(b, date)) })
+      .then((res) => {
+        if (!res.available) {
+          setLedgerSyncState({ kind: 'local-only' });
+          return;
+        }
+        if (res.error) {
+          setLedgerSyncState({ kind: 'error', message: res.error });
+          return;
+        }
+        setLedgerSyncState({
+          kind: 'synced',
+          commitUrl: res.commit?.url,
+          unchanged: !res.commit?.sha,
+        });
+      })
+      .catch((err: unknown) =>
+        setLedgerSyncState({
+          kind: 'error',
+          message: err instanceof Error ? err.message : String(err),
+        })
+      );
   }
+
+  // Ledger sync state for the post-export confirmation banner.
+  const [ledgerSyncState, setLedgerSyncState] = useState<
+    | { kind: 'idle' }
+    | { kind: 'pending' }
+    | { kind: 'synced'; commitUrl?: string; unchanged: boolean }
+    | { kind: 'local-only' }
+    | { kind: 'error'; message: string }
+  >({ kind: 'idle' });
 
   // Vocabulary updates — proposed tags from this export set, ready to be
   // promoted into tag-vocabulary.json.
@@ -608,6 +649,60 @@ export default function ExportPage() {
             : `Download CSV (${booksToExport.length})`}
         </button>
       </div>
+
+      {/* Ledger sync state — shown after a CSV download triggers the
+          repo-side write. Idle pre-export; no banner clutter. */}
+      {ledgerSyncState.kind !== 'idle' && (
+        <div
+          className={`mt-2 px-4 py-3 rounded-md text-sm leading-relaxed ${
+            ledgerSyncState.kind === 'synced'
+              ? 'bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-800/50 text-green-900 dark:text-green-100'
+              : ledgerSyncState.kind === 'error'
+                ? 'bg-mahogany/10 dark:bg-tartan/30 border border-mahogany/40 dark:border-tartan/50 text-mahogany dark:text-orange-100'
+                : 'bg-cream-100 dark:bg-ink/60 border border-cream-300 dark:border-brass/20 text-ink/70 dark:text-cream-300/80'
+          }`}
+        >
+          {ledgerSyncState.kind === 'pending' && <>Syncing ledger to repo…</>}
+          {ledgerSyncState.kind === 'synced' && (
+            <>
+              {ledgerSyncState.unchanged
+                ? 'Ledger unchanged — no new entries to commit.'
+                : 'Ledger synced to repo — every device will see this export on next load.'}
+              {ledgerSyncState.commitUrl && (
+                <>
+                  {' '}
+                  <a
+                    href={ledgerSyncState.commitUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2 hover:text-green-700 dark:hover:text-green-50"
+                  >
+                    View commit →
+                  </a>
+                </>
+              )}
+            </>
+          )}
+          {ledgerSyncState.kind === 'local-only' && (
+            <>
+              Ledger updated locally only — <span className="font-mono">GITHUB_TOKEN</span>{' '}
+              isn&rsquo;t configured, so other devices won&rsquo;t see this export until the
+              token is set.
+            </>
+          )}
+          {ledgerSyncState.kind === 'error' && (
+            <>
+              <div className="font-semibold">Couldn&rsquo;t sync ledger to repo</div>
+              <div className="text-xs font-mono break-all mt-1">
+                {ledgerSyncState.message}
+              </div>
+              <div className="text-xs italic mt-1">
+                Local cache is updated; this device will still flag duplicates correctly.
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

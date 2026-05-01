@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import {
   deleteLedgerBatch,
   getLedgerBatches,
+  pushLedgerDelta,
+  syncLedgerFromRepo,
   type LedgerBatch,
 } from '@/lib/export-ledger';
 
@@ -14,10 +16,22 @@ export default function LedgerPage() {
   // multi-confirms when the user is bulk-cleaning the ledger.
   const [confirming, setConfirming] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    setBatches(getLedgerBatches());
-    setHydrated(true);
+    let cancelled = false;
+    // Pull the authoritative ledger before rendering. If the remote isn't
+    // available we silently fall back to whatever's in localStorage.
+    syncLedgerFromRepo()
+      .catch(() => null)
+      .finally(() => {
+        if (cancelled) return;
+        setBatches(getLedgerBatches());
+        setHydrated(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function refresh() {
@@ -29,9 +43,32 @@ export default function LedgerPage() {
   }
 
   function onDelete(b: LedgerBatch) {
+    // Update local cache immediately so the UI never lags behind a click.
     deleteLedgerBatch(b.batchLabel);
     setConfirming(null);
     refresh();
+    setSyncMessage('Syncing deletion to repo…');
+    pushLedgerDelta({ removeBatchLabels: [b.batchLabel ?? null] })
+      .then((res) => {
+        if (!res.available) {
+          setSyncMessage('Deleted locally — repo sync unavailable.');
+          return;
+        }
+        if (res.error) {
+          setSyncMessage(`Deleted locally; repo sync failed: ${res.error}`);
+          return;
+        }
+        setSyncMessage('Deletion synced to repo.');
+        // Server returns the post-merge state; refresh from the cache it
+        // populated so any concurrent additions don't disappear from view.
+        refresh();
+        window.setTimeout(() => setSyncMessage(null), 4000);
+      })
+      .catch((err: unknown) =>
+        setSyncMessage(
+          `Deleted locally; repo sync failed: ${err instanceof Error ? err.message : String(err)}`
+        )
+      );
   }
 
   // Avoid the empty-state flashing on first paint while we read localStorage.
@@ -60,6 +97,12 @@ export default function LedgerPage() {
           memory, never anything you&apos;ve already uploaded to LibraryThing.
         </p>
       </div>
+
+      {syncMessage && (
+        <div className="px-4 py-2 rounded-md text-xs bg-cream-100 dark:bg-ink/60 border border-cream-300 dark:border-brass/20 text-ink/70 dark:text-cream-300/80">
+          {syncMessage}
+        </div>
+      )}
 
       {batches.length === 0 ? (
         <div className="bg-cream-50 dark:bg-ink-soft/60 border border-cream-300 dark:border-ink-soft rounded-lg p-10 text-center">

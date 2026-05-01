@@ -21,7 +21,7 @@ import {
   type RereadOptions,
 } from './pipeline';
 import { toTitleCase } from './csv-export';
-import { flagIfPreviouslyExported, loadLedger } from './export-ledger';
+import { flagIfPreviouslyExported, loadLedger, syncLedgerFromRepo } from './export-ledger';
 
 export interface ProcessingState {
   /** True from "process all" click until the loop returns. */
@@ -315,6 +315,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       // ignore quota errors
     }
   }, [state.batches, state.allBooks]);
+
+  // Pull the authoritative ledger from the repo on app load so duplicate
+  // detection is consistent across devices. syncLedgerFromRepo updates the
+  // localStorage cache that loadLedger() reads at processing time. When the
+  // remote isn't available (no GITHUB_TOKEN configured), this is a no-op
+  // and we keep using whatever's in the local cache.
+  useEffect(() => {
+    syncLedgerFromRepo().catch(() => {
+      // best-effort — fall back silently to localStorage
+    });
+  }, []);
 
   // Pending files live in a ref — they can't be serialized and don't need to
   // trigger renders. The provider mounts in app/layout.tsx and never unmounts,

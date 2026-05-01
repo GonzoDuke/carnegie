@@ -1,6 +1,7 @@
 import type { BookRecord } from './types';
 
 const LEDGER_KEY = 'carnegie:export-ledger:v1';
+const REMOTE_AVAILABLE_KEY = 'carnegie:export-ledger:remote-available:v1';
 
 export interface LedgerEntry {
   /** Normalized ISBN (digits + X only). Empty when the source book had no ISBN. */
@@ -63,6 +64,133 @@ function saveLedger(entries: LedgerEntry[]): void {
   }
 }
 
+/** Replace the local cache wholesale. Used after a remote sync returns
+ *  authoritative state from lib/export-ledger.json. */
+export function setLedgerCache(entries: LedgerEntry[]): void {
+  saveLedger(entries);
+}
+
+/**
+ * Merge a list of additions into an existing ledger using the same
+ * dedupe rules as appendToLedger. Pure — does not touch storage.
+ * Exported so the API route can share the exact same merge semantics
+ * as the client.
+ */
+export function mergeLedgerAdditions(
+  existing: LedgerEntry[],
+  additions: LedgerEntry[]
+): LedgerEntry[] {
+  const out = [...existing];
+  for (const add of additions) {
+    if (!add.isbn && !add.titleNorm) continue;
+    const idx = out.findIndex((e) => entriesMatch(e, add));
+    if (idx >= 0) {
+      // Refresh on the later sighting so the warning reflects the most
+      // recent export. Same date wins for the incoming record (keeps
+      // batchLabel current).
+      if (add.date >= out[idx].date) out[idx] = add;
+    } else {
+      out.push(add);
+    }
+  }
+  return out;
+}
+
+interface RemoteLedgerResponse {
+  available: boolean;
+  entries?: LedgerEntry[];
+  /** Latest remote SHA, returned for caller logging. We don't need it again
+   *  on the client because the API route resolves SHA server-side per call. */
+  sha?: string | null;
+  /** Commit URL when a write happened. */
+  commit?: { url?: string; sha?: string };
+  error?: string;
+}
+
+/**
+ * Fetch the authoritative ledger from lib/export-ledger.json via the
+ * /api/ledger route. Updates the localStorage cache when the remote is
+ * available. Returns the remote entries when fetched, or null when the
+ * remote is unavailable (caller should fall back to localStorage).
+ */
+export async function syncLedgerFromRepo(): Promise<LedgerEntry[] | null> {
+  if (typeof window === 'undefined') return null;
+  try {
+    const res = await fetch('/api/ledger', { cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = (await res.json()) as RemoteLedgerResponse;
+    rememberRemoteAvailability(data.available);
+    if (!data.available || !Array.isArray(data.entries)) return null;
+    // Defensive merge: union the remote entries with whatever's in local
+    // cache — covers the case where this is the first sync after the
+    // localStorage→repo migration and the user has unmigrated entries.
+    const local = loadLedger();
+    const merged = mergeLedgerAdditions(data.entries, local);
+    saveLedger(merged);
+    return merged;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Push a delta to the remote ledger. The route applies adds/removes
+ * server-side against the current remote state, so two devices writing
+ * concurrently won't clobber each other. On success, refresh the cache
+ * with the post-merge state returned by the route.
+ */
+export async function pushLedgerDelta(
+  delta: { add?: LedgerEntry[]; removeBatchLabels?: (string | null)[]; clearAll?: boolean }
+): Promise<RemoteLedgerResponse> {
+  if (typeof window === 'undefined') return { available: false };
+  try {
+    const res = await fetch('/api/ledger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(delta),
+    });
+    const data = (await res.json().catch(() => ({}))) as RemoteLedgerResponse;
+    if (res.status === 501) {
+      rememberRemoteAvailability(false);
+      return { available: false, error: data.error };
+    }
+    if (!res.ok) {
+      return { available: data.available ?? true, error: data.error ?? `HTTP ${res.status}` };
+    }
+    rememberRemoteAvailability(true);
+    if (Array.isArray(data.entries)) saveLedger(data.entries);
+    return data;
+  } catch (err) {
+    return { available: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+function rememberRemoteAvailability(on: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(REMOTE_AVAILABLE_KEY, on ? '1' : '0');
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Last known availability of the remote ledger, cached so the UI doesn't
+ * have to wait for a network probe to render the right state. Returns
+ * `null` when we haven't checked yet.
+ */
+export function getCachedRemoteAvailability(): boolean | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const v = localStorage.getItem(REMOTE_AVAILABLE_KEY);
+    if (v === '1') return true;
+    if (v === '0') return false;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function bookToLedgerEntry(book: BookRecord, date: Date = new Date()): LedgerEntry {
   return {
     isbn: normalizeIsbn(book.isbn),
@@ -98,7 +226,7 @@ export function appendToLedger(books: BookRecord[], date: Date = new Date()): vo
   saveLedger(next);
 }
 
-function entriesMatch(a: LedgerEntry, b: LedgerEntry): boolean {
+export function entriesMatch(a: LedgerEntry, b: LedgerEntry): boolean {
   if (a.isbn && b.isbn) return a.isbn === b.isbn;
   // ISBN missing on one or both sides — fall back to title+author.
   if (!a.titleNorm || !b.titleNorm) return false;
