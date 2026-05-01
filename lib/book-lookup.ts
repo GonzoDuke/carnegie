@@ -11,6 +11,14 @@ const LOC_HEADERS: Record<string, string> = {
   Accept: 'application/xml',
 };
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+// One-shot warning so the dev console doesn't get spammed when the env
+// var is unset across hundreds of book lookups.
+let isbndbKeyMissingWarned = false;
+
 /**
  * Open Library returns LCC in a padded internal form like
  *   "BL-0053.00000000.J36 2012"
@@ -587,6 +595,265 @@ async function tryOpenLibrary(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Tier 3: ISBNdb (paid, key required, ~110M titles, broadest single source)
+// ---------------------------------------------------------------------------
+
+interface IsbndbBook {
+  isbn?: string;
+  isbn13?: string;
+  title?: string;
+  title_long?: string;
+  authors?: string[];
+  publisher?: string;
+  date_published?: string;
+  pages?: number;
+  binding?: string;
+  subjects?: string[];
+  dewey_decimal?: string | string[];
+  language?: string;
+}
+
+// Module-level rate-limit gate. ISBNdb basic plan = 1 req/sec. Concurrent
+// book lookups in a batch all funnel through here; each one claims the
+// next 1-second slot. Within a single Vercel function instance this
+// produces clean spacing; across cold-started instances we may exceed
+// briefly, which is what the 429-retry handler below covers.
+let isbndbNextSlot = 0;
+async function isbndbWaitSlot(): Promise<void> {
+  const now = Date.now();
+  const slot = Math.max(now, isbndbNextSlot);
+  isbndbNextSlot = slot + 1000;
+  if (slot > now) await sleep(slot - now);
+}
+
+function parseIsbndbYear(s: string | undefined): number {
+  if (!s) return 0;
+  const m = s.match(/\b(1[5-9]\d{2}|20\d{2})\b/);
+  return m ? parseInt(m[1], 10) : 0;
+}
+
+async function isbndbFetch(url: string, apiKey: string): Promise<Response | null> {
+  // One retry on 429 per the spec. Any other non-OK is surfaced to the
+  // caller for skip-and-continue handling.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await isbndbWaitSlot();
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(10000),
+      cache: 'no-store',
+      headers: {
+        Authorization: apiKey,
+        'Content-Type': 'application/json',
+        'User-Agent': UA,
+      },
+    });
+    if (res.status === 429 && attempt === 0) {
+      await sleep(2000);
+      continue;
+    }
+    if (res.status === 401 || res.status === 403) {
+      console.error('[isbndb] ISBNDB_API_KEY is invalid or subscription has expired.');
+      return null;
+    }
+    return res;
+  }
+  return null;
+}
+
+interface IsbndbHit {
+  isbn: string;
+  publisher: string;
+  publicationYear: number;
+  author: string;
+  ddc: string;
+  subjects: string[];
+}
+
+function isbndbBookToHit(b: IsbndbBook): IsbndbHit {
+  const isbn = (b.isbn13 || b.isbn || '').replace(/[^\dxX]/g, '');
+  const ddcRaw = Array.isArray(b.dewey_decimal) ? b.dewey_decimal[0] : b.dewey_decimal;
+  return {
+    isbn,
+    publisher: (b.publisher ?? '').trim(),
+    publicationYear: parseIsbndbYear(b.date_published),
+    author: (b.authors && b.authors[0]) ? String(b.authors[0]).trim() : '',
+    ddc: (ddcRaw ?? '').toString().trim(),
+    subjects: Array.isArray(b.subjects) ? b.subjects.map((s) => String(s).trim()).filter(Boolean) : [],
+  };
+}
+
+/**
+ * ISBNdb tier. Fills gaps in an in-progress BookLookupResult — does NOT
+ * replace fields a higher-priority tier already populated. Returns null
+ * when the key is missing, the lookup misses, or the call errors.
+ *
+ * Two query modes:
+ *  - Direct ISBN endpoint (precise) when we already have an ISBN
+ *  - Search endpoint when we don't, with a Levenshtein title-match guard
+ *    to avoid spurious hits from broad text queries
+ */
+export async function lookupIsbndb(
+  title: string,
+  author: string,
+  isbn?: string
+): Promise<IsbndbHit | null> {
+  const apiKey = process.env.ISBNDB_API_KEY;
+  if (!apiKey) {
+    if (!isbndbKeyMissingWarned) {
+      console.warn('[isbndb] ISBNDB_API_KEY not set — tier 3 (ISBNdb) disabled.');
+      isbndbKeyMissingWarned = true;
+    }
+    return null;
+  }
+
+  try {
+    // Path 1: direct ISBN lookup. Most precise; one record returned.
+    if (isbn) {
+      const cleaned = isbn.replace(/[^\dxX]/g, '');
+      if (cleaned.length === 10 || cleaned.length === 13) {
+        const res = await isbndbFetch(
+          `https://api2.isbndb.com/book/${encodeURIComponent(cleaned)}`,
+          apiKey
+        );
+        if (res && res.ok) {
+          const data = (await res.json()) as { book?: IsbndbBook };
+          if (data.book) return isbndbBookToHit(data.book);
+        }
+      }
+    }
+
+    // Path 2: search by title + author last name. ISBNdb's relevance
+    // ranking is decent but we still verify the top result's title is
+    // close enough to ours before trusting it.
+    const queryTokens = [
+      title.trim(),
+      lastName(author).trim(),
+    ].filter(Boolean).join(' ');
+    if (!queryTokens) return null;
+    const res = await isbndbFetch(
+      `https://api2.isbndb.com/books/${encodeURIComponent(queryTokens)}`,
+      apiKey
+    );
+    if (!res || !res.ok) return null;
+    const data = (await res.json()) as { books?: IsbndbBook[] };
+    const books = data.books ?? [];
+    // Pick the first result whose normalized title is plausibly the same
+    // book — substring-bidirectional match catches subtitle variants.
+    const best = books.find((b) => {
+      const t = b.title_long || b.title || '';
+      return titleSubstringMatch(title, t) || normalize(t) === normalize(title);
+    });
+    if (!best) return null;
+    return isbndbBookToHit(best);
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tier 5: Wikidata (free SPARQL endpoint, primary purpose: LCC gap-filling)
+// ---------------------------------------------------------------------------
+
+interface WikidataHit {
+  lcc: string;
+  ddc: string;
+  isbn: string;
+  publisher: string;
+  publicationYear: number;
+}
+
+function buildWikidataSparql(title: string): string {
+  const lower = title.toLowerCase().replace(/"/g, '\\"');
+  // P31=Q571 (book), Q7725634 (literary work), Q47461344 (written work).
+  // Filtering by any of those captures most book entities. The label
+  // CONTAINS filter narrows to entries whose label includes our title;
+  // we then verify the match in the response.
+  return `SELECT ?item ?itemLabel ?isbn13 ?lcc ?ddc ?authorLabel ?publisherLabel ?pubdate WHERE {
+  VALUES ?type { wd:Q571 wd:Q7725634 wd:Q47461344 }
+  ?item wdt:P31 ?type.
+  ?item rdfs:label ?label. FILTER(LANG(?label) = "en"). FILTER(CONTAINS(LCASE(?label), "${lower}")).
+  OPTIONAL { ?item wdt:P212 ?isbn13. }
+  OPTIONAL { ?item wdt:P1036 ?lcc. }
+  OPTIONAL { ?item wdt:P971 ?ddc. }
+  OPTIONAL { ?item wdt:P50 ?author. ?author rdfs:label ?authorLabel. FILTER(LANG(?authorLabel) = "en"). }
+  OPTIONAL { ?item wdt:P123 ?publisher. ?publisher rdfs:label ?publisherLabel. FILTER(LANG(?publisherLabel) = "en"). }
+  OPTIONAL { ?item wdt:P577 ?pubdate. }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}
+LIMIT 5`;
+}
+
+interface WikidataBinding {
+  itemLabel?: { value: string };
+  isbn13?: { value: string };
+  lcc?: { value: string };
+  ddc?: { value: string };
+  authorLabel?: { value: string };
+  publisherLabel?: { value: string };
+  pubdate?: { value: string };
+}
+
+/**
+ * Wikidata SPARQL lookup. Single HTTP call returns LCC, DDC, ISBN, author,
+ * publisher, pubdate when Wikidata has them. Coverage is patchy — many
+ * books have no Wikidata entry. That's expected; this tier exists to
+ * occasionally save us from reaching the AI-inferred-LCC fallback.
+ */
+export async function lookupWikidata(
+  title: string,
+  author: string
+): Promise<WikidataHit | null> {
+  if (!title || title.length < 3) return null;
+  try {
+    const sparql = buildWikidataSparql(title);
+    const url = `https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(sparql)}`;
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(10000),
+      cache: 'no-store',
+      headers: { Accept: 'application/sparql-results+json', 'User-Agent': UA },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { results?: { bindings?: WikidataBinding[] } };
+    const bindings = data.results?.bindings ?? [];
+    if (bindings.length === 0) return null;
+
+    // Pick the binding that best matches our title + author. Title match
+    // is required; author match (when we have an author) is preferred.
+    const wantAuthor = normalize(author);
+    let best: WikidataBinding | undefined;
+    let bestScore = -Infinity;
+    for (const b of bindings) {
+      if (!titleSubstringMatch(title, b.itemLabel?.value)) continue;
+      let score = 0;
+      if (b.lcc?.value) score += 5;
+      if (b.ddc?.value) score += 1;
+      if (wantAuthor && b.authorLabel?.value) {
+        const candAuthor = normalize(b.authorLabel.value);
+        if (candAuthor && (candAuthor.includes(wantAuthor) || wantAuthor.includes(candAuthor))) {
+          score += 3;
+        }
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        best = b;
+      }
+    }
+    if (!best) return null;
+
+    return {
+      lcc: (best.lcc?.value ?? '').trim(),
+      ddc: (best.ddc?.value ?? '').trim(),
+      isbn: (best.isbn13?.value ?? '').replace(/[^\dxX]/g, ''),
+      publisher: (best.publisherLabel?.value ?? '').trim(),
+      publicationYear: best.pubdate?.value
+        ? parseInt(best.pubdate.value.slice(0, 4), 10) || 0
+        : 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function lookupBook(
   title: string,
   author: string
@@ -718,9 +985,9 @@ export async function lookupBook(
   // Final post-processing: canonicalize LCC + LoC SRU enrichment.
   // Track WHERE the LCC came from so the BookCard can show provenance.
   result.lcc = normalizeLcc(result.lcc);
-  let lccSource: 'ol' | 'loc' | 'inferred' | 'none' = result.lcc ? 'ol' : 'none';
+  let lccSource: 'ol' | 'loc' | 'wikidata' | 'inferred' | 'none' = result.lcc ? 'ol' : 'none';
 
-  // Tier 5a: LoC SRU by ISBN (existing behavior).
+  // LoC SRU by ISBN (existing behavior).
   if (result.isbn && !result.lcc) {
     const sruLcc = await lookupLccByIsbn(result.isbn);
     if (sruLcc) {
@@ -729,13 +996,79 @@ export async function lookupBook(
     }
   }
 
-  // Tier 5b: LoC SRU by title + author. Catches books with no ISBN.
+  // LoC SRU by title + author. Catches books with no ISBN.
   if (!result.lcc && title && author) {
     const cleanedAuthor = cleanAuthorForQuery(author);
     const sruLcc = await lookupLccByTitleAuthor(title, cleanedAuthor);
     if (sruLcc) {
       result.lcc = normalizeLcc(sruLcc);
       lccSource = 'loc';
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Tier 3: ISBNdb. Fills bibliographic gaps (ISBN, publisher, year, DDC,
+  // subjects). Never overwrites a field a higher-priority tier already set.
+  // Skip silently when ISBNDB_API_KEY isn't configured.
+  // -------------------------------------------------------------------------
+  const needsBibliographicGapFill =
+    !result.isbn || !result.publisher || !result.publicationYear;
+  if (needsBibliographicGapFill) {
+    const isbndbHit = await lookupIsbndb(title, author, result.isbn || undefined);
+    if (isbndbHit) {
+      let usedIsbndb = false;
+      if (!result.isbn && isbndbHit.isbn) {
+        result.isbn = isbndbHit.isbn;
+        usedIsbndb = true;
+      }
+      if (!result.publisher && isbndbHit.publisher) {
+        result.publisher = isbndbHit.publisher;
+        usedIsbndb = true;
+      }
+      if (!result.publicationYear && isbndbHit.publicationYear) {
+        result.publicationYear = isbndbHit.publicationYear;
+        usedIsbndb = true;
+      }
+      if (!result.ddc && isbndbHit.ddc) {
+        result.ddc = isbndbHit.ddc;
+        usedIsbndb = true;
+      }
+      if (isbndbHit.subjects.length > 0) {
+        const existing = new Set((result.subjects ?? []).map((s) => s.toLowerCase()));
+        const merged = [...(result.subjects ?? [])];
+        for (const s of isbndbHit.subjects) {
+          if (!existing.has(s.toLowerCase())) merged.push(s);
+        }
+        result.subjects = merged.slice(0, 15);
+      }
+      // Only flip the metadata source label when the prior chain truly
+      // returned nothing (`source: 'none'`). When OL/Google already
+      // matched, ISBNdb is a gap-filler — keep their flag for diagnostics.
+      if (result.source === 'none' && usedIsbndb) {
+        result.source = 'isbndb';
+        if (!tier || tier === 'none') tier = 'isbndb';
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Tier 5: Wikidata. LCC gap-filler that aggregates classifications from
+  // multiple national libraries — sometimes catches books LoC's own SRU
+  // missed. Only fires when LCC is still empty.
+  // -------------------------------------------------------------------------
+  if (!result.lcc) {
+    const wd = await lookupWikidata(title, author);
+    if (wd) {
+      if (wd.lcc) {
+        result.lcc = normalizeLcc(wd.lcc);
+        lccSource = 'wikidata';
+      }
+      if (!result.ddc && wd.ddc) result.ddc = wd.ddc;
+      if (!result.isbn && wd.isbn) result.isbn = wd.isbn;
+      if (!result.publisher && wd.publisher) result.publisher = wd.publisher;
+      if (!result.publicationYear && wd.publicationYear) {
+        result.publicationYear = wd.publicationYear;
+      }
     }
   }
 

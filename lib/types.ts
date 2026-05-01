@@ -26,9 +26,11 @@ export interface BookLookupResult {
   publicationYear: number;
   lcc: string;
   subjects?: string[];
-  source: 'openlibrary' | 'googlebooks' | 'none';
+  /** Dewey Decimal Classification, when a tier surfaced one (ISBNdb, Wikidata). */
+  ddc?: string;
+  source: 'openlibrary' | 'googlebooks' | 'isbndb' | 'none';
   /** Where in the cascade the LCC came from. Set by lookupBook post-processing. */
-  lccSource?: 'ol' | 'loc' | 'inferred' | 'none';
+  lccSource?: 'ol' | 'loc' | 'wikidata' | 'inferred' | 'none';
 }
 
 export interface BookRecord {
@@ -56,16 +58,19 @@ export interface BookRecord {
   notes?: string;
   /** True when the user added this book via "Add missing book" rather than auto-detection. */
   manuallyAdded?: boolean;
-  lookupSource: 'openlibrary' | 'googlebooks' | 'none';
+  lookupSource: 'openlibrary' | 'googlebooks' | 'isbndb' | 'none';
+  /** Dewey Decimal Classification, when a tier surfaced one. */
+  ddc?: string;
   /**
    * Where the LCC came from, in priority order:
    * - 'spine'    : read directly off the physical book (most authoritative)
    * - 'loc'      : Library of Congress SRU
+   * - 'wikidata' : Wikidata SPARQL (free LCC gap-filler)
    * - 'ol'       : Open Library's per-edition LCC field (default; no badge)
    * - 'inferred' : Anthropic model best-guess (least authoritative)
    * - 'none'     : no LCC available
    */
-  lccSource: 'spine' | 'loc' | 'ol' | 'inferred' | 'lookup' | 'none';
+  lccSource: 'spine' | 'loc' | 'wikidata' | 'ol' | 'inferred' | 'lookup' | 'none';
   /** Cropped image of just this spine, as a data URI. Lets the reviewer see what the model saw. */
   spineThumbnail?: string;
   /** Higher-resolution OCR-quality crop, used by "Reread spine". Not persisted to localStorage. */

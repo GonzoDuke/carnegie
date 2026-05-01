@@ -195,6 +195,14 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
                 from LoC
               </span>
             )}
+            {book.lccSource === 'wikidata' && (
+              <span
+                className="text-[9px] uppercase tracking-[0.16em] px-1.5 py-0.5 rounded bg-cream-200 dark:bg-ink text-ink/65 dark:text-cream-300/65 font-semibold"
+                title="LCC came from Wikidata — community-aggregated from multiple national libraries"
+              >
+                from Wikidata
+              </span>
+            )}
             {book.lccSource === 'inferred' && (
               <span
                 className="text-[9px] uppercase tracking-[0.16em] px-1.5 py-0.5 rounded bg-mahogany/10 dark:bg-mahogany/25 text-mahogany dark:text-orange-200 font-semibold border border-mahogany/30"
@@ -404,6 +412,8 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
                 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                 : book.lookupSource === 'googlebooks'
                 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                : book.lookupSource === 'isbndb'
+                ? 'bg-[#1E3A5F]/10 text-[#1E3A5F] dark:bg-[#1E3A5F]/40 dark:text-blue-200'
                 : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
             }`}
             title="Where the metadata came from"
@@ -412,6 +422,8 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
               ? 'Open Library'
               : book.lookupSource === 'googlebooks'
               ? 'Google Books'
+              : book.lookupSource === 'isbndb'
+              ? 'ISBNdb'
               : 'No match'}
           </span>
         </div>

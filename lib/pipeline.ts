@@ -633,6 +633,7 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
     batchNotes,
     manuallyAdded,
     lookupSource: lookup.source,
+    ddc: lookup.ddc,
     lccSource,
     spineThumbnail,
     ocrImage: ocrCrop,
@@ -853,6 +854,7 @@ export async function addManualBook(opts: AddManualBookOptions): Promise<BookRec
     batchLabel: opts.batchLabel,
     batchNotes: opts.batchNotes,
     lookupSource: lookup.source,
+    ddc: lookup.ddc,
     lccSource,
     manuallyAdded: true,
     original: {
@@ -1101,6 +1103,7 @@ export async function rereadBook(
     confidence: combinedConfidence,
     warnings: grounded.warnings,
     lookupSource: lookup.source,
+    ddc: lookup.ddc,
     lccSource,
   };
   if (tags) {
