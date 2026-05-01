@@ -27,7 +27,7 @@ A Claude Code pipeline that processes spine photos of bookshelves, identifies bo
 ## Directory structure
 
 ```
-skinsbury-library/
+carnegie/
 ├── tag-vocabulary.json      # Tag domains, tags, form tags, inference rules
 ├── vocabulary-changelog.md  # Auto-generated log of new tags added per batch
 ├── system-prompt.md         # Claude API system prompt with few-shot examples

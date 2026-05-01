@@ -25,7 +25,7 @@ A personal-use web app for cataloging a home book library from shelf photos. The
 ## Directory structure
 
 ```
-skinsbury-library/
+carnegie/
 ├── app/
 │   ├── layout.tsx
 │   ├── page.tsx                    # Upload screen (default)
@@ -242,7 +242,7 @@ Takes a book's metadata and returns inferred tags using the Claude API with the 
 
 Tags column: all genre tags + form tags, comma-separated, in a single field.
 
-**Filename:** `skinsbury-lt-import-{YYYY-MM-DD}-{batch-count}books.csv`
+**Filename:** `carnegie-lt-import-{YYYY-MM-DD}-{batch-count}books.csv`
 
 ---
 
