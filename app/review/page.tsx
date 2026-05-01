@@ -138,11 +138,11 @@ export default function ReviewPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-8">
-        <Stat label="Total" value={counts.total} />
-        <Stat label="Pending" value={counts.pending} tone="brass" />
-        <Stat label="Approved" value={counts.approved} tone="green" />
-        <Stat label="Rejected" value={counts.rejected} tone="red" />
-        <Stat label="Low confidence" value={counts.low} tone="mahogany" />
+        <Stat label="Total" value={counts.total} active={filter === 'all'} />
+        <Stat label="Pending" value={counts.pending} tone="brass" active={filter === 'pending'} />
+        <Stat label="Approved" value={counts.approved} tone="green" active={filter === 'approved'} />
+        <Stat label="Rejected" value={counts.rejected} tone="red" active={filter === 'rejected'} />
+        <Stat label="Low confidence" value={counts.low} tone="mahogany" active={filter === 'low'} />
       </div>
 
       {/* Filter + sort row + bulk actions */}
@@ -428,27 +428,37 @@ function Stat({
   label,
   value,
   tone,
+  active,
 }: {
   label: string;
   value: number;
   tone?: 'brass' | 'green' | 'red' | 'mahogany';
+  active?: boolean;
 }) {
-  const toneClass =
+  // Each tile gets a colored left rail. The text tone follows it. Active
+  // filter brightens the tile's background slightly toward its accent
+  // color so the user sees which filter the list is responding to.
+  const accent =
     tone === 'brass'
-      ? 'text-brass-deep dark:text-brass'
+      ? { rail: '#C9A96E', text: 'text-brass-deep dark:text-brass', tint: 'bg-brass/5 dark:bg-brass/10' }
       : tone === 'green'
-      ? 'text-green-700 dark:text-green-400'
-      : tone === 'red'
-      ? 'text-red-700 dark:text-red-400'
-      : tone === 'mahogany'
-      ? 'text-mahogany dark:text-orange-200'
-      : 'text-ink dark:text-cream-100';
+        ? { rail: '#2D7A4F', text: 'text-[#2D7A4F] dark:text-green-400', tint: 'bg-[#2D7A4F]/5 dark:bg-green-900/15' }
+        : tone === 'red'
+          ? { rail: '#A3432E', text: 'text-[#A3432E] dark:text-orange-300', tint: 'bg-[#A3432E]/5 dark:bg-red-900/15' }
+          : tone === 'mahogany'
+            ? { rail: '#8B4513', text: 'text-mahogany dark:text-orange-200', tint: 'bg-mahogany/5 dark:bg-mahogany/15' }
+            : { rail: '#1E3A2F', text: 'text-ink dark:text-cream-100', tint: 'bg-accent/5 dark:bg-accent/15' };
   return (
-    <div className="bg-cream-50 dark:bg-ink-soft/60 border border-cream-300 dark:border-ink-soft rounded-xl p-4">
-      <div className="text-[10px] uppercase tracking-[0.18em] text-ink/50 dark:text-cream-300/50 mb-1.5">
+    <div
+      className={`relative bg-cream-50 dark:bg-ink-soft/60 border border-cream-300 dark:border-ink-soft rounded-xl p-4 pl-5 transition-colors ${
+        active ? accent.tint : ''
+      }`}
+      style={{ borderLeft: `3px solid ${accent.rail}` }}
+    >
+      <div className="text-[11px] uppercase tracking-[0.5px] font-medium text-ink/55 dark:text-cream-300/55 mb-1.5">
         {label}
       </div>
-      <div className={`text-3xl font-display ${toneClass}`}>{value}</div>
+      <div className={`text-[28px] font-semibold leading-none ${accent.text}`}>{value}</div>
     </div>
   );
 }
