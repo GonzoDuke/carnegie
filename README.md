@@ -30,7 +30,7 @@ A Claude Code pipeline that processes spine photos of bookshelves, identifies bo
 carnegie/
 ├── tag-vocabulary.json      # Tag domains, tags, form tags, inference rules
 ├── vocabulary-changelog.md  # Auto-generated log of new tags added per batch
-├── system-prompt.md         # Claude API system prompt with few-shot examples
+├── lib/system-prompt.md     # Claude API system prompt with few-shot examples
 ├── sample-lt-import.csv     # Reference format for LibraryThing CSV import
 ├── README.md                # This file
 ├── input/                   # Drop spine photos here
@@ -50,7 +50,7 @@ This command:
 - Reads spine text from each photo using Claude Vision
 - Looks up each identified book via Open Library API (ISBN, LCC, publisher, year)
 - Falls back to Google Books API if Open Library has no match
-- Runs tag inference using system-prompt.md and tag-vocabulary.json
+- Runs tag inference using lib/system-prompt.md and lib/tag-vocabulary.json
 - Outputs a draft XLSX to drafts/ with columns:
   - Confidence (HIGH / MEDIUM / LOW)
   - Title
