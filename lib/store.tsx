@@ -120,7 +120,7 @@ function reducer(state: State, action: Action): State {
         duplicateResolved: 'merged' as const,
         duplicateGroup: undefined,
         duplicateOf: undefined,
-        warnings: winner.warnings.filter((w) => !w.startsWith('Possible duplicate —')),
+        warnings: winner.warnings.filter((w) => !/^possible duplicate\b/i.test(w)),
       };
       const loserIdSet = new Set(action.loserIds);
       return {
@@ -155,7 +155,7 @@ function reducer(state: State, action: Action): State {
         duplicateOf: positions.filter((p) => p !== b.spineRead.position),
         duplicateResolved: undefined,
         warnings: [
-          ...b.warnings.filter((w) => !w.startsWith('Possible duplicate —')),
+          ...b.warnings.filter((w) => !/^possible duplicate\b/i.test(w)),
           warning,
         ],
       });
@@ -191,7 +191,7 @@ function reducer(state: State, action: Action): State {
     }
     case 'KEEP_BOTH_DUPLICATES': {
       const stripDupWarnings = (warnings: string[]) =>
-        warnings.filter((w) => !w.startsWith('Possible duplicate —'));
+        warnings.filter((w) => !/^possible duplicate\b/i.test(w));
       const patch = (bk: BookRecord): BookRecord =>
         bk.duplicateGroup === action.groupId
           ? {

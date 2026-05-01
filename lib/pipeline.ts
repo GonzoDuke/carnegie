@@ -1161,7 +1161,7 @@ export function flagDuplicates(books: BookRecord[]): BookRecord[] {
       const others = positions.filter((p) => p !== b.spineRead.position);
       const warning = `Possible duplicate — same title found at spine ${positionsLabel}. Merge or keep both?`;
       const filteredWarnings = b.warnings.filter(
-        (w) => !w.startsWith('Possible duplicate —') && !w.startsWith('Detector returned ')
+        (w) => !/^possible duplicate\b/i.test(w) && !/^detector returned\b/i.test(w)
       );
       out.push({
         ...b,

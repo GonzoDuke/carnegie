@@ -25,25 +25,65 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
   const [hint, setHint] = useState('');
   const [rereadError, setRereadError] = useState<string | null>(null);
 
-  // Duplicate group siblings — used by the duplicate-pending banner so the
-  // Merge button knows which records to fold into this one.
-  const dupSiblings =
-    book.duplicateGroup && !book.duplicateResolved
-      ? state.allBooks.filter(
-          (b) => b.id !== book.id && b.duplicateGroup === book.duplicateGroup
-        )
-      : [];
+  // Duplicate detection. The `duplicateGroup` field is the canonical
+  // signal, but state can drift (older saves, in-flight edits) so we ALSO
+  // accept a "Possible duplicate — at spine #X and #Y" warning string as
+  // evidence and recover the sibling positions from it. Without this
+  // fallback, a card could end up showing the warning text in its bullet
+  // list with no Merge / Keep-both buttons attached to it.
+  const dupWarning = book.warnings.find((w) => /^possible duplicate\b/i.test(w));
+  const positionsFromWarning = dupWarning
+    ? Array.from(dupWarning.matchAll(/#(\d+)/g))
+        .map((m) => Number(m[1]))
+        .filter((n) => Number.isFinite(n))
+    : [];
+  const otherDupPositions =
+    book.duplicateOf && book.duplicateOf.length > 0
+      ? book.duplicateOf
+      : positionsFromWarning.filter((p) => p !== book.spineRead.position);
+
+  const showDupBanner =
+    !book.duplicateResolved &&
+    (Boolean(book.duplicateGroup) || otherDupPositions.length > 0);
+
+  // Sibling lookup: prefer the duplicateGroup id when present, fall back to
+  // matching spine positions inside the same source photo when the group
+  // id is missing — that's the recovery path.
+  const dupSiblings = showDupBanner
+    ? state.allBooks.filter((b) => {
+        if (b.id === book.id) return false;
+        if (book.duplicateGroup && b.duplicateGroup === book.duplicateGroup) return true;
+        if (b.sourcePhoto !== book.sourcePhoto) return false;
+        return otherDupPositions.includes(b.spineRead.position);
+      })
+    : [];
 
   function onMergeHere() {
-    // Merging "into" the card the user clicked: this card is the winner and
-    // every sibling becomes a snapshot in mergedFrom.
+    if (dupSiblings.length === 0) return;
+    // Merging "into" the card the user clicked: this card is the winner
+    // and every sibling becomes a snapshot in mergedFrom. Works on raw
+    // IDs so it doesn't care whether duplicateGroup is currently set.
     mergeDuplicates(
       book.id,
       dupSiblings.map((b) => b.id)
     );
   }
   function onKeepBoth() {
-    if (book.duplicateGroup) keepBothDuplicates(book.duplicateGroup);
+    if (book.duplicateGroup) {
+      keepBothDuplicates(book.duplicateGroup);
+      return;
+    }
+    // Recovery path: clear the warning + mark resolved on this book and
+    // its siblings directly via updateBook. Keeps the action working
+    // even when the canonical group id has been lost.
+    const stripDup = (warnings: string[]) =>
+      warnings.filter((w) => !/^possible duplicate\b/i.test(w));
+    [book, ...dupSiblings].forEach((b) =>
+      updateBook(b.id, {
+        duplicateResolved: 'kept-both',
+        warnings: stripDup(b.warnings),
+      })
+    );
   }
   function onUnmerge() {
     unmergeBook(book.id);
@@ -110,12 +150,15 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
     }
   }
 
-  // Filter out duplicate-related warnings: those have their own banners above
-  // and shouldn't double up in the generic warning treatment.
+  // Filter out duplicate-related warnings: those have their own banners
+  // above and shouldn't double up in the generic warning treatment. We
+  // match case-insensitively on word boundaries so older save formats
+  // (different dash, different casing) don't slip through into the
+  // bullet list — that's the visible bug this guard fixes.
   const nonDupWarnings = book.warnings.filter(
     (w) =>
-      !w.startsWith('Possible duplicate —') &&
-      !w.startsWith('Detector returned ')
+      !/^possible duplicate\b/i.test(w) &&
+      !/^detector returned\b/i.test(w)
   );
   const hasWarnings = nonDupWarnings.length > 0;
   const lowConfidence = book.confidence === 'LOW';
@@ -309,26 +352,36 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
       {/* Possible-duplicate banner — only while the group is unresolved.
           Lists the sibling spine numbers and offers Merge / Keep-both. We
           never silently merge: paperback + hardcover of the same title are
-          legitimately two separate physical copies. */}
-      {book.duplicateGroup && !book.duplicateResolved && (
-        <div className="mt-3 px-3 py-2 rounded text-xs bg-brass-soft/70 dark:bg-brass/20 text-brass-deep dark:text-brass border border-brass/50 flex flex-wrap items-start gap-x-3 gap-y-2">
-          <span className="font-semibold tracking-wider uppercase text-[10px] mt-0.5">
-            Possible duplicate
-          </span>
-          <span className="leading-relaxed flex-1 min-w-[200px]">
-            Same title found at spine{' '}
-            <span className="font-mono">
-              {(book.duplicateOf ?? []).map((p) => `#${p}`).join(' and ')}
+          legitimately two separate physical copies. The action row sits on
+          its own line below the message so the buttons are always visible
+          regardless of message length / viewport width. */}
+      {showDupBanner && (
+        <div className="mt-3 px-3 py-2 rounded text-xs bg-brass-soft/70 dark:bg-brass/20 text-brass-deep dark:text-brass border border-brass/50">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="font-semibold tracking-wider uppercase text-[10px]">
+              Possible duplicate
             </span>
-            . Merge or keep both?
-          </span>
-          <div className="flex items-center gap-2 ml-auto">
+            <span className="leading-relaxed flex-1 min-w-[180px]">
+              Same title found at spine{' '}
+              <span className="font-mono">
+                {otherDupPositions.length > 0
+                  ? otherDupPositions.map((p) => `#${p}`).join(' and ')
+                  : '#?'}
+              </span>
+              . Merge or keep both?
+            </span>
+          </div>
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
             <button
               type="button"
               onClick={onMergeHere}
               disabled={dupSiblings.length === 0}
               className="px-3 py-1 rounded-md bg-brass text-accent-deep hover:bg-brass-deep hover:text-limestone text-xs font-medium transition disabled:opacity-50"
-              title="Fold the other copies into this card. You can Unmerge later."
+              title={
+                dupSiblings.length > 0
+                  ? 'Fold the other copies into this card. You can Unmerge later.'
+                  : 'Sibling copies are no longer in the queue — nothing to merge.'
+              }
             >
               Merge into this
             </button>
