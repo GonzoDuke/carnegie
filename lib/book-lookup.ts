@@ -43,16 +43,10 @@ export function normalizeLcc(s: string | undefined | null): string {
  *     <subfield code="b">A3 2010</subfield>
  *   </datafield>
  */
-export async function lookupLccByIsbn(isbn: string): Promise<string> {
-  if (!isbn) return '';
-  const cleaned = isbn.replace(/[^\dxX]/g, '');
-  if (!cleaned) return '';
+async function loFetch050(url: string, timeoutMs: number): Promise<string> {
   try {
-    const url =
-      `https://lx2.loc.gov/sru/voyager?version=1.1&operation=searchRetrieve` +
-      `&query=bath.isbn=${cleaned}&maximumRecords=1&recordSchema=marcxml`;
     const res = await fetch(url, {
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(timeoutMs),
       cache: 'no-store',
       headers: LOC_HEADERS,
     });
@@ -69,6 +63,32 @@ export async function lookupLccByIsbn(isbn: string): Promise<string> {
   } catch {
     return '';
   }
+}
+
+export async function lookupLccByIsbn(isbn: string): Promise<string> {
+  if (!isbn) return '';
+  const cleaned = isbn.replace(/[^\dxX]/g, '');
+  if (!cleaned) return '';
+  const url =
+    `https://lx2.loc.gov/sru/voyager?version=1.1&operation=searchRetrieve` +
+    `&query=bath.isbn=${cleaned}&maximumRecords=1&recordSchema=marcxml`;
+  return loFetch050(url, 8000);
+}
+
+/**
+ * Tier 5: LoC SRU by title + author. Best-effort — the LoC endpoint is
+ * occasionally slow/flaky on text queries; tight timeout, fall through
+ * silently on miss or timeout.
+ */
+export async function lookupLccByTitleAuthor(title: string, author: string): Promise<string> {
+  const t = (title ?? '').trim();
+  const a = (author ?? '').trim();
+  if (!t || !a) return '';
+  const cql = `bath.title=${JSON.stringify(t)} AND bath.author=${JSON.stringify(a)}`;
+  const url =
+    `https://lx2.loc.gov/sru/voyager?version=1.1&operation=searchRetrieve` +
+    `&query=${encodeURIComponent(cql)}&maximumRecords=1&recordSchema=marcxml`;
+  return loFetch050(url, 7000);
 }
 
 interface OpenLibraryDoc {
@@ -695,13 +715,29 @@ export async function lookupBook(
     // ignore
   }
 
-  // Final post-processing: canonicalize LCC + LoC SRU fallback when the
-  // primary path didn't already enrich (i.e., the Open Library branch).
+  // Final post-processing: canonicalize LCC + LoC SRU enrichment.
+  // Track WHERE the LCC came from so the BookCard can show provenance.
   result.lcc = normalizeLcc(result.lcc);
+  let lccSource: 'ol' | 'loc' | 'inferred' | 'none' = result.lcc ? 'ol' : 'none';
+
+  // Tier 5a: LoC SRU by ISBN (existing behavior).
   if (result.isbn && !result.lcc) {
     const sruLcc = await lookupLccByIsbn(result.isbn);
-    if (sruLcc) result.lcc = normalizeLcc(sruLcc);
+    if (sruLcc) {
+      result.lcc = normalizeLcc(sruLcc);
+      lccSource = 'loc';
+    }
   }
 
-  return Object.assign(result, { tier: tier || 'none' });
+  // Tier 5b: LoC SRU by title + author. Catches books with no ISBN.
+  if (!result.lcc && title && author) {
+    const cleanedAuthor = cleanAuthorForQuery(author);
+    const sruLcc = await lookupLccByTitleAuthor(title, cleanedAuthor);
+    if (sruLcc) {
+      result.lcc = normalizeLcc(sruLcc);
+      lccSource = 'loc';
+    }
+  }
+
+  return Object.assign(result, { tier: tier || 'none', lccSource });
 }

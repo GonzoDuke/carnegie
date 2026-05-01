@@ -113,6 +113,27 @@ export async function lookupBookClient(
   return (await res.json()) as BookLookupResult;
 }
 
+export interface InferLccResponse {
+  lcc: string;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  reasoning?: string;
+}
+
+export async function inferLccClient(args: {
+  title: string;
+  author: string;
+  publisher?: string;
+  publicationYear?: number;
+}): Promise<InferLccResponse> {
+  const res = await fetch('/api/infer-lcc', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(args),
+  });
+  if (!res.ok) return { lcc: '', confidence: 'LOW' };
+  return (await res.json()) as InferLccResponse;
+}
+
 export async function inferTagsClient(args: {
   title: string;
   author: string;
@@ -476,12 +497,35 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
 
   // Spine-printed LCC wins over the lookup-derived one — it's the LoC's
   // own classification for the exact physical edition the user owns.
-  const finalLcc = read.lcc || lookup.lcc;
-  const lccSource: 'spine' | 'lookup' | 'none' = read.lcc
+  // Provenance: spine > loc/ol (from lookup chain) > inferred (model best-guess)
+  let finalLcc = read.lcc || lookup.lcc;
+  let lccSource: BookRecord['lccSource'] = read.lcc
     ? 'spine'
     : lookup.lcc
-      ? 'lookup'
+      ? lookup.lccSource ?? 'ol'
       : 'none';
+
+  // Tier 6: model-inferred LCC (final fallback). Only fires when the
+  // entire lookup chain (OL t1-t4 → GB → LoC SRU by ISBN → LoC SRU by
+  // title+author) returned nothing. Marked 'inferred' so the BookCard
+  // can show a clearly distinct badge — this is best-guess, not
+  // authoritative.
+  if (!finalLcc && grounded.keep && read.title && read.author) {
+    try {
+      const inferred = await inferLccClient({
+        title: read.title,
+        author: read.author,
+        publisher: lookup.publisher,
+        publicationYear: lookup.publicationYear,
+      });
+      if (inferred.lcc && inferred.confidence !== 'LOW') {
+        finalLcc = inferred.lcc;
+        lccSource = 'inferred';
+      }
+    } catch {
+      // ignore — leave LCC empty
+    }
+  }
 
   // Tag inference — only if we're keeping the entry, have a title, AND
   // a successful metadata lookup. With no lookup match we'd be tagging
@@ -623,8 +667,26 @@ export async function addManualBook(opts: AddManualBookOptions): Promise<BookRec
 
   const titleCased = toTitleCase(title);
   const finalIsbn = lookup.isbn || isbn;
-  const finalLcc = lookup.lcc;
-  const lccSource: 'spine' | 'lookup' | 'none' = finalLcc ? 'lookup' : 'none';
+  let finalLcc = lookup.lcc;
+  let lccSource: BookRecord['lccSource'] = finalLcc ? lookup.lccSource ?? 'ol' : 'none';
+
+  // Tier 6 inference for manual entries that come back without an LCC.
+  if (!finalLcc && title && author) {
+    try {
+      const inferred = await inferLccClient({
+        title,
+        author,
+        publisher: lookup.publisher,
+        publicationYear: lookup.publicationYear,
+      });
+      if (inferred.lcc && inferred.confidence !== 'LOW') {
+        finalLcc = inferred.lcc;
+        lccSource = 'inferred';
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   return {
     id: makeId(),
@@ -804,12 +866,30 @@ export async function rereadBook(
     };
   }
 
-  const finalLcc = lccFromSpine || lookup.lcc;
-  const lccSource: 'spine' | 'lookup' | 'none' = lccFromSpine
+  let finalLcc = lccFromSpine || lookup.lcc;
+  let lccSource: BookRecord['lccSource'] = lccFromSpine
     ? 'spine'
     : lookup.lcc
-      ? 'lookup'
+      ? lookup.lccSource ?? 'ol'
       : 'none';
+
+  // Tier 6 inference (same fallback as buildBookFromCrop).
+  if (!finalLcc && title && author) {
+    try {
+      const inferred = await inferLccClient({
+        title,
+        author,
+        publisher: lookup.publisher,
+        publicationYear: lookup.publicationYear,
+      });
+      if (inferred.lcc && inferred.confidence !== 'LOW') {
+        finalLcc = inferred.lcc;
+        lccSource = 'inferred';
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   // Tag inference: ONLY when the user's current tag list is empty.
   // Otherwise their manual tag curation is authoritative — a reread is for

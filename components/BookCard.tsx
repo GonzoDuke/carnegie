@@ -167,6 +167,22 @@ export function BookCard({ book }: BookCardProps) {
                 from spine
               </span>
             )}
+            {book.lccSource === 'loc' && (
+              <span
+                className="text-[9px] uppercase tracking-[0.16em] px-1.5 py-0.5 rounded bg-brass-soft/70 dark:bg-brass/15 text-brass-deep dark:text-brass font-semibold"
+                title="LCC came from the Library of Congress catalog — authoritative source"
+              >
+                from LoC
+              </span>
+            )}
+            {book.lccSource === 'inferred' && (
+              <span
+                className="text-[9px] uppercase tracking-[0.16em] px-1.5 py-0.5 rounded bg-mahogany/10 dark:bg-mahogany/25 text-mahogany dark:text-orange-200 font-semibold border border-mahogany/30"
+                title="LCC was inferred by Claude — not from a real catalog. Verify before approving."
+              >
+                AI-inferred
+              </span>
+            )}
           </div>
         </div>
         <ConfidenceBadge level={book.confidence} />
