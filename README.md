@@ -29,7 +29,7 @@ A Claude Code pipeline that processes spine photos of bookshelves, identifies bo
 ```
 carnegie/
 ├── tag-vocabulary.json      # Tag domains, tags, form tags, inference rules
-├── vocabulary-changelog.md  # Auto-generated log of new tags added per batch
+├── lib/vocabulary-changelog.md  # Auto-generated log of new tags added per batch
 ├── lib/system-prompt.md     # Claude API system prompt with few-shot examples
 ├── sample-lt-import.csv     # Reference format for LibraryThing CSV import
 ├── README.md                # This file
@@ -80,7 +80,7 @@ claude "Approve drafts/[filename].xlsx — export LT CSV to approved/ and update
 This command does three things:
 1. **Exports**: Reads only rows marked Y in the Approved column. Formats output as LibraryThing CSV (see sample-lt-import.csv for schema). Tags go in a single comma-separated TAGS column. Saves to approved/ with timestamp in filename.
 2. **Updates vocabulary**: Scans approved rows for any tags prefixed with [Proposed]. Strips the prefix and appends the new tag to the matching domain in tag-vocabulary.json. If no domain matches, appends to an "unclassified" section for manual filing later.
-3. **Logs changes**: Appends a line to vocabulary-changelog.md recording the new tag, which batch it came from, and the date. This gives you a history of how the vocabulary has grown.
+3. **Logs changes**: Appends a line to lib/vocabulary-changelog.md recording the new tag, which batch it came from, and the date. This gives you a history of how the vocabulary has grown.
 
 The vocabulary feedback loop is automatic. Every approved batch teaches the engine new tags for future batches.
 
