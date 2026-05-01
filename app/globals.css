@@ -64,6 +64,17 @@ body {
 }
 .animate-pulse-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
 
+/* Toast — slides down from the top, holds, fades out. Used for the
+   landscape-orientation reminder when the user taps Take photos. The
+   2.0s total runtime matches the JS timeout that unmounts the element. */
+@keyframes toast {
+  0%   { opacity: 0; transform: translate(-50%, -16px); }
+  15%  { opacity: 1; transform: translate(-50%, 0); }
+  85%  { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -8px); }
+}
+.animate-toast { animation: toast 2s ease-out forwards; }
+
 /* Scrollbar polish */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
