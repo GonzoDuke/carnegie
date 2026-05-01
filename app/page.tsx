@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { ProcessingQueue } from '@/components/ProcessingQueue';
 import { BatchProgress } from '@/components/BatchProgress';
+import { CropModal } from '@/components/CropModal';
 import { useDarkMode, useStore } from '@/lib/store';
 import type { PhotoBatch } from '@/lib/types';
 import { createThumbnail, loadImage, makeId } from '@/lib/pipeline';
@@ -57,38 +58,85 @@ export default function UploadPage() {
   const processing = state.processing;
   const isProcessing = processing?.isActive ?? false;
 
-  async function handleFiles(files: File[]) {
-    for (const file of files) {
-      const id = makeId();
-      let thumbnail = '';
-      let lowRes = false;
-      try {
-        const loaded = await loadImage(file);
-        if (loaded.width < MIN_IMAGE_WIDTH) lowRes = true;
-        thumbnail = await createThumbnail(file);
-      } catch {
-        // Surface as an error in the batch
-      }
-      const trimmedLabel = batchLabel.trim();
-      const trimmedNotes = batchNotes.trim();
-      const batch: PhotoBatch = {
-        id,
-        filename: file.name,
-        fileSize: file.size,
-        thumbnail,
-        status: lowRes ? 'error' : 'queued',
-        error: lowRes
-          ? `Image too small (< ${MIN_IMAGE_WIDTH}px wide). Please re-shoot at higher resolution.`
-          : undefined,
-        spinesDetected: 0,
-        booksIdentified: 0,
-        books: [],
-        batchLabel: trimmedLabel || undefined,
-        batchNotes: trimmedNotes || undefined,
-      };
-      addBatch(batch);
-      if (!lowRes) setPendingFile(id, file);
+  // Files arriving from the camera or the gallery picker are queued for the
+  // crop step rather than enrolled as batches directly. Each file gets a
+  // CropModal pass — the user can frame just the shelf they care about, or
+  // tap "Use full image" to pass it through unchanged. We snapshot the
+  // batch label and notes at queue time so a label change between shots
+  // doesn't leak into already-queued files.
+  interface PendingCrop {
+    id: string;
+    file: File;
+    batchLabel: string;
+    batchNotes: string;
+  }
+  const [cropQueue, setCropQueue] = useState<PendingCrop[]>([]);
+
+  function enqueueForCrop(files: File[]) {
+    if (files.length === 0) return;
+    const trimmedLabel = batchLabel.trim();
+    const trimmedNotes = batchNotes.trim();
+    const additions: PendingCrop[] = files.map((file) => ({
+      id: makeId(),
+      file,
+      batchLabel: trimmedLabel,
+      batchNotes: trimmedNotes,
+    }));
+    setCropQueue((prev) => [...prev, ...additions]);
+  }
+
+  async function commitFile(file: File, savedLabel: string, savedNotes: string) {
+    const id = makeId();
+    let thumbnail = '';
+    let lowRes = false;
+    try {
+      const loaded = await loadImage(file);
+      if (loaded.width < MIN_IMAGE_WIDTH) lowRes = true;
+      thumbnail = await createThumbnail(file);
+    } catch {
+      // Surface as an error in the batch
     }
+    const batch: PhotoBatch = {
+      id,
+      filename: file.name,
+      fileSize: file.size,
+      thumbnail,
+      status: lowRes ? 'error' : 'queued',
+      error: lowRes
+        ? `Image too small (< ${MIN_IMAGE_WIDTH}px wide). Please re-shoot at higher resolution.`
+        : undefined,
+      spinesDetected: 0,
+      booksIdentified: 0,
+      books: [],
+      batchLabel: savedLabel || undefined,
+      batchNotes: savedNotes || undefined,
+    };
+    addBatch(batch);
+    if (!lowRes) setPendingFile(id, file);
+  }
+
+  function handleFiles(files: File[]) {
+    enqueueForCrop(files);
+  }
+
+  function handleCropConfirm(cropped: File) {
+    setCropQueue((prev) => {
+      const [head, ...rest] = prev;
+      if (head) commitFile(cropped, head.batchLabel, head.batchNotes);
+      return rest;
+    });
+  }
+
+  function handleCropSkip(original: File) {
+    setCropQueue((prev) => {
+      const [head, ...rest] = prev;
+      if (head) commitFile(original, head.batchLabel, head.batchNotes);
+      return rest;
+    });
+  }
+
+  function handleCropCancel() {
+    setCropQueue((prev) => prev.slice(1));
   }
 
   function handleRemove(id: string) {
@@ -305,6 +353,22 @@ export default function UploadPage() {
               : `Process all (${processableQueued.length})`}
         </button>
       </div>
+
+      {/* Inline crop step. Renders one modal per queued file; advancing
+          happens inside the confirm/skip/cancel handlers. Keyed on the
+          first item's id so React tears down and rebuilds between files
+          (resets pointer state, image refs, animation phase). */}
+      {cropQueue.length > 0 && (
+        <CropModal
+          key={cropQueue[0].id}
+          file={cropQueue[0].file}
+          queueIndex={1}
+          queueTotal={cropQueue.length}
+          onConfirm={handleCropConfirm}
+          onSkip={handleCropSkip}
+          onCancel={handleCropCancel}
+        />
+      )}
     </div>
   );
 }
