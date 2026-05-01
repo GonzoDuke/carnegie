@@ -127,8 +127,13 @@ export default function ExportPage() {
     );
   }
 
+  // Brief "Downloaded ✓" state for the primary CTA after a successful export.
+  const [downloadFlash, setDownloadFlash] = useState(false);
+
   function downloadCsv() {
     if (booksToExport.length === 0) return;
+    setDownloadFlash(true);
+    window.setTimeout(() => setDownloadFlash(false), 2000);
     if (splitByBatch) {
       // One file per selected batch, downloaded sequentially.
       for (const b of batches.filter((g) => selectedBatches.has(g.key))) {
@@ -483,9 +488,11 @@ export default function ExportPage() {
       </div>
 
       {/* Vocabulary updates — proposed tags ready to be promoted into the
-          controlled vocabulary. Only shown when the export set has any. */}
+          controlled vocabulary. Only shown when the export set has any.
+          Brass top border anchors it as a deliberate next step rather than
+          a floating panel. */}
       {promotions.length > 0 && (
-        <div className="bg-brass-soft/40 dark:bg-brass/10 border border-brass/40 rounded-lg p-5 space-y-3">
+        <div className="bg-brass-soft/40 dark:bg-brass/10 border border-brass/40 border-t-[3px] border-t-brass rounded-lg p-5 space-y-3">
           <div className="flex items-baseline gap-2 flex-wrap">
             <h2 className="text-sm uppercase tracking-[0.18em] font-semibold text-brass-deep dark:text-brass">
               Vocabulary updates
@@ -642,11 +649,17 @@ export default function ExportPage() {
         <button
           onClick={downloadCsv}
           disabled={booksToExport.length === 0}
-          className="px-5 py-2.5 rounded-md bg-accent text-limestone hover:bg-accent-deep disabled:opacity-40 disabled:cursor-not-allowed transition shadow-sm"
+          className={`px-5 py-2.5 rounded-md text-limestone disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm ${
+            downloadFlash
+              ? 'bg-[#2D7A4F] hover:bg-[#2D7A4F]'
+              : 'bg-accent hover:bg-accent-deep'
+          }`}
         >
-          {splitByBatch && hasMultipleBatches
-            ? `Download ${selectedBatches.size} CSV${selectedBatches.size !== 1 ? 's' : ''}`
-            : `Download CSV (${booksToExport.length})`}
+          {downloadFlash
+            ? 'Downloaded ✓'
+            : splitByBatch && hasMultipleBatches
+              ? `Download ${selectedBatches.size} CSV${selectedBatches.size !== 1 ? 's' : ''}`
+              : `Download CSV (${booksToExport.length})`}
         </button>
       </div>
 

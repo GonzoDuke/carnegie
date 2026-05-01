@@ -20,10 +20,12 @@ export function ExportPreview({
 
   return (
     <div className="border border-cream-300 dark:border-ink-soft rounded-lg overflow-hidden bg-limestone dark:bg-ink-soft/60">
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
         <table className="text-xs font-mono w-full">
-          <thead>
-            <tr className="bg-brass-soft dark:bg-ink-soft text-ink/70 dark:text-cream-300/70">
+          {/* Sticky header — stays visible when the user scrolls a long
+              preview to see what each column actually contains. */}
+          <thead className="sticky top-0 z-[1]">
+            <tr className="bg-brass-soft dark:bg-ink-soft text-ink/70 dark:text-cream-300/70 shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
               {CSV_HEADERS.map((h) => (
                 <th
                   key={h}
@@ -35,12 +37,19 @@ export function ExportPreview({
             </tr>
           </thead>
           <tbody>
-            {books.map((book) => {
+            {books.map((book, rowIdx) => {
               const row = bookToCsvRow(book, options);
+              // Alternating row backgrounds so wide tables stay readable.
+              // Marble (#F5F2EB) on even rows, limestone (#E8E2D4) on odd
+              // matches the page palette without screaming for attention.
+              const zebra =
+                rowIdx % 2 === 0
+                  ? 'bg-marble dark:bg-ink/40'
+                  : 'bg-limestone dark:bg-ink-soft/60';
               return (
                 <tr
                   key={book.id}
-                  className="border-b border-cream-200 dark:border-ink-soft/50 last:border-b-0"
+                  className={`${zebra} border-b border-cream-200 dark:border-ink-soft/50 last:border-b-0`}
                 >
                   {row.map((cell, i) => (
                     <td
