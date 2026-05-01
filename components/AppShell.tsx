@@ -26,12 +26,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="max-w-[1600px] mx-auto px-8 lg:px-12 py-5 flex items-center gap-8">
           <div className="flex flex-col">
             <div
-              className="font-display leading-tight text-limestone"
-              style={{ letterSpacing: '2px', fontSize: '32px' }}
+              className="font-display leading-none text-limestone"
+              style={{ letterSpacing: '4px', fontSize: '56px', fontWeight: 500 }}
             >
               Carnegie
             </div>
-            <div className="text-xs text-brass tracking-wider mt-1">
+            <div
+              className="text-[11px] uppercase text-brass mt-2"
+              style={{ letterSpacing: '3px' }}
+            >
               Personal Cataloging System
             </div>
           </div>
