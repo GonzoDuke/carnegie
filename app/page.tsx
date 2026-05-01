@@ -85,12 +85,26 @@ export default function UploadPage() {
     setCropQueue((prev) => [...prev, ...additions]);
   }
 
-  async function commitFile(file: File, savedLabel: string, savedNotes: string) {
+  /**
+   * Enroll a fully-resolved source `File` as a queued batch. After this
+   * call, every downstream step — Pass A detect, Pass B per-spine crops,
+   * Reread, "Add missing book" — reads from `pendingFiles[id]`, which is
+   * exactly the `file` argument here. When the user cropped, `file` is
+   * the cropped JPEG produced by CropModal and the original is gone.
+   */
+  async function commitFile(
+    file: File,
+    savedLabel: string,
+    savedNotes: string,
+    croppedFrom?: string
+  ) {
     const id = makeId();
     let thumbnail = '';
     let lowRes = false;
+    let dims: { width: number; height: number } | undefined;
     try {
       const loaded = await loadImage(file);
+      dims = { width: loaded.width, height: loaded.height };
       if (loaded.width < MIN_IMAGE_WIDTH) lowRes = true;
       thumbnail = await createThumbnail(file);
     } catch {
@@ -110,6 +124,8 @@ export default function UploadPage() {
       books: [],
       batchLabel: savedLabel || undefined,
       batchNotes: savedNotes || undefined,
+      croppedFrom,
+      sourceDimensions: dims,
     };
     addBatch(batch);
     if (!lowRes) setPendingFile(id, file);
@@ -119,20 +135,25 @@ export default function UploadPage() {
     enqueueForCrop(files);
   }
 
+  // Crop confirm/skip/cancel — pop the head from cropQueue (pure state
+  // update) and run side effects (commitFile) outside the updater so
+  // strict-mode double-invocation can't enrol the same file twice.
   function handleCropConfirm(cropped: File) {
-    setCropQueue((prev) => {
-      const [head, ...rest] = prev;
-      if (head) commitFile(cropped, head.batchLabel, head.batchNotes);
-      return rest;
-    });
+    const head = cropQueue[0];
+    if (!head) return;
+    setCropQueue((prev) => prev.slice(1));
+    // The cropped JPEG REPLACES the original everywhere downstream. We
+    // record the original filename on the batch (`croppedFrom`) so the UI
+    // can show "Cropped from <name>" and any future debug pass can verify
+    // at a glance that the pipeline is running on cropped pixels.
+    void commitFile(cropped, head.batchLabel, head.batchNotes, head.file.name);
   }
 
   function handleCropSkip(original: File) {
-    setCropQueue((prev) => {
-      const [head, ...rest] = prev;
-      if (head) commitFile(original, head.batchLabel, head.batchNotes);
-      return rest;
-    });
+    const head = cropQueue[0];
+    if (!head) return;
+    setCropQueue((prev) => prev.slice(1));
+    void commitFile(original, head.batchLabel, head.batchNotes);
   }
 
   function handleCropCancel() {

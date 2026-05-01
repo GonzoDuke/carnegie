@@ -138,6 +138,22 @@ export interface PhotoBatch {
   batchLabel?: string;
   /** Free-form notes set at upload time, inherited by every book in this batch. */
   batchNotes?: string;
+  /**
+   * Set when the user cropped the photo before it entered the queue. The
+   * value is the ORIGINAL filename so the queue UI can show "Cropped from
+   * <name>" and a future debug session can confirm at a glance which
+   * batches are running on cropped vs full source. The actual cropped
+   * pixels are what live in `pendingFiles[id]` and are what the pipeline
+   * (Pass A, Pass B crops, Reread) reads — the original is discarded.
+   */
+  croppedFrom?: string;
+  /**
+   * Image dimensions of whatever is in `pendingFiles[id]` — i.e. the
+   * cropped image when the user cropped, otherwise the original. Recorded
+   * once at queue time so the pipeline never has to re-decode just to
+   * know the source size, and so a stale view never shows pre-crop dims.
+   */
+  sourceDimensions?: { width: number; height: number };
 }
 
 export interface AppState {

@@ -52,9 +52,27 @@ export function ProcessingQueue({ batches, onRemove }: Props) {
               <div className="w-14 h-14 rounded border border-cream-300 dark:border-ink-soft bg-cream-200 dark:bg-ink-soft" />
             )}
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">{b.filename}</div>
-              <div className="text-xs text-ink/50 dark:text-cream-300/50 flex items-center gap-2 mt-0.5">
+              <div className="text-sm font-medium truncate flex items-center gap-2">
+                <span className="truncate">{b.filename}</span>
+                {b.croppedFrom && (
+                  <span
+                    className="shrink-0 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-brass/15 dark:bg-brass/25 text-brass-deep dark:text-brass border border-brass/40 font-semibold"
+                    title={`Cropped from ${b.croppedFrom}. Pipeline reads the cropped pixels only — original was discarded.`}
+                  >
+                    Cropped
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-ink/50 dark:text-cream-300/50 flex items-center gap-2 mt-0.5 flex-wrap">
                 <span>{formatBytes(b.fileSize)}</span>
+                {b.sourceDimensions && (
+                  <>
+                    <span>·</span>
+                    <span className="font-mono">
+                      {b.sourceDimensions.width}×{b.sourceDimensions.height}
+                    </span>
+                  </>
+                )}
                 <span>·</span>
                 <span className="flex items-center gap-1.5">
                   <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[b.status]}`} />
