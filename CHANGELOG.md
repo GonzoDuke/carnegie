@@ -5,6 +5,81 @@ Source documents live in [lib/archive/](lib/archive/). Newest first.
 
 ---
 
+## v2.0.0 — 2026-05-01
+
+A cohort of features and a full design polish pass. The shape of the app is the
+same — Upload → Review → Export — but the rough edges from v1 have been ground
+down: cropping happens in-app, the ledger is shared across devices, vocabulary
+promotions auto-commit, and the visual hierarchy now reads as a finished
+product instead of a working prototype.
+
+### Capture
+- **In-app camera modal** (`5ee3e22`, `11e0270`): replaced the OS file-picker
+  capture path with a `getUserMedia` stream rendered inside a 70vh card with
+  a thumbnail strip, brass shutter, and "Done" text link. Fixes a Samsung
+  Chrome regression that flashed the file picker before launching the camera.
+- **Inline crop step** (`3f82b21`): every incoming photo — camera or gallery —
+  passes through a canvas-based [CropModal](components/CropModal.tsx) before
+  it joins the queue. Drag corner / edge handles to frame just the shelf
+  section, or tap "Use full image". Multi-file uploads queue and crop
+  sequentially.
+- **Pass A relaxed for horizontal spines** (`71253fb`): the detect prompt now
+  accepts books lying flat with the spine facing the camera, in addition to
+  upright shelf books. Each detection carries an `orientation` field
+  ('vertical' | 'horizontal') for downstream consumers, inferred from bbox
+  shape when the model omits it. Raw model output is also surfaced in the
+  response and `console.warn`-logged on zero detections.
+
+### Duplicates
+- **Flag-only dedup with Merge / Keep-both / Unmerge** (`a83e02d`): replaced
+  silent auto-merge with a per-card "Possible duplicate" banner that lets the
+  user decide. Merging stashes the losers in `mergedFrom` so Unmerge can
+  restore them as separate cards.
+- **Export ledger lives in the repo** (`fcbfe01`): moved the duplicate-detection
+  ledger from localStorage to `lib/export-ledger.json` via a new
+  [/api/ledger](app/api/ledger/route.ts) route. App load syncs from GitHub;
+  exports POST a delta; ledger management screen propagates deletions. Falls
+  back to localStorage-only when `GITHUB_TOKEN` isn't configured.
+
+### Vocabulary
+- **Auto-commit promotions** (`7243ba6`): one-click "Commit N new tags to repo"
+  on the Export screen replaces the manual two-file download workflow. The
+  new [/api/commit-vocabulary](app/api/commit-vocabulary/route.ts) route uses
+  the GitHub Contents API to update both `lib/tag-vocabulary.json` and
+  `lib/vocabulary-changelog.md`. Vercel auto-redeploys per commit.
+
+### UI / chrome
+- **Nav reshuffle** (`b9a015c`): centered nav rail holds only the three core
+  steps (Upload / Review / Export); Ledger moves to the right anchor as a
+  standalone button. Dark-mode toggle becomes a small text link beneath
+  the queue summary on the upload page.
+
+### Design polish (eight sections — `ee529f1` → `8858727`)
+Source: [lib/archive/carnegie-design-polish.md](lib/archive/carnegie-design-polish.md)
+
+1. **Typography hierarchy** — five-level scale (`typo-page-title`,
+   `typo-page-desc`, `typo-card-title`, `typo-card-meta`, `typo-label`)
+   centralized in globals.css.
+2. **Spacing system** — 8px-grid alignments across page sections, BookCard
+   padding `py-5 px-6`, stats tiles 16px internal, 32px gap below stats.
+3. **BookCard zones** — A (identity) / B (tags) / C (actions) with a
+   limestone hairline divider; LCC pulled onto its own line with provenance
+   badge.
+4. **Micro-interactions** — brass approve-pulse on first approve,
+   warm-red reject hover, scale-in tag × icon on hover.
+5. **Upload empty state** — "How it works" three-step flow + tips list +
+   lifetime stats from the ledger; disappears once a photo is queued.
+6. **Stats tiles** — 3px left rail per accent, 28px / weight 600 numbers,
+   active-filter background tint.
+7. **Export polish** — alternating zebra rows in the CSV preview, sticky
+   column headers, brass top border on the vocabulary section, brief
+   "Downloaded ✓" success state on the primary CTA.
+8. **Dark mode warmth** — card surfaces shift to `#2E2924` with `#4A4540`
+   borders; warning banners switch to a deep amber (`#3D2E1A`); tag-pill
+   dark-mode opacity bumps from /30 to /45 for better presence.
+
+---
+
 ## 2026-05-01 — Tablet camera capture (multi-capture loop)
 
 Source: [lib/archive/carnegie-tablet-camera.md](lib/archive/carnegie-tablet-camera.md)
