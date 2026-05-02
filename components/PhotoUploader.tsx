@@ -209,7 +209,7 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
           if (disabled) return;
           handleFiles(e.dataTransfer.files);
         }}
-        className={`relative rounded-[10px] border-[1.5px] border-dashed transition-all duration-200 ease-gentle px-6 py-10 text-center cursor-pointer ${
+        className={`relative rounded-[10px] border-[1.5px] border-dashed transition-all duration-200 ease-gentle px-8 py-14 text-center cursor-pointer ${
           isDragging
             ? 'border-navy bg-navy-soft scale-[1.005]'
             : 'border-line hover:border-navy hover:bg-navy-soft/50'
@@ -225,25 +225,25 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
           onChange={(e) => handleFiles(e.target.files)}
         />
 
-        <div className="text-[15px] font-medium text-text-secondary mb-1 inline-flex items-center gap-1.5">
+        <div className="text-[17px] font-medium text-text-secondary mb-1.5 inline-flex items-center gap-2">
           Drop bookshelf photos here
           <button
             type="button"
             onClick={(e) => e.stopPropagation()}
             aria-label="Photography tips"
             title="Landscape orientation · fill the frame with one shelf · stand 2–3 feet away · turn flash off · avoid overhead lighting on plastic covers"
-            className="inline-flex items-center justify-center w-[14px] h-[14px] rounded-full text-[10px] font-semibold text-text-quaternary hover:text-navy border border-line hover:border-navy transition"
+            className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full text-[11px] font-semibold text-text-quaternary hover:text-navy border border-line hover:border-navy transition"
           >
             i
           </button>
         </div>
-        <div className="text-[11px] text-text-quaternary mb-3.5">
+        <div className="text-[13px] text-text-quaternary mb-5">
           JPG, PNG, HEIC up to 30 MB
         </div>
-        <div className="inline-flex flex-wrap justify-center gap-2">
+        <div className="inline-flex flex-wrap justify-center gap-2.5">
           <button
             type="button"
-            className="inline-flex items-center text-[13px] font-medium px-4 py-1.5 rounded-md bg-navy text-white hover:bg-navy-deep transition disabled:opacity-50"
+            className="inline-flex items-center text-[14px] font-medium px-5 py-[9px] rounded-md bg-navy text-white hover:bg-navy-deep transition disabled:opacity-50"
             disabled={disabled}
             onClick={(e) => {
               e.stopPropagation();
@@ -254,7 +254,7 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 text-[13px] font-medium px-4 py-1.5 rounded-md bg-surface-card text-text-secondary border border-line hover:bg-surface-page transition disabled:opacity-50"
+            className="inline-flex items-center gap-2 text-[14px] font-medium px-5 py-[9px] rounded-md bg-surface-card text-text-secondary border border-line hover:bg-surface-page transition disabled:opacity-50"
             disabled={disabled}
             onClick={(e) => {
               e.stopPropagation();
@@ -262,7 +262,7 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
             }}
             title="Open the rear camera and capture multiple shelves in sequence"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
               <circle cx="12" cy="13" r="4" />
             </svg>

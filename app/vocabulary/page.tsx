@@ -309,7 +309,7 @@ export default function VocabularyPage() {
                   if (e.key === 'Enter' && newTagName.trim() && !busy) onAddTag();
                 }}
                 placeholder="e.g. Profanity studies"
-                className="w-full bg-surface-card border border-line rounded-md px-3 py-1.5 text-[13px] text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-navy"
+                className="w-full bg-surface-card border border-line rounded-md px-[14px] py-[10px] text-[15px] text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-navy"
               />
             </div>
             <div className="min-w-[160px]">
@@ -317,7 +317,7 @@ export default function VocabularyPage() {
               <select
                 value={newTagDomain}
                 onChange={(e) => setNewTagDomain(e.target.value as DomainKey)}
-                className="w-full bg-surface-card border border-line rounded-md px-3 py-1.5 text-[13px] text-text-primary focus:outline-none focus:border-navy"
+                className="w-full bg-surface-card border border-line rounded-md px-[14px] py-[10px] text-[15px] text-text-primary focus:outline-none focus:border-navy"
               >
                 {sortedDomainKeys.map((k) => (
                   <option key={k} value={k}>
@@ -330,7 +330,7 @@ export default function VocabularyPage() {
               type="button"
               onClick={onAddTag}
               disabled={!newTagName.trim() || !!busy}
-              className="text-[13px] font-medium px-4 py-1.5 rounded-md bg-navy text-white hover:bg-navy-deep disabled:opacity-50 transition"
+              className="text-[14px] font-medium px-5 py-[9px] rounded-md bg-navy text-white hover:bg-navy-deep disabled:opacity-50 transition"
             >
               {busy?.kind === 'add' ? 'Adding…' : 'Add'}
             </button>

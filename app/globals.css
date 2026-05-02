@@ -31,7 +31,7 @@
 
 html {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 body {
@@ -105,12 +105,12 @@ body {
    Level 5 — Labels / helper (Outfit 10–11px, all-caps for labels) */
 .typo-page-title {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 600;
   letter-spacing: 0;
   line-height: 1.25;
   color: rgb(var(--color-text-primary));
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .typo-page-desc {

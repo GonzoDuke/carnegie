@@ -237,7 +237,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           scroll so the sidebar stays put as the user pages through long
           tables. Per-screen sticky page headers come in subsequent steps. */}
       <main className="flex-1 min-h-screen overflow-x-hidden" style={{ marginLeft: SIDEBAR_W }}>
-        <div className="max-w-[1600px] w-full mx-auto px-8 lg:px-12 py-10">{children}</div>
+        {/* Fill the remaining width — no max-w cap. The app is designed
+            for the desktop screens it runs on; cap-and-center looks like
+            a mobile app stretched. */}
+        <div className="w-full px-8 lg:px-12 py-10">{children}</div>
       </main>
     </div>
   );
@@ -274,11 +277,11 @@ function NavItem({ item, active }: { item: NavItemDef; active: boolean }) {
       href={item.href}
       className="flex items-center gap-[9px] transition-colors"
       style={{
-        padding: '7px 16px',
+        padding: '10px 16px',
         color: active ? SIDE_TEXT_ACTIVE : SIDE_TEXT,
         background: active ? SIDE_ACTIVE : 'transparent',
         borderLeft: `2px solid ${active ? NAVY : 'transparent'}`,
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: active ? 500 : 400,
       }}
       onMouseEnter={(e) => {

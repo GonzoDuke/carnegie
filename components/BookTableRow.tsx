@@ -114,16 +114,17 @@ export function BookTableRow({ book }: { book: BookRecord }) {
     <>
       <div
         onClick={() => setOpen((v) => !v)}
-        className={`grid grid-cols-[52px_1fr_80px_200px_100px] items-center gap-3 px-[14px] py-[10px] border-b border-line-light cursor-pointer transition-colors ${rowTint}`}
+        className={`grid grid-cols-[72px_1fr_90px_240px_120px] items-center gap-4 px-[16px] py-[14px] border-b border-line-light cursor-pointer transition-colors ${rowTint}`}
         role="button"
         aria-expanded={open}
       >
-        {/* Cover — Cover component handles the load-fail fallback chain */}
+        {/* Cover — 56×80 to read at desktop scale; Cover component
+            handles the load-fail fallback chain. */}
         <Cover
           coverUrl={book.coverUrl}
           spineThumbnail={book.spineThumbnail}
           alt={book.title || 'unknown book'}
-          className="w-9 h-[52px] rounded bg-surface-page border border-line-light overflow-hidden"
+          className="w-14 h-20 rounded bg-surface-page border border-line-light overflow-hidden"
         />
 
         {/* Title + metadata */}
@@ -138,12 +139,12 @@ export function BookTableRow({ book }: { book: BookRecord }) {
             )}
             {book.title || <span className="italic opacity-60">Untitled spine</span>}
           </div>
-          <div className="text-[11px] text-text-tertiary mt-0.5 truncate">
+          <div className="text-[13px] text-text-tertiary mt-1 truncate">
             {book.author || 'Unknown author'}
             {book.isbn && (
               <>
                 <span className="mx-1.5 text-text-quaternary">·</span>
-                <span className="font-mono text-[10px]">{book.isbn}</span>
+                <span className="font-mono text-[12px]">{book.isbn}</span>
               </>
             )}
             {book.publicationYear ? (
@@ -161,25 +162,25 @@ export function BookTableRow({ book }: { book: BookRecord }) {
         </div>
 
         {/* Tags (compact) */}
-        <div className="flex items-center gap-1 overflow-hidden">
+        <div className="flex items-center gap-1.5 overflow-hidden">
           {tagsCondensed.map((t) => {
             const tag = String(t);
             return <TagChip key={tag} tag={tag} variant="genre" size="sm" />;
           })}
           {tagsExtra > 0 && (
-            <span className="text-[10px] text-text-quaternary">+{tagsExtra}</span>
+            <span className="text-[12px] text-text-quaternary">+{tagsExtra}</span>
           )}
         </div>
 
-        {/* Actions — small ✓ ✕. Inline editing happens in the detail
-            panel below, so no separate Edit button. */}
-        <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+        {/* Actions — ✓ / ✕. Inline editing happens in the detail panel
+            below, so no separate Edit button. */}
+        <div className="flex items-center gap-1.5 justify-end" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
             onClick={() => setStatus('approved')}
             disabled={rereading}
             aria-label="Approve"
-            className={`w-7 h-7 rounded text-xs font-semibold border transition ${
+            className={`w-9 h-9 rounded text-[15px] font-semibold border transition ${
               isApproved
                 ? 'bg-carnegie-gold border-carnegie-gold text-text-primary'
                 : 'border-line text-text-tertiary hover:border-navy hover:text-navy hover:bg-navy-soft'
@@ -192,7 +193,7 @@ export function BookTableRow({ book }: { book: BookRecord }) {
             onClick={() => setStatus('rejected')}
             disabled={rereading}
             aria-label="Reject"
-            className={`w-7 h-7 rounded text-xs font-semibold border transition ${
+            className={`w-9 h-9 rounded text-[15px] font-semibold border transition ${
               isRejected
                 ? 'bg-carnegie-red-soft border-carnegie-red text-carnegie-red'
                 : 'border-line text-text-tertiary hover:border-carnegie-red hover:text-carnegie-red hover:bg-carnegie-red-soft'

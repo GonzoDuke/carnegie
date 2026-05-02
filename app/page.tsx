@@ -186,7 +186,7 @@ export default function UploadPage() {
             onChange={(e) => setBatchLabel(e.target.value)}
             placeholder='Shelf 3, Box 4, Upstairs hallway...'
             disabled={isProcessing}
-            className="w-full bg-surface-card border border-line rounded-md px-3 py-2 text-[13px] text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-navy disabled:opacity-50 transition-colors"
+            className="w-full bg-surface-card border border-line rounded-md px-[14px] py-[10px] text-[15px] text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-navy disabled:opacity-50 transition-colors"
           />
           <div className="text-[10px] text-text-quaternary mt-0.5">
             Groups photos by physical location
@@ -203,7 +203,7 @@ export default function UploadPage() {
             onChange={(e) => setBatchNotes(e.target.value)}
             placeholder='First editions, signed copies...'
             disabled={isProcessing}
-            className="w-full bg-surface-card border border-line rounded-md px-3 py-2 text-[13px] text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-navy disabled:opacity-50 transition-colors"
+            className="w-full bg-surface-card border border-line rounded-md px-[14px] py-[10px] text-[15px] text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-navy disabled:opacity-50 transition-colors"
           />
           <div className="text-[10px] text-text-quaternary mt-0.5">
             Free-form &rarr; LibraryThing COMMENTS
@@ -302,7 +302,7 @@ export default function UploadPage() {
         <button
           onClick={() => processQueue()}
           disabled={!canProcess}
-          className="px-5 py-2 rounded-md bg-navy text-white hover:bg-navy-deep disabled:opacity-40 disabled:cursor-not-allowed transition text-[13px] font-medium"
+          className="px-[20px] py-[9px] rounded-md bg-navy text-white hover:bg-navy-deep disabled:opacity-40 disabled:cursor-not-allowed transition text-[14px] font-medium"
         >
           {isProcessing
             ? 'Processing…'

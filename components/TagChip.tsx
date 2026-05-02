@@ -49,7 +49,12 @@ export function TagChip({ tag, variant, onRemove, size = 'md' }: TagChipProps) {
     classes = FORM_CLASSES[cat];
   }
 
-  const sizeClass = size === 'sm' ? 'text-[11px] px-2 py-0.5' : 'text-xs px-2.5 py-1';
+  // Bumped from 10/12px to 12/13px text and 4px×10px padding so tag
+  // pills read at the same density as the rest of the v3 app.
+  const sizeClass =
+    size === 'sm'
+      ? 'text-[12px] px-2.5 py-[3px]'
+      : 'text-[13px] px-[10px] py-1';
 
   return (
     <span
