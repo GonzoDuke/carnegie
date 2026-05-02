@@ -49,6 +49,22 @@ const DOMAIN_KEYS: DomainKey[] = (Object.keys(VOCAB.domains) as DomainKey[]).fil
   (k) => k !== '_unclassified'
 );
 
+/**
+ * Order DOMAIN_KEYS by the human-readable label of each domain. The
+ * raw key order from tag-vocabulary.json reflects how the file was
+ * authored — not alphabetical. Sort wherever a user-facing list of
+ * domains is rendered (left rail, "all" row groupings, the new-tag
+ * dropdown).
+ */
+function sortDomainKeysByLabel(
+  keys: DomainKey[],
+  domains: VocabShape['domains']
+): DomainKey[] {
+  return [...keys].sort((a, b) =>
+    (domains[a]?.label ?? a).localeCompare(domains[b]?.label ?? b)
+  );
+}
+
 export default function VocabularyPage() {
   const { state } = useStore();
 
@@ -60,7 +76,16 @@ export default function VocabularyPage() {
   );
   const [selection, setSelection] = useState<Selection>('all');
   const [newTagName, setNewTagName] = useState('');
-  const [newTagDomain, setNewTagDomain] = useState<DomainKey>(DOMAIN_KEYS[0]);
+  // Domain keys ordered alphabetically by label. Recomputed when vocab
+  // shifts so a freshly-added domain (none currently, but future-proof)
+  // would slot in alphabetically too.
+  const sortedDomainKeys = useMemo(
+    () => sortDomainKeysByLabel(DOMAIN_KEYS, vocab.domains),
+    [vocab]
+  );
+  const [newTagDomain, setNewTagDomain] = useState<DomainKey>(
+    () => sortDomainKeysByLabel(DOMAIN_KEYS, vocabSeed.domains)[0]
+  );
   const [busy, setBusy] = useState<{ kind: 'add' | 'delete'; tag: string } | null>(
     null
   );
@@ -115,23 +140,26 @@ export default function VocabularyPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.allBooks]);
 
-  /** Flat list of every tag in the current vocab, with its domain. */
+  /**
+   * Flat list of every tag in the current vocab, with its domain.
+   * Ordered: domain alphabetical (by label), then tag alphabetical
+   * within each domain. The "All" view consumes this list as-is so it
+   * displays domains in alphabetical order with tags grouped under
+   * each. Single-domain selections filter this list, which preserves
+   * the intra-domain alphabetical order.
+   */
   const allRows = useMemo(() => {
     const rows: { tag: string; domain: DomainKey; domainLabel: string }[] = [];
-    for (const key of DOMAIN_KEYS) {
+    for (const key of sortedDomainKeys) {
       const def = vocab.domains[key];
       if (!def) continue;
-      for (const tag of def.tags) {
+      const tagsAlpha = [...def.tags].sort((a, b) => a.localeCompare(b));
+      for (const tag of tagsAlpha) {
         rows.push({ tag, domain: key, domainLabel: def.label });
       }
     }
-    rows.sort((a, b) =>
-      a.domainLabel === b.domainLabel
-        ? a.tag.localeCompare(b.tag)
-        : a.domainLabel.localeCompare(b.domainLabel)
-    );
     return rows;
-  }, [vocab]);
+  }, [vocab, sortedDomainKeys]);
 
   const filteredRows = useMemo(
     () =>
@@ -252,7 +280,7 @@ export default function VocabularyPage() {
             onClick={() => setSelection('all')}
           />
           <div className="border-t border-line-light" />
-          {DOMAIN_KEYS.map((k) => {
+          {sortedDomainKeys.map((k) => {
             const def = vocab.domains[k];
             if (!def) return null;
             return (
@@ -291,7 +319,7 @@ export default function VocabularyPage() {
                 onChange={(e) => setNewTagDomain(e.target.value as DomainKey)}
                 className="w-full bg-surface-card border border-line rounded-md px-3 py-1.5 text-[13px] text-text-primary focus:outline-none focus:border-navy"
               >
-                {DOMAIN_KEYS.map((k) => (
+                {sortedDomainKeys.map((k) => (
                   <option key={k} value={k}>
                     {vocab.domains[k]?.label ?? k}
                   </option>
