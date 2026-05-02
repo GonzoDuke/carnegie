@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useStore } from '@/lib/store';
+import { confirmDiscardSession } from '@/lib/session';
 
 const NAVY = '#1B3A5C';
 
@@ -23,6 +25,20 @@ interface TabDef {
  */
 export function MobileShell() {
   const pathname = usePathname();
+  const { state, clear } = useStore();
+
+  const sessionEmpty =
+    state.allBooks.length === 0 && state.batches.length === 0;
+
+  function onNewSession() {
+    if (!confirmDiscardSession(state.allBooks)) return;
+    clear();
+    // Mirror AppShell — page-local input state (batch label / notes)
+    // listens for this and resets itself.
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('carnegie:session-cleared'));
+    }
+  }
 
   const tabs: TabDef[] = [
     { href: '/', label: 'Capture', icon: <CameraIcon /> },
@@ -37,7 +53,11 @@ export function MobileShell() {
 
   return (
     <>
-      {/* Top bar — small spine-stack mark + CARNEGIE wordmark, navy. */}
+      {/* Top bar — small spine-stack mark + CARNEGIE wordmark + a
+          right-aligned New-session icon button. The button mirrors the
+          desktop sidebar's behavior: confirmation dialog when there's
+          unprocessed/unapproved work, then clears every batch and
+          resets to a fresh Capture screen. */}
       <header
         className="fixed top-0 inset-x-0 z-30 flex items-center gap-2 px-4"
         style={{ height: 48, background: NAVY }}
@@ -55,6 +75,20 @@ export function MobileShell() {
         >
           Carnegie
         </span>
+        <button
+          type="button"
+          onClick={onNewSession}
+          disabled={sessionEmpty}
+          aria-label="New session"
+          title="Discard the current batch and start fresh — exported books stay in the ledger."
+          className="ml-auto flex items-center justify-center w-9 h-9 rounded-full transition disabled:opacity-30 disabled:cursor-not-allowed"
+          style={{
+            color: 'rgba(255,255,255,0.85)',
+            background: 'rgba(255,255,255,0.08)',
+          }}
+        >
+          <NewSessionIcon />
+        </button>
       </header>
 
       {/* Bottom tab bar — three primary tabs. iOS adds a home-indicator
@@ -152,6 +186,27 @@ function IconShell({ children }: { children: React.ReactNode }) {
       aria-hidden
     >
       {children}
+    </svg>
+  );
+}
+
+function NewSessionIcon() {
+  // Circular-arrow refresh glyph. Reads as "start over" without the
+  // destructive connotation of an X.
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width="18"
+      height="18"
+      aria-hidden
+    >
+      <path d="M21 12a9 9 0 1 1-3-6.7" />
+      <path d="M21 4v5h-5" />
     </svg>
   );
 }
