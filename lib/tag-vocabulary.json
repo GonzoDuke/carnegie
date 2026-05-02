@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "updated": "2026-05-01",
+  "updated": "2026-05-02",
   "description": "Tag vocabulary and inference rules for Carnegie. Used by the tagging pipeline to auto-generate tags for LibraryThing import.",
   "domains": {
     "philosophy": {
@@ -146,10 +146,11 @@
         "K"
       ],
       "tags": [
-        "Protest & activism",
         "Civil liberties",
+        "Drugs",
         "Free speech",
         "Identity & tribalism",
+        "Protest & activism",
         "Social criticism"
       ]
     },
