@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { BookCard } from '@/components/BookCard';
+import { BookTableRow } from '@/components/BookTableRow';
 import { SpineSelector } from '@/components/SpineSelector';
 import { useStore } from '@/lib/store';
 import { VOCAB, type DomainKey } from '@/lib/tag-domains';
@@ -33,19 +33,9 @@ export default function ReviewPage() {
   const [filter, setFilter] = useState<Filter>('all');
   const [sort, setSort] = useState<Sort>('position');
   const [addingFor, setAddingFor] = useState<PhotoBatch | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [retagBusy, setRetagBusy] = useState(false);
   const [retagDomainOpen, setRetagDomainOpen] = useState(false);
   const [retagToast, setRetagToast] = useState<string | null>(null);
-
-  function toggleSelected(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
 
   async function runBulkRetag(ids: string[], scopeLabel: string) {
     if (ids.length === 0 || retagBusy) return;
@@ -253,150 +243,55 @@ export default function ReviewPage() {
         </div>
       )}
 
-      {/* Book list — grouped by batch label */}
-      <div className="space-y-6">
+      {/* Compact book table — replaces the v2 grouped-card layout. Sticky
+          column header, click any row to expand its detail panel. */}
+      <div className="bg-surface-card dark:bg-ink-soft border border-line dark:border-[#2E2C29] rounded-lg overflow-hidden">
+        <div className="grid grid-cols-[52px_1fr_80px_200px_100px] items-center gap-3 px-[14px] py-[7px] bg-surface-page dark:bg-ink/40 border-b border-line dark:border-[#2E2C29] sticky top-0 z-[5]">
+          <span />
+          <span className="typo-label">Book</span>
+          <span className="typo-label">Conf.</span>
+          <span className="typo-label">Tags</span>
+          <span className="typo-label text-right">Action</span>
+        </div>
+
         {visibleBooks.length === 0 ? (
-          <div className="text-sm text-ink/50 dark:text-cream-300/50 italic p-8 text-center border border-dashed border-cream-300 dark:border-ink-soft rounded-lg">
+          <div className="text-sm text-text-tertiary italic p-8 text-center">
             No books in this filter.
           </div>
         ) : (
-          (() => {
-            const groups = new Map<string, typeof visibleBooks>();
-            for (const b of visibleBooks) {
-              const key = b.batchLabel ?? '';
-              const arr = groups.get(key) ?? [];
-              arr.push(b);
-              groups.set(key, arr);
-            }
-            const groupKeys = Array.from(groups.keys()).sort((a, b) => {
-              if (a === '' && b !== '') return 1; // Uncategorized last
-              if (b === '' && a !== '') return -1;
-              return a.localeCompare(b);
-            });
-            const onlyOneGroup = groupKeys.length === 1 && groupKeys[0] === '';
-            return groupKeys.map((key) => {
-              const groupBooks = groups.get(key)!;
-              const label = key || 'Uncategorized';
-              const pendingInGroup = groupBooks.filter((b) => b.status === 'pending');
-              // Photo batches that belong to this label-group. Used by the
-              // "Add missing book" button — we render one per photo so the
-              // user can pick which photo to augment when a label has more
-              // than one.
-              const groupBatches = state.batches.filter(
-                (b) => (b.batchLabel ?? '') === key && (b.status === 'done' || b.status === 'processing')
-              );
-              return (
-                <div key={key} className="space-y-3">
-                  {!onlyOneGroup && (
-                    <div className="sticky top-[88px] z-[5] bg-cream-50/95 dark:bg-ink/95 backdrop-blur border-b border-cream-300 dark:border-ink-soft py-2 -mx-2 px-2 flex items-center gap-3">
-                      <h2 className="font-serif text-xl text-ink dark:text-cream-100">{label}</h2>
-                      <span className="text-xs text-ink/50 dark:text-cream-300/50">
-                        {groupBooks.length} book{groupBooks.length !== 1 ? 's' : ''}
-                      </span>
-                      <div className="flex-1" />
-                      {pendingInGroup.length > 0 && (
-                        <button
-                          onClick={() =>
-                            pendingInGroup.forEach((b) =>
-                              updateBook(b.id, { status: 'approved' })
-                            )
-                          }
-                          className="text-[11px] px-2.5 py-1 rounded border border-green-400/70 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition"
-                        >
-                          Approve all in {label} ({pendingInGroup.length})
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  <div className="space-y-3">
-                    {groupBooks.map((book) => (
-                      <BookCard
-                        key={book.id}
-                        book={book}
-                        selectable
-                        selected={selected.has(book.id)}
-                        onToggleSelected={toggleSelected}
-                      />
-                    ))}
-                  </div>
-                  {groupBatches.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2 pt-2">
-                      <span className="text-[11px] uppercase tracking-wider text-ink/40 dark:text-cream-300/40 font-semibold">
-                        Add a missed book:
-                      </span>
-                      {groupBatches.map((b) => (
-                        <button
-                          key={b.id}
-                          onClick={() => setAddingFor(b)}
-                          className="text-xs px-3 py-1.5 rounded-md border border-dashed border-accent/60 text-accent hover:bg-accent-soft dark:hover:bg-accent/20 transition"
-                          title={`Open ${b.filename} and draw / type a missed spine`}
-                        >
-                          + from {b.filename.length > 28 ? b.filename.slice(0, 25) + '…' : b.filename}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            });
-          })()
+          visibleBooks.map((book) => <BookTableRow key={book.id} book={book} />)
         )}
       </div>
 
-      {/* Floating selection action bar — only when ≥ 1 books are checkbox-selected */}
-      {selected.size > 0 && (
-        <div className="sticky bottom-4 flex justify-center z-10">
-          <div className="flex items-center gap-2 bg-accent text-limestone rounded-full pl-5 pr-2 py-2 shadow-lg">
-            <span className="text-sm font-medium">{selected.size} selected</span>
-            <span className="opacity-50">·</span>
-            <button
-              onClick={() =>
-                runBulkRetag(Array.from(selected), `${selected.size} selected`)
-              }
-              disabled={retagBusy}
-              className="text-xs px-3 py-1.5 rounded-full bg-brass text-accent-deep font-medium hover:bg-brass-deep hover:text-limestone transition disabled:opacity-50"
-            >
-              ↻ Re-tag
-            </button>
-            <button
-              onClick={() => {
-                Array.from(selected).forEach((id) =>
-                  updateBook(id, { status: 'approved' })
-                );
-                setSelected(new Set());
-              }}
-              className="text-xs px-3 py-1.5 rounded-full bg-fern text-limestone hover:bg-accent-deep transition"
-            >
-              Approve
-            </button>
-            <button
-              onClick={() => {
-                Array.from(selected).forEach((id) =>
-                  updateBook(id, { status: 'rejected' })
-                );
-                setSelected(new Set());
-              }}
-              className="text-xs px-3 py-1.5 rounded-full bg-mahogany/30 text-limestone hover:bg-mahogany transition"
-            >
-              Reject
-            </button>
-            <button
-              onClick={() => setSelected(new Set())}
-              className="text-xs px-2 py-1.5 rounded-full text-limestone/70 hover:text-limestone transition"
-              aria-label="Clear selection"
-            >
-              ×
-            </button>
-          </div>
+      {/* Add-missing-book launcher — flat list of every photo batch with a
+          source file still in memory. Per-batch grouping moved off the
+          review list, so this row is the entry point now. */}
+      {state.batches.filter(
+        (b) => b.status === 'done' || b.status === 'processing'
+      ).length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 pt-2">
+          <span className="typo-label">Add a missed book:</span>
+          {state.batches
+            .filter((b) => b.status === 'done' || b.status === 'processing')
+            .map((b) => (
+              <button
+                key={b.id}
+                onClick={() => setAddingFor(b)}
+                className="text-xs px-3 py-1.5 rounded-md border border-dashed border-navy/60 text-navy hover:bg-navy-soft transition"
+                title={`Open ${b.filename} and draw / type a missed spine`}
+              >
+                + from {b.filename.length > 28 ? b.filename.slice(0, 25) + '…' : b.filename}
+              </button>
+            ))}
         </div>
       )}
 
-      {/* Bottom bulk action + nav — hidden when selection bar is active */}
-      {counts.pending > 0 && selected.size === 0 && (
+      {/* Bottom bulk action */}
+      {counts.pending > 0 && (
         <div className="sticky bottom-4 flex justify-center">
           <button
             onClick={approveRemaining}
-            className="text-sm px-5 py-2.5 rounded-full bg-brass text-accent-deep font-medium shadow-md hover:bg-brass-deep hover:text-limestone transition"
+            className="text-sm px-6 py-2 rounded-md bg-navy-soft text-navy font-semibold shadow-md hover:bg-navy-mid transition"
           >
             Approve remaining ({counts.pending})
           </button>
