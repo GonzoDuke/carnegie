@@ -1,0 +1,293 @@
+{
+  "id": "09f7b49b-686a-4f9e-88c2-f4c33b162053",
+  "filename": "20260501_070042.cropped.jpg",
+  "fileSize": 1127915,
+  "thumbnail": "",
+  "status": "done",
+  "spinesDetected": 5,
+  "booksIdentified": 5,
+  "books": [
+    {
+      "id": "22db5fc2-0141-4dde-b678-c9bcdeb21677",
+      "spineRead": {
+        "position": 1,
+        "rawText": "The Four Agreements — Don Miguel Ruiz",
+        "title": "The Four Agreements",
+        "author": "Don Miguel Ruiz",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 100,
+          "height": 15
+        }
+      },
+      "title": "The Four Agreements",
+      "author": "Don Miguel Ruiz",
+      "authorLF": "Ruiz, Don Miguel",
+      "isbn": "9781602851092",
+      "publisher": "Amber Allen",
+      "publicationYear": 1997,
+      "lcc": "BJ1581.2 .R85 2008",
+      "genreTags": [
+        "Self-improvement",
+        "Spirituality",
+        "Ethics"
+      ],
+      "formTags": [],
+      "confidence": "HIGH",
+      "reasoning": "LCC BJ → Ethics. Subject headings confirm conduct of life, Toltec philosophy, and spirituality. Clear self-help/spiritual guidance book combining ancient wisdom with practical ethics.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "20260501_070042.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9781602851092-M.jpg?default=false",
+      "ocrModel": "s",
+      "original": {
+        "title": "The Four Agreements",
+        "author": "Don Miguel Ruiz",
+        "isbn": "9781602851092",
+        "publisher": "Amber Allen",
+        "publicationYear": 1997,
+        "lcc": "BJ1581.2 .R85 2008",
+        "genreTags": [
+          "Self-improvement",
+          "Spirituality",
+          "Ethics"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "0c356b11-c108-4dac-a2a1-32601d58cd5b",
+      "spineRead": {
+        "position": 2,
+        "rawText": "zen buddhism: selected writings of d. t. suzuki — d. t. suzuki",
+        "title": "zen buddhism: selected writings of d. t. suzuki",
+        "author": "d. t. suzuki",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 0,
+          "y": 15,
+          "width": 100,
+          "height": 15
+        }
+      },
+      "title": "Zen Buddhism: Selected Writings of D. T. Suzuki",
+      "author": "d. t. suzuki",
+      "authorLF": "suzuki, d. t.",
+      "isbn": "9780385093002",
+      "publisher": "Doubleday",
+      "publicationYear": 1956,
+      "lcc": "BL1442 .Z4 H8",
+      "genreTags": [
+        "Buddhism",
+        "Anthology"
+      ],
+      "formTags": [],
+      "confidence": "HIGH",
+      "reasoning": "LCC BL1442 → Buddhism. Subject headings confirm Zen Buddhism. 'Selected writings' indicates anthology format.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "20260501_070042.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780385093002-M.jpg?default=false",
+      "ocrModel": "s",
+      "original": {
+        "title": "Zen Buddhism: Selected Writings of D. T. Suzuki",
+        "author": "d. t. suzuki",
+        "isbn": "9780385093002",
+        "publisher": "Doubleday",
+        "publicationYear": 1956,
+        "lcc": "BL1442 .Z4 H8",
+        "genreTags": [
+          "Buddhism",
+          "Anthology"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "9f249290-d80d-4154-a8af-70a00057b225",
+      "spineRead": {
+        "position": 3,
+        "rawText": "ZEN: Tradition and Transition — ed. Kenneth Kraft",
+        "title": "ZEN: Tradition and Transition",
+        "author": "ed. Kenneth Kraft",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 0,
+          "y": 30,
+          "width": 100,
+          "height": 15
+        }
+      },
+      "title": "Zen: Tradition and Transition",
+      "author": "ed. Kenneth Kraft",
+      "authorLF": "Kraft, ed. Kenneth",
+      "isbn": "9780802110220",
+      "publisher": "Grove Press",
+      "publicationYear": 1988,
+      "lcc": "BQ9266 .Z463 1988",
+      "genreTags": [
+        "Buddhism"
+      ],
+      "formTags": [
+        "Anthology"
+      ],
+      "confidence": "HIGH",
+      "reasoning": "LCC BQ → Buddhism. Subject headings confirm Zen Buddhism. Editor Kenneth Kraft indicates anthology format. Clear single-domain classification.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "20260501_070042.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780802110220-M.jpg?default=false",
+      "ocrModel": "s",
+      "original": {
+        "title": "Zen: Tradition and Transition",
+        "author": "ed. Kenneth Kraft",
+        "isbn": "9780802110220",
+        "publisher": "Grove Press",
+        "publicationYear": 1988,
+        "lcc": "BQ9266 .Z463 1988",
+        "genreTags": [
+          "Buddhism"
+        ],
+        "formTags": [
+          "Anthology"
+        ]
+      }
+    },
+    {
+      "id": "611bdfac-765f-4089-9f76-e3d75a3811ba",
+      "spineRead": {
+        "position": 4,
+        "rawText": "A GUIDE TO THE BODHISATTVA'S WAY OF LIFE — SANTIDEVA",
+        "title": "A GUIDE TO THE BODHISATTVA'S WAY OF LIFE",
+        "author": "SANTIDEVA",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 0,
+          "y": 45,
+          "width": 100,
+          "height": 15
+        }
+      },
+      "title": "A Guide to the Bodhisattva's Way of Life",
+      "author": "SANTIDEVA",
+      "authorLF": "SANTIDEVA",
+      "isbn": "9789383441846",
+      "publisher": "Library of Tibetan Works & Archives",
+      "publicationYear": 1987,
+      "lcc": "BQ3142 .E5 B38 1987",
+      "genreTags": [
+        "Buddhism",
+        "How-to / guide"
+      ],
+      "formTags": [],
+      "confidence": "HIGH",
+      "reasoning": "LCC BQ → Buddhism confirmed by subject headings. 'Guide' in title indicates instructional form → How-to / guide. Classic Buddhist text on bodhisattva practice.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "20260501_070042.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9789383441846-M.jpg?default=false",
+      "ocrModel": "s",
+      "original": {
+        "title": "A Guide to the Bodhisattva's Way of Life",
+        "author": "SANTIDEVA",
+        "isbn": "9789383441846",
+        "publisher": "Library of Tibetan Works & Archives",
+        "publicationYear": 1987,
+        "lcc": "BQ3142 .E5 B38 1987",
+        "genreTags": [
+          "Buddhism",
+          "How-to / guide"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "f5c2fc9e-36b7-44a8-ac8e-4956be707547",
+      "spineRead": {
+        "position": 5,
+        "rawText": "THE DHARMA BUM'S GUIDE TO WESTERN LITERATURE — DEAN SLUYTER",
+        "title": "THE DHARMA BUM'S GUIDE TO WESTERN LITERATURE",
+        "author": "DEAN SLUYTER",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 0,
+          "y": 60,
+          "width": 100,
+          "height": 15
+        }
+      },
+      "title": "The Dharma Bum's Guide to Western Literature",
+      "author": "DEAN SLUYTER",
+      "authorLF": "SLUYTER, DEAN",
+      "isbn": "9781608687695",
+      "publisher": "New World Library",
+      "publicationYear": 2022,
+      "lcc": "",
+      "genreTags": [
+        "Literary criticism",
+        "Buddhism",
+        "Counterculture"
+      ],
+      "formTags": [
+        "How-to / guide"
+      ],
+      "confidence": "MEDIUM",
+      "reasoning": "Title suggests Buddhist perspective on Western literature → Literary criticism + Buddhism. 'Dharma Bum' references Kerouac's Beat novel → Counterculture. 'Guide' in title → How-to form tag. No LCC limits confidence.",
+      "status": "pending",
+      "warnings": [
+        "LCC code missing — tags inferred from title and author only."
+      ],
+      "sourcePhoto": "20260501_070042.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "none",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9781608687695-M.jpg?default=false",
+      "ocrModel": "s",
+      "original": {
+        "title": "The Dharma Bum's Guide to Western Literature",
+        "author": "DEAN SLUYTER",
+        "isbn": "9781608687695",
+        "publisher": "New World Library",
+        "publicationYear": 2022,
+        "lcc": "",
+        "genreTags": [
+          "Literary criticism",
+          "Buddhism",
+          "Counterculture"
+        ],
+        "formTags": [
+          "How-to / guide"
+        ]
+      }
+    }
+  ],
+  "croppedFrom": "20260501_070042.jpg",
+  "sourceDimensions": {
+    "width": 3600,
+    "height": 2085
+  }
+}
