@@ -95,12 +95,22 @@ export function MobileBookCard({ book }: { book: BookRecord }) {
         aria-expanded={open}
         className="w-full flex items-stretch gap-3 p-3 text-left"
       >
-        <Cover
-          coverUrl={book.coverUrl}
-          spineThumbnail={book.spineThumbnail}
-          alt={book.title || 'unknown book'}
-          className="w-16 h-24 rounded bg-surface-page border border-line-light overflow-hidden flex-shrink-0"
-        />
+        <div className="relative flex-shrink-0">
+          <Cover
+            coverUrl={book.coverUrl}
+            spineThumbnail={book.spineThumbnail}
+            alt={book.title || 'unknown book'}
+            className="w-16 h-24 rounded bg-surface-page border border-line-light overflow-hidden"
+          />
+          {book.scannedFromBarcode && (
+            <span
+              className="absolute -bottom-1 -right-1 text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-navy text-white shadow"
+              title="Added by ISBN barcode scan"
+            >
+              Scanned
+            </span>
+          )}
+        </div>
         <div className="min-w-0 flex-1 flex flex-col">
           <div className="flex items-start gap-1.5">
             {hasWarning && (

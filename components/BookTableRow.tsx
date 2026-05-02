@@ -120,13 +120,26 @@ export function BookTableRow({ book }: { book: BookRecord }) {
         aria-expanded={open}
       >
         {/* Cover — 56×80 to read at desktop scale; Cover component
-            handles the load-fail fallback chain. */}
-        <Cover
-          coverUrl={book.coverUrl}
-          spineThumbnail={book.spineThumbnail}
-          alt={book.title || 'unknown book'}
-          className="w-14 h-20 rounded bg-surface-page border border-line-light overflow-hidden"
-        />
+            handles the load-fail fallback chain. Scanned books wear a
+            small "Scanned" badge in the bottom-right of the cover so
+            the reviewer can tell at a glance which records came from
+            a barcode vs. spine OCR. */}
+        <div className="relative">
+          <Cover
+            coverUrl={book.coverUrl}
+            spineThumbnail={book.spineThumbnail}
+            alt={book.title || 'unknown book'}
+            className="w-14 h-20 rounded bg-surface-page border border-line-light overflow-hidden"
+          />
+          {book.scannedFromBarcode && (
+            <span
+              className="absolute -bottom-1 -right-1 text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-navy text-white shadow"
+              title="Added by ISBN barcode scan"
+            >
+              Scanned
+            </span>
+          )}
+        </div>
 
         {/* Title + metadata */}
         <div className="min-w-0 pr-2">
