@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useDarkMode, useStore } from '@/lib/store';
 import { getLedgerBatches, loadLedger } from '@/lib/export-ledger';
 import { confirmDiscardSession } from '@/lib/session';
+import { MobileShell } from './MobileShell';
 
 /**
  * Carnegie shell — left sidebar (200px, near-black) + scrollable content area.
@@ -91,8 +92,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex" style={{ fontFamily: '"Outfit", system-ui, -apple-system, sans-serif' }}>
+      {/* Phone chrome — top bar + bottom tab bar. Hidden at md+ where
+          the sidebar takes over. Renders no children itself; the page
+          content lives in <main> below with responsive padding so the
+          fixed bars don't overlap it. */}
+      <div className="md:hidden">
+        <MobileShell />
+      </div>
+
       <aside
-        className="fixed inset-y-0 left-0 flex flex-col select-none"
+        className="fixed inset-y-0 left-0 hidden md:flex flex-col select-none"
         style={{
           width: SIDEBAR_W,
           background: SIDE_BG,
@@ -200,12 +209,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Content column — takes the remaining viewport width. Independent
           scroll so the sidebar stays put as the user pages through long
-          tables. Per-screen sticky page headers come in subsequent steps. */}
-      <main className="flex-1 min-h-screen overflow-x-hidden" style={{ marginLeft: SIDEBAR_W }}>
+          tables. On phone the sidebar is gone and the mobile chrome
+          (48px top bar + ~56px bottom tab bar) sits above; the responsive
+          padding below clears them so the page doesn't tuck under. */}
+      <main
+        className="flex-1 min-h-screen overflow-x-hidden md:!ml-[260px] pt-12 md:pt-0 pb-16 md:pb-0"
+      >
         {/* Fill the remaining width — no max-w cap. The app is designed
             for the desktop screens it runs on; cap-and-center looks like
-            a mobile app stretched. */}
-        <div className="w-full px-8 lg:px-12 py-10">{children}</div>
+            a mobile app stretched. Phone gets tighter padding. */}
+        <div className="w-full px-4 md:px-8 lg:px-12 py-4 md:py-10">{children}</div>
       </main>
     </div>
   );

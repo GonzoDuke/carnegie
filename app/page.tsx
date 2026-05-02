@@ -9,6 +9,7 @@ import { CropModal } from '@/components/CropModal';
 import { useDarkMode, useStore } from '@/lib/store';
 import type { PhotoBatch } from '@/lib/types';
 import { createThumbnail, loadImage, makeId } from '@/lib/pipeline';
+import { syncPendingBatchesFromRepo } from '@/lib/pending-batches';
 
 const MIN_IMAGE_WIDTH = 1500;
 
@@ -21,6 +22,39 @@ export default function UploadPage() {
     hasPendingFile,
     processQueue,
   } = useStore();
+
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
+
+  async function refreshFromCloud() {
+    if (refreshing) return;
+    setRefreshing(true);
+    setRefreshMsg(null);
+    try {
+      const remote = await syncPendingBatchesFromRepo();
+      if (!remote) {
+        setRefreshMsg('Sync unavailable.');
+      } else {
+        const existing = new Set(state.batches.map((b) => b.id));
+        let added = 0;
+        for (const raw of remote) {
+          if (existing.has(raw.id)) continue;
+          addBatch(raw);
+          added += 1;
+        }
+        setRefreshMsg(
+          added === 0
+            ? 'Already up to date.'
+            : `Pulled ${added} new ${added === 1 ? 'batch' : 'batches'}.`
+        );
+      }
+    } catch {
+      setRefreshMsg('Refresh failed.');
+    } finally {
+      setRefreshing(false);
+      setTimeout(() => setRefreshMsg(null), 3500);
+    }
+  }
 
   const [batchLabel, setBatchLabel] = useState('');
   const [batchNotes, setBatchNotes] = useState('');
@@ -169,7 +203,27 @@ export default function UploadPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="typo-page-title">Upload</h1>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <h1 className="typo-page-title">Upload</h1>
+        {/* Phone-only "Refresh from cloud" — pulls batches just-processed
+            on another device (e.g. tablet) so the Review tab here picks
+            them up without a hard reload. The desktop / tablet auto-syncs
+            on mount and uses the Review header's button for re-pulls. */}
+        <button
+          type="button"
+          onClick={refreshFromCloud}
+          disabled={refreshing}
+          className="md:hidden text-[12px] font-medium px-3 py-1.5 rounded-md border border-line text-text-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Pull batches just-processed on other devices."
+        >
+          {refreshing ? '⟳ Refreshing…' : '↻ Refresh from cloud'}
+        </button>
+      </div>
+      {refreshMsg && (
+        <div className="md:hidden text-[12px] text-text-tertiary">
+          {refreshMsg}
+        </div>
+      )}
 
       {/* Batch inputs — v3 styling: white card, 1px line border, navy
           focus ring. Helper text directly under the field rather than

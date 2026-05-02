@@ -22,6 +22,106 @@ import {
 } from './pipeline';
 import { toTitleCase } from './csv-export';
 import { flagIfPreviouslyExported, loadLedger, syncLedgerFromRepo } from './export-ledger';
+import {
+  deletePendingBatchFromRepo,
+  pushBatchToRepo,
+  syncPendingBatchesFromRepo,
+} from './pending-batches';
+
+// ---------------------------------------------------------------------------
+// sanitizeBook — defensive coercion for any BookRecord that flows in from
+// persistence (localStorage hydration) or the cross-device sync. Both paths
+// go through the same helper so a corrupt persisted record (an object on
+// `warnings`, a non-string tag, etc.) can't reach JSX as a non-primitive
+// and trigger the production "Objects are not valid as a React child"
+// #418 / #438 crashes.
+// ---------------------------------------------------------------------------
+
+const toStringSafe = (v: unknown): string =>
+  typeof v === 'string'
+    ? v
+    : v == null
+      ? ''
+      : typeof v === 'number' || typeof v === 'boolean'
+        ? String(v)
+        : (() => {
+            try {
+              return JSON.stringify(v);
+            } catch {
+              return '';
+            }
+          })();
+
+const toStringArr = (v: unknown): string[] =>
+  Array.isArray(v) ? v.map(toStringSafe).filter((s) => s.length > 0) : [];
+
+const toIntSafe = (v: unknown): number => {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string') {
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+};
+
+const VALID_CONFIDENCE = new Set(['HIGH', 'MEDIUM', 'LOW']);
+
+function sanitizeBook<
+  T extends Partial<BookRecord> & { title?: string; original?: { title?: string } }
+>(book: T): BookRecord {
+  const conf = VALID_CONFIDENCE.has(toStringSafe(book.confidence) as 'HIGH')
+    ? (book.confidence as 'HIGH' | 'MEDIUM' | 'LOW')
+    : 'LOW';
+  return {
+    ...(book as BookRecord),
+    title: book.title ? toTitleCase(toStringSafe(book.title)) : '',
+    author: toStringSafe(book.author),
+    authorLF: toStringSafe(book.authorLF),
+    isbn: toStringSafe(book.isbn),
+    publisher: toStringSafe(book.publisher),
+    publicationYear: toIntSafe(book.publicationYear),
+    lcc: toStringSafe(book.lcc),
+    reasoning: toStringSafe(book.reasoning),
+    sourcePhoto: toStringSafe(book.sourcePhoto),
+    batchLabel: book.batchLabel == null ? undefined : toStringSafe(book.batchLabel),
+    batchNotes: book.batchNotes == null ? undefined : toStringSafe(book.batchNotes),
+    notes: book.notes == null ? undefined : toStringSafe(book.notes),
+    coverUrl: book.coverUrl == null ? undefined : toStringSafe(book.coverUrl),
+    spineThumbnail:
+      book.spineThumbnail == null ? undefined : toStringSafe(book.spineThumbnail),
+    ddc: book.ddc == null ? undefined : toStringSafe(book.ddc),
+    confidence: conf,
+    status:
+      book.status === 'approved' || book.status === 'rejected' || book.status === 'pending'
+        ? book.status
+        : 'pending',
+    warnings: toStringArr(book.warnings),
+    genreTags: toStringArr(book.genreTags),
+    formTags: toStringArr(book.formTags),
+    duplicateOf: Array.isArray(book.duplicateOf)
+      ? book.duplicateOf.map(toIntSafe).filter((n) => n > 0)
+      : undefined,
+    original: book.original
+      ? {
+          ...book.original,
+          title: book.original.title
+            ? toTitleCase(toStringSafe(book.original.title))
+            : '',
+        }
+      : ({} as BookRecord['original']),
+  };
+}
+
+function sanitizeBatch(b: Partial<PhotoBatch>): PhotoBatch {
+  return {
+    ...(b as PhotoBatch),
+    status:
+      b.status === 'processing' || b.status === 'queued'
+        ? ('done' as const)
+        : (b.status ?? 'done'),
+    books: Array.isArray(b.books) ? b.books.map(sanitizeBook) : [],
+  };
+}
 
 export interface ProcessingState {
   /** True from "process all" click until the loop returns. */
@@ -59,8 +159,22 @@ const initialState: State = { batches: [], allBooks: [], processing: null };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case 'ADD_BATCH':
-      return { ...state, batches: [...state.batches, action.batch] };
+    case 'ADD_BATCH': {
+      // Most callers (PhotoUploader → enqueue) push a batch with no books
+      // and rely on ADD_BOOK during processQueue to populate both lists.
+      // The cross-device sync path adds a pre-populated batch in one shot,
+      // so union those books into allBooks here without duplicating any
+      // that already exist (de-dupes by id).
+      const existingBookIds = new Set(state.allBooks.map((b) => b.id));
+      const newBooks = (action.batch.books ?? []).filter(
+        (b) => !existingBookIds.has(b.id)
+      );
+      return {
+        ...state,
+        batches: [...state.batches, action.batch],
+        allBooks: newBooks.length > 0 ? [...state.allBooks, ...newBooks] : state.allBooks,
+      };
+    }
     case 'UPDATE_BATCH':
       return {
         ...state,
@@ -265,101 +379,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const parsed = JSON.parse(raw) as Partial<State>;
       // Strip any in-flight processing state on cold load — Files don't survive
       // a page refresh, so anything that was processing is no longer recoverable.
-      // Also re-Title-Case existing book titles so any older records that were
-      // saved with broken casing (random ALL-CAPS words from the prior bug)
-      // get cleaned up retroactively.
-      // Sanitize EVERY field that flows into a rendered React child so a
-      // corrupt persisted record (an object accidentally pushed onto
-      // warnings, a non-string tag, a non-string lcc, etc.) cannot reach
-      // JSX as a non-primitive — that's what triggers the production
-      // "Objects are not valid as a React child" #418 / #438 crashes.
-      const toStringSafe = (v: unknown): string =>
-        typeof v === 'string'
-          ? v
-          : v == null
-            ? ''
-            : typeof v === 'number' || typeof v === 'boolean'
-              ? String(v)
-              : (() => {
-                  try {
-                    return JSON.stringify(v);
-                  } catch {
-                    return '';
-                  }
-                })();
-      const toStringArr = (v: unknown): string[] =>
-        Array.isArray(v)
-          ? v.map(toStringSafe).filter((s) => s.length > 0)
-          : [];
-      const toIntSafe = (v: unknown): number => {
-        if (typeof v === 'number' && Number.isFinite(v)) return v;
-        if (typeof v === 'string') {
-          const n = parseInt(v, 10);
-          return Number.isFinite(n) ? n : 0;
-        }
-        return 0;
-      };
-      const VALID_CONFIDENCE = new Set(['HIGH', 'MEDIUM', 'LOW']);
-      const sanitizeBook = <
-        T extends Partial<BookRecord> & { title?: string; original?: { title?: string } }
-      >(book: T): BookRecord => {
-        const conf = VALID_CONFIDENCE.has(toStringSafe(book.confidence) as 'HIGH')
-          ? (book.confidence as 'HIGH' | 'MEDIUM' | 'LOW')
-          : 'LOW';
-        return {
-          ...(book as BookRecord),
-          title: book.title ? toTitleCase(toStringSafe(book.title)) : '',
-          author: toStringSafe(book.author),
-          authorLF: toStringSafe(book.authorLF),
-          isbn: toStringSafe(book.isbn),
-          publisher: toStringSafe(book.publisher),
-          publicationYear: toIntSafe(book.publicationYear),
-          lcc: toStringSafe(book.lcc),
-          reasoning: toStringSafe(book.reasoning),
-          sourcePhoto: toStringSafe(book.sourcePhoto),
-          batchLabel:
-            book.batchLabel == null ? undefined : toStringSafe(book.batchLabel),
-          batchNotes:
-            book.batchNotes == null ? undefined : toStringSafe(book.batchNotes),
-          notes: book.notes == null ? undefined : toStringSafe(book.notes),
-          coverUrl:
-            book.coverUrl == null ? undefined : toStringSafe(book.coverUrl),
-          spineThumbnail:
-            book.spineThumbnail == null
-              ? undefined
-              : toStringSafe(book.spineThumbnail),
-          ddc: book.ddc == null ? undefined : toStringSafe(book.ddc),
-          confidence: conf,
-          status:
-            book.status === 'approved' ||
-            book.status === 'rejected' ||
-            book.status === 'pending'
-              ? book.status
-              : 'pending',
-          warnings: toStringArr(book.warnings),
-          genreTags: toStringArr(book.genreTags),
-          formTags: toStringArr(book.formTags),
-          duplicateOf: Array.isArray(book.duplicateOf)
-            ? book.duplicateOf.map(toIntSafe).filter((n) => n > 0)
-            : undefined,
-          original: book.original
-            ? {
-                ...book.original,
-                title: book.original.title
-                  ? toTitleCase(toStringSafe(book.original.title))
-                  : '',
-              }
-            : ({} as BookRecord['original']),
-        };
-      };
-      const batches = (parsed.batches ?? []).map((b) => ({
-        ...b,
-        status:
-          b.status === 'processing' || b.status === 'queued'
-            ? ('done' as const)
-            : b.status,
-        books: Array.isArray(b.books) ? b.books.map(sanitizeBook) : [],
-      }));
+      // Sanitize via the module-scope helper so the same coercion runs for
+      // localStorage hydration AND inbound cross-device sync.
+      const batches = (parsed.batches ?? []).map(sanitizeBatch);
       const allBooks = Array.isArray(parsed.allBooks)
         ? parsed.allBooks.map(sanitizeBook)
         : [];
@@ -400,10 +422,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // localStorage cache that loadLedger() reads at processing time. When the
   // remote isn't available (no GITHUB_TOKEN configured), this is a no-op
   // and we keep using whatever's in the local cache.
+  //
+  // In parallel, pull any pending batches that were processed on another
+  // device (typically a phone capture) so they appear in /review here.
   useEffect(() => {
-    syncLedgerFromRepo().catch(() => {
-      // best-effort — fall back silently to localStorage
-    });
+    syncLedgerFromRepo().catch(() => {});
+    syncPendingBatchesFromRepo()
+      .then((remoteBatches) => {
+        if (!remoteBatches || remoteBatches.length === 0) return;
+        const existingIds = new Set(stateRef.current.batches.map((b) => b.id));
+        for (const raw of remoteBatches) {
+          if (existingIds.has(raw.id)) continue;
+          dispatch({ type: 'ADD_BATCH', batch: sanitizeBatch(raw) });
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Pending files live in a ref — they can't be serialized and don't need to
@@ -550,6 +583,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           }
 
           dispatch({ type: 'UPDATE_BATCH', id: batch.id, patch: { status: 'done' } });
+
+          // Push the finalized batch to the repo so other devices (typically
+          // a tablet picking up a phone capture) can see it on their next
+          // sync. Fire-and-forget — failures never block the UI, and the
+          // route returns 501 cleanly when GITHUB_TOKEN isn't configured.
+          const finalizedBatch: PhotoBatch = {
+            ...batch,
+            status: 'done',
+            spinesDetected: detections.length,
+            booksIdentified: finalBooks.length,
+            books: finalBooks,
+          };
+          pushBatchToRepo(finalizedBatch).catch(() => {});
         } catch (err: any) {
           dispatch({
             type: 'UPDATE_BATCH',
@@ -672,12 +718,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       removeBatch: (id) => {
         pendingFiles.current.delete(id);
         dispatch({ type: 'REMOVE_BATCH', id });
+        // Drop the cross-device copy too so other devices stop seeing it.
+        deletePendingBatchFromRepo(id).catch(() => {});
       },
       addBook: (batchId, book) => dispatch({ type: 'ADD_BOOK', batchId, book }),
       updateBook: (id, patch) => dispatch({ type: 'UPDATE_BOOK', id, patch }),
       clear: () => {
         pendingFiles.current.clear();
+        // Tear down every remote pending-batch entry so the next session
+        // doesn't pull back the work the user just discarded. Snapshot ids
+        // before dispatch so the loop reads pre-clear state.
+        const idsToWipe = stateRef.current.batches.map((b) => b.id);
         dispatch({ type: 'CLEAR' });
+        for (const id of idsToWipe) {
+          deletePendingBatchFromRepo(id).catch(() => {});
+        }
       },
       setPendingFile: (batchId, file) => {
         pendingFiles.current.set(batchId, file);

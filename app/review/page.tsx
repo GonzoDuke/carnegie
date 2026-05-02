@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { BookTableRow } from '@/components/BookTableRow';
+import { MobileBookCard } from '@/components/MobileBookCard';
 import { DebugErrorBoundary } from '@/components/DebugErrorBoundary';
 import { SpineSelector } from '@/components/SpineSelector';
 import { useStore } from '@/lib/store';
@@ -10,6 +11,7 @@ import { VOCAB, type DomainKey } from '@/lib/tag-domains';
 import type { PhotoBatch } from '@/lib/types';
 import { flagIfPreviouslyExported } from '@/lib/export-ledger';
 import { confirmDiscardSession } from '@/lib/session';
+import { syncPendingBatchesFromRepo } from '@/lib/pending-batches';
 
 type Filter = 'all' | 'pending' | 'approved' | 'rejected' | 'low';
 type Sort = 'position' | 'confidence-desc' | 'confidence-asc';
@@ -31,13 +33,48 @@ const SORTS: { id: Sort; label: string; title: string }[] = [
 const CONFIDENCE_RANK = { LOW: 0, MEDIUM: 1, HIGH: 2 } as const;
 
 export default function ReviewPage() {
-  const { state, updateBook, addBook, getPendingFile, bulkRetag, clear } = useStore();
+  const { state, updateBook, addBook, addBatch, getPendingFile, bulkRetag, clear } = useStore();
   const [filter, setFilter] = useState<Filter>('all');
   const [sort, setSort] = useState<Sort>('position');
   const [addingFor, setAddingFor] = useState<PhotoBatch | null>(null);
   const [retagBusy, setRetagBusy] = useState(false);
   const [retagDomainOpen, setRetagDomainOpen] = useState(false);
   const [retagToast, setRetagToast] = useState<string | null>(null);
+  const [refreshState, setRefreshState] = useState<
+    'idle' | 'pending' | 'done' | 'error'
+  >('idle');
+  const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
+
+  async function refreshFromCloud() {
+    if (refreshState === 'pending') return;
+    setRefreshState('pending');
+    setRefreshMessage(null);
+    try {
+      const remote = await syncPendingBatchesFromRepo();
+      if (!remote) {
+        setRefreshState('error');
+        setRefreshMessage('Sync unavailable — working offline.');
+        setTimeout(() => setRefreshState('idle'), 3500);
+        return;
+      }
+      const existing = new Set(state.batches.map((b) => b.id));
+      let added = 0;
+      for (const raw of remote) {
+        if (existing.has(raw.id)) continue;
+        addBatch(raw);
+        added += 1;
+      }
+      setRefreshState('done');
+      setRefreshMessage(
+        added === 0 ? 'Already up to date.' : `Pulled ${added} new ${added === 1 ? 'batch' : 'batches'}.`
+      );
+      setTimeout(() => setRefreshState('idle'), 3500);
+    } catch {
+      setRefreshState('error');
+      setRefreshMessage('Refresh failed.');
+      setTimeout(() => setRefreshState('idle'), 3500);
+    }
+  }
 
   async function runBulkRetag(ids: string[], scopeLabel: string) {
     if (ids.length === 0 || retagBusy) return;
@@ -124,18 +161,38 @@ export default function ReviewPage() {
               {counts.total} {counts.total === 1 ? 'book' : 'books'}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (confirmDiscardSession(state.allBooks)) clear();
-            }}
-            disabled={state.allBooks.length === 0 && state.batches.length === 0}
-            className="text-[12px] font-medium px-3 py-1.5 rounded-md border border-line text-text-secondary hover:border-carnegie-red hover:text-carnegie-red hover:bg-carnegie-red-soft transition disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Discard the current batch and start fresh — exported books stay in the ledger."
-          >
-            Clear batch
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={refreshFromCloud}
+              disabled={refreshState === 'pending'}
+              className="text-[12px] font-medium px-3 py-1.5 rounded-md border border-line text-text-secondary hover:border-navy hover:text-navy hover:bg-navy-soft transition disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Pull batches just-processed on other devices (e.g. a phone capture)."
+            >
+              {refreshState === 'pending' ? '⟳ Refreshing…' : '↻ Refresh from cloud'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirmDiscardSession(state.allBooks)) clear();
+              }}
+              disabled={state.allBooks.length === 0 && state.batches.length === 0}
+              className="text-[12px] font-medium px-3 py-1.5 rounded-md border border-line text-text-secondary hover:border-carnegie-red hover:text-carnegie-red hover:bg-carnegie-red-soft transition disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Discard the current batch and start fresh — exported books stay in the ledger."
+            >
+              Clear batch
+            </button>
+          </div>
         </div>
+        {refreshMessage && refreshState !== 'pending' && (
+          <div
+            className={`mt-2 text-[12px] ${
+              refreshState === 'error' ? 'text-carnegie-red' : 'text-text-tertiary'
+            }`}
+          >
+            {refreshMessage}
+          </div>
+        )}
         <p className="typo-page-desc max-w-3xl">
           Verify each book&apos;s metadata and tags. Edit fields by clicking them. Only
           approved books make it into the export.
@@ -151,8 +208,26 @@ export default function ReviewPage() {
         <Stat label="Low confidence" value={counts.low} tone="mahogany" active={filter === 'low'} />
       </div>
 
-      {/* Filter + sort row + bulk actions */}
-      <div className="flex flex-wrap items-center gap-3 pb-3 border-b border-cream-300 dark:border-ink-soft">
+      {/* Phone filter chips — just the basic status filters, no sort
+          controls and no bulk re-tag (those are desktop affordances). */}
+      <div className="md:hidden flex gap-1.5 flex-wrap pb-3 border-b border-cream-300 dark:border-ink-soft">
+        {FILTERS.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setFilter(f.id)}
+            className={`text-xs px-3 py-1.5 rounded-md transition ${
+              filter === f.id
+                ? 'bg-accent text-cream-50'
+                : 'bg-cream-100 text-ink/70 dark:text-cream-300/70'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Filter + sort row + bulk actions (desktop / tablet). */}
+      <div className="hidden md:flex flex-wrap items-center gap-3 pb-3 border-b border-cream-300 dark:border-ink-soft">
         <div className="flex gap-1 flex-wrap">
           {FILTERS.map((f) => (
             <button
@@ -259,9 +334,9 @@ export default function ReviewPage() {
         </div>
       )}
 
-      {/* Compact book table — replaces the v2 grouped-card layout. Sticky
-          column header, click any row to expand its detail panel. */}
-      <div className="bg-surface-card border border-line rounded-lg overflow-hidden">
+      {/* Compact book table (desktop / tablet). Sticky column header,
+          click any row to expand its detail panel. */}
+      <div className="hidden md:block bg-surface-card border border-line rounded-lg overflow-hidden">
         <div className="grid grid-cols-[72px_1fr_90px_240px_120px] items-center gap-4 px-[16px] py-[10px] bg-surface-page border-b border-line sticky top-0 z-[5]">
           <span />
           <span className="typo-label">Book</span>
@@ -279,13 +354,24 @@ export default function ReviewPage() {
         )}
       </div>
 
+      {/* Phone card list. Same data, same store, same filter chips. */}
+      <div className="md:hidden space-y-3">
+        {visibleBooks.length === 0 ? (
+          <div className="text-sm text-text-tertiary italic p-8 text-center bg-surface-card border border-line rounded-lg">
+            No books in this filter.
+          </div>
+        ) : (
+          visibleBooks.map((book) => <MobileBookCard key={book.id} book={book} />)
+        )}
+      </div>
+
       {/* Add-missing-book launcher — flat list of every photo batch with a
           source file still in memory. Per-batch grouping moved off the
           review list, so this row is the entry point now. */}
       {state.batches.filter(
         (b) => b.status === 'done' || b.status === 'processing'
       ).length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 pt-2">
+        <div className="hidden md:flex flex-wrap items-center gap-2 pt-2">
           <span className="typo-label">Add a missed book:</span>
           {state.batches
             .filter((b) => b.status === 'done' || b.status === 'processing')

@@ -1,0 +1,185 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+const NAVY = '#1B3A5C';
+
+interface TabDef {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+}
+
+/**
+ * Phone-only chrome — a 48px top bar with the Carnegie wordmark, and a
+ * 56px bottom tab bar with three primary destinations (Capture / Review /
+ * Export). No children: AppShell renders the page content separately
+ * inside its responsive `<main>`, with top + bottom padding reserved here.
+ *
+ * Vocabulary and History intentionally don't appear in the bottom bar —
+ * they're library-management screens that belong on the larger desktop /
+ * tablet layout.
+ */
+export function MobileShell() {
+  const pathname = usePathname();
+
+  const tabs: TabDef[] = [
+    { href: '/', label: 'Capture', icon: <CameraIcon /> },
+    { href: '/review', label: 'Review', icon: <ReviewIcon /> },
+    { href: '/export', label: 'Export', icon: <ExportIcon /> },
+  ];
+
+  function isActive(href: string) {
+    if (href === '/') return pathname === '/';
+    return pathname === href || pathname.startsWith(href + '/');
+  }
+
+  return (
+    <>
+      {/* Top bar — small spine-stack mark + CARNEGIE wordmark, navy. */}
+      <header
+        className="fixed top-0 inset-x-0 z-30 flex items-center gap-2 px-4"
+        style={{ height: 48, background: NAVY }}
+      >
+        <MiniSpineStack />
+        <span
+          style={{
+            fontFamily: '"Arial Black", "Helvetica Neue", Arial, system-ui, sans-serif',
+            fontSize: 15,
+            fontWeight: 900,
+            color: '#FFFFFF',
+            letterSpacing: '3px',
+            textTransform: 'uppercase',
+          }}
+        >
+          Carnegie
+        </span>
+      </header>
+
+      {/* Bottom tab bar — three primary tabs. iOS adds a home-indicator
+          inset; honor it via env(safe-area-inset-bottom) so the labels
+          don't get clipped on a real device. */}
+      <nav
+        className="fixed bottom-0 inset-x-0 z-30 grid grid-cols-3 border-t border-line-light bg-surface-card"
+        style={{
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
+        aria-label="Primary"
+      >
+        {tabs.map((t) => {
+          const active = isActive(t.href);
+          return (
+            <Link
+              key={t.href}
+              href={t.href}
+              className="flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] transition-colors"
+              style={{
+                color: active ? NAVY : '#707070',
+                fontWeight: active ? 600 : 500,
+                background: active ? 'rgba(27,58,92,0.06)' : 'transparent',
+              }}
+            >
+              <span
+                style={{
+                  width: 22,
+                  height: 22,
+                  display: 'inline-flex',
+                  opacity: active ? 0.9 : 0.6,
+                }}
+              >
+                {t.icon}
+              </span>
+              <span>{t.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </>
+  );
+}
+
+function MiniSpineStack() {
+  // Half-scale of the sidebar's SpineStackLogo so the wordmark dominates
+  // the 48px top bar. 28px tile, 4 bars, 4px wide.
+  const bars: { color: string; height: number }[] = [
+    { color: '#C4A35A', height: 21 },
+    { color: '#5B8DB8', height: 18 },
+    { color: '#B83232', height: 15 },
+    { color: '#8A8A84', height: 12 },
+  ];
+  return (
+    <div
+      style={{
+        width: 28,
+        height: 28,
+        borderRadius: 5,
+        background: '#141414',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 1.5,
+        flexShrink: 0,
+      }}
+      aria-hidden
+    >
+      {bars.map((b, i) => (
+        <span
+          key={i}
+          style={{
+            width: 3.5,
+            height: b.height,
+            background: b.color,
+            borderRadius: 0.75,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function IconShell({ children }: { children: React.ReactNode }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width="100%"
+      height="100%"
+      aria-hidden
+    >
+      {children}
+    </svg>
+  );
+}
+
+function CameraIcon() {
+  return (
+    <IconShell>
+      <path d="M3 8h3l2-2h8l2 2h3v11H3z" />
+      <circle cx="12" cy="13" r="4" />
+    </IconShell>
+  );
+}
+
+function ReviewIcon() {
+  return (
+    <IconShell>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M7 8h10M7 12h10M7 16h6" />
+    </IconShell>
+  );
+}
+
+function ExportIcon() {
+  return (
+    <IconShell>
+      <path d="M12 3v12" />
+      <path d="M7 8l5-5 5 5" />
+      <path d="M3 17v4h18v-4" />
+    </IconShell>
+  );
+}
