@@ -3,7 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface PhotoUploaderProps {
-  onFiles: (files: File[]) => void;
+  /**
+   * Receives accepted images. `source: 'gallery'` files came from the
+   * file picker / drag-drop and should go through the crop step. `source:
+   * 'camera'` files were already framed in the in-app camera viewfinder
+   * and should skip cropping (the camera modal sits on top of any
+   * CropModal, so cropping mid-capture would be invisible anyway).
+   */
+  onFiles: (files: File[], opts: { source: 'gallery' | 'camera' }) => void;
   disabled?: boolean;
 }
 
@@ -40,7 +47,7 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
         /\.(jpe?g|png|heic|heif|webp)$/i.test(f.name)
       );
       if (accepted.length === 0) return;
-      onFiles(accepted);
+      onFiles(accepted, { source: 'gallery' });
     },
     [onFiles]
   );
@@ -149,7 +156,7 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
           `shelf-capture-${String(n).padStart(3, '0')}.jpg`,
           { type: 'image/jpeg', lastModified: Date.now() }
         );
-        onFiles([file]);
+        onFiles([file], { source: 'camera' });
         setCaptureUiCount(n);
         const url = URL.createObjectURL(blob);
         setThumbs((prev) => [...prev, { id: n, url, name: file.name }]);

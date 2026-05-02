@@ -162,7 +162,21 @@ export default function UploadPage() {
     if (!lowRes) setPendingFile(id, file);
   }
 
-  function handleFiles(files: File[]) {
+  function handleFiles(
+    files: File[],
+    opts: { source: 'gallery' | 'camera' }
+  ) {
+    if (opts.source === 'camera') {
+      // Camera shots were framed in the viewfinder. The CropModal also
+      // can't show itself while the camera modal is mounted on top, so
+      // route directly to commitFile with the current label/notes.
+      const savedLabel = batchLabel.trim();
+      const savedNotes = batchNotes.trim();
+      for (const f of files) {
+        void commitFile(f, savedLabel, savedNotes);
+      }
+      return;
+    }
     enqueueForCrop(files);
   }
 
@@ -369,48 +383,34 @@ export default function UploadPage() {
         </button>
       </div>
 
-      {/* Phone action area. Counter + dark-mode link as a quiet caption
-          row, then the Process-all CTA full-width and large. The CTA
-          also pins to the bottom of the viewport (above the 56px tab
-          bar + iOS home-indicator inset) so it's always tappable even
-          when the photo strip is scrolled. */}
-      <div className="md:hidden pt-3 mt-2 border-t border-line space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="text-[12px] text-text-tertiary">
-            {state.batches.length} photo{state.batches.length !== 1 ? 's' : ''} ·{' '}
-            {state.allBooks.length} book{state.allBooks.length !== 1 ? 's' : ''}
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              const next = !isDark;
-              setDark(next);
-              setIsDark(next);
-            }}
-            className="text-[11px] text-text-quaternary"
-            aria-label="Toggle dark mode"
-          >
-            {isDark ? '☀ Light' : '☾ Dark'}
-          </button>
+      {/* Phone caption row — counter + dark-mode link. The Process-all
+          CTA itself is the sticky button further down so it stays
+          thumb-reachable above the bottom tab bar through any queue
+          length. */}
+      <div className="md:hidden flex items-center justify-between pt-3 mt-2 border-t border-line">
+        <div className="text-[12px] text-text-tertiary">
+          {state.batches.length} photo{state.batches.length !== 1 ? 's' : ''} ·{' '}
+          {state.allBooks.length} book{state.allBooks.length !== 1 ? 's' : ''}
         </div>
         <button
-          onClick={() => processQueue()}
-          disabled={!canProcess}
-          className="w-full py-3.5 rounded-md bg-navy text-white text-[16px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition active:scale-[0.99]"
+          type="button"
+          onClick={() => {
+            const next = !isDark;
+            setDark(next);
+            setIsDark(next);
+          }}
+          className="text-[11px] text-text-quaternary"
+          aria-label="Toggle dark mode"
         >
-          {isProcessing
-            ? 'Processing…'
-            : processableQueued.length === 0
-              ? 'Process all'
-              : `Process all (${processableQueued.length})`}
+          {isDark ? '☀ Light' : '☾ Dark'}
         </button>
       </div>
 
-      {/* Sticky phone CTA. Sits above the bottom tab bar so even a long
-          queue or progress block can't push the action off-screen.
-          Hidden when there's nothing actionable, and when the inline
-          CTA above is already on-screen we keep both — the sticky one
-          mirrors the inline one and disappears once the queue empties. */}
+      {/* Sticky phone CTA — only Process-all button on phone. Pinned
+          above the 56px bottom tab bar (plus iOS home-indicator inset)
+          so it's always tappable. Renders only when there's actionable
+          work; an "all done" state shows the Review CTA inside the
+          processing block above instead. */}
       {processableQueued.length > 0 && (
         <div
           className="md:hidden fixed inset-x-0 z-20 px-4"
@@ -428,6 +428,12 @@ export default function UploadPage() {
               : `Process all (${processableQueued.length})`}
           </button>
         </div>
+      )}
+
+      {/* Phone spacer so the sticky Process-all button doesn't overlap the
+          last in-page row when the user scrolls to the bottom. */}
+      {processableQueued.length > 0 && (
+        <div className="md:hidden h-16" aria-hidden />
       )}
 
       {/* Inline crop step. Renders one modal per queued file; advancing
