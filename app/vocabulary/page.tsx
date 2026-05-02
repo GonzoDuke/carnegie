@@ -266,11 +266,227 @@ export default function VocabularyPage() {
     [changelogText]
   );
 
+  // Stacked phone view shares every piece of state and handler with the
+  // desktop layout below. `md:hidden` gates this block; the desktop grid
+  // is `hidden md:grid` so a single render path covers both viewports.
+  const phoneView = (
+    <div className="md:hidden flex flex-col">
+      {/* Horizontal scrollable domain pills. "All" first so it's the
+          default selection. -mx-4 + px-4 lets the row bleed past the
+          page padding so the first/last pill can sit flush at the
+          edges instead of in a centered column. */}
+      <div className="-mx-4 px-4 overflow-x-auto pb-2 mb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-1.5 w-max">
+          <DomainPill
+            label="All"
+            count={allRows.length}
+            active={selection === 'all'}
+            onClick={() => setSelection('all')}
+          />
+          {sortedDomainKeys.map((k) => {
+            const def = vocab.domains[k];
+            if (!def) return null;
+            return (
+              <DomainPill
+                key={k}
+                label={def.label}
+                count={def.tags.length}
+                active={selection === k}
+                onClick={() => setSelection(k)}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-carnegie-red-soft border border-carnegie-red/40 text-carnegie-red rounded-md px-3 py-2 text-[12px] mb-2">
+          {error}
+        </div>
+      )}
+
+      {/* Single-column tag stack. Each row: tag name, domain label,
+          usage count, delete button. */}
+      <div className="bg-surface-card border border-line rounded-lg overflow-hidden mb-3">
+        {filteredRows.length === 0 ? (
+          <div className="text-[13px] text-text-tertiary italic p-6 text-center">
+            No tags in this domain yet.
+          </div>
+        ) : (
+          filteredRows.map((row) => {
+            const usage = usageByTag.get(row.tag) ?? 0;
+            const canDelete = usage === 0 && !busy;
+            const isConfirming =
+              confirm?.tag === row.tag && confirm.domain === row.domain;
+            return (
+              <div
+                key={`${row.domain}:${row.tag}`}
+                className="flex items-center gap-3 px-3 py-3 border-b border-line-light last:border-b-0"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14px] text-text-primary truncate">
+                    {row.tag}
+                  </div>
+                  <div className="text-[11px] text-text-tertiary truncate">
+                    {row.domainLabel}
+                    <span className="mx-1.5 text-text-quaternary">·</span>
+                    <span
+                      className={`font-mono ${
+                        usage === 0 ? 'text-text-quaternary' : 'text-text-secondary'
+                      }`}
+                    >
+                      {usage} {usage === 1 ? 'use' : 'uses'}
+                    </span>
+                  </div>
+                </div>
+                {isConfirming ? (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => onDeleteTag(row.tag, row.domain)}
+                      className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-carnegie-red text-carnegie-red"
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirm(null)}
+                      className="text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-line text-text-tertiary"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      canDelete && setConfirm({ tag: row.tag, domain: row.domain })
+                    }
+                    disabled={!canDelete}
+                    aria-label={`Delete ${row.tag}`}
+                    title={
+                      usage > 0
+                        ? `Used by ${usage} ${usage === 1 ? 'book' : 'books'} — delete blocked.`
+                        : 'Remove from vocabulary'
+                    }
+                    className="w-8 h-8 flex-shrink-0 rounded text-[14px] font-semibold border border-line text-text-quaternary disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    {busy?.kind === 'delete' && busy.tag === row.tag ? '…' : '✕'}
+                  </button>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Collapsible changelog — same as desktop, just inline rather
+          than in the right pane. Lives ABOVE the sticky add-tag bar
+          so it scrolls with the rest of the content. */}
+      <div className="bg-surface-card border border-line rounded-lg overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setChangelogOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-3 py-2.5 text-[13px] font-medium text-text-secondary"
+          aria-expanded={changelogOpen}
+        >
+          <span className="flex items-center gap-2">
+            <span className="typo-label">Changelog</span>
+            {parsedChangelog.length > 0 && (
+              <span className="text-[11px] text-text-tertiary">
+                {parsedChangelog.length}{' '}
+                {parsedChangelog.length === 1 ? 'entry' : 'entries'}
+              </span>
+            )}
+          </span>
+          <span className="text-text-tertiary">{changelogOpen ? '▾' : '▸'}</span>
+        </button>
+        {changelogOpen && (
+          <div className="border-t border-line-light px-3 py-2.5 space-y-1.5 max-h-[280px] overflow-y-auto">
+            {parsedChangelog.length === 0 ? (
+              <div className="text-[12px] text-text-tertiary italic">
+                No changelog entries found.
+              </div>
+            ) : (
+              parsedChangelog.map((e, i) => (
+                <div key={i} className="text-[12px] leading-snug">
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-mono text-[11px] text-text-tertiary flex-shrink-0">
+                      {e.date}
+                    </span>
+                    <span className="text-text-primary font-medium truncate">
+                      {e.tag}
+                    </span>
+                  </div>
+                  <div className="typo-label mt-0.5">
+                    {e.domain}
+                    {e.source && (
+                      <span className="text-[11px] text-text-tertiary italic ml-1.5 normal-case tracking-normal">
+                        — {e.source}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Spacer so the last content row isn't covered by the sticky
+          add-tag bar. The bar is ~158px tall (input + select + button +
+          padding) above the 56px tab bar. */}
+      <div aria-hidden className="h-[180px]" />
+
+      {/* Sticky add-tag panel — pinned just above the bottom tab bar.
+          Stacked: name input, domain select, full-width Add button. */}
+      <div
+        className="fixed inset-x-0 z-20 bg-surface-card border-t border-line px-3 pt-2 pb-2 space-y-2 shadow-[0_-2px_8px_rgba(0,0,0,0.04)]"
+        style={{
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 56px)',
+        }}
+      >
+        <input
+          type="text"
+          value={newTagName}
+          onChange={(e) => setNewTagName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && newTagName.trim() && !busy) onAddTag();
+          }}
+          placeholder="New tag name"
+          className="w-full bg-surface-card border border-line rounded-md px-3 py-2 text-[14px] text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-navy"
+        />
+        <select
+          value={newTagDomain}
+          onChange={(e) => setNewTagDomain(e.target.value as DomainKey)}
+          className="w-full bg-surface-card border border-line rounded-md px-3 py-2 text-[14px] text-text-primary focus:outline-none focus:border-navy"
+          aria-label="Domain"
+        >
+          {sortedDomainKeys.map((k) => (
+            <option key={k} value={k}>
+              {vocab.domains[k]?.label ?? k}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={onAddTag}
+          disabled={!newTagName.trim() || !!busy}
+          className="w-full py-2.5 rounded-md bg-navy text-white text-[14px] font-semibold disabled:opacity-50 transition"
+        >
+          {busy?.kind === 'add' ? 'Adding…' : 'Add tag'}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       <h1 className="typo-page-title">Vocabulary</h1>
 
-      <div className="grid grid-cols-[180px_1fr] gap-6">
+      {phoneView}
+
+      <div className="hidden md:grid grid-cols-[180px_1fr] gap-6">
         {/* LEFT — domain rail */}
         <aside className="bg-surface-card border border-line rounded-lg overflow-hidden h-max">
           <DomainRow
@@ -471,6 +687,39 @@ export default function VocabularyPage() {
         </section>
       </div>
     </div>
+  );
+}
+
+function DomainPill({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] transition border ${
+        active
+          ? 'bg-navy text-white border-navy font-medium'
+          : 'bg-surface-card text-text-secondary border-line'
+      }`}
+    >
+      <span>{label}</span>
+      <span
+        className={`text-[10px] font-mono ${
+          active ? 'text-white/75' : 'text-text-quaternary'
+        }`}
+      >
+        {count}
+      </span>
+    </button>
   );
 }
 
