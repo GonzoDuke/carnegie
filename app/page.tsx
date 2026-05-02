@@ -1,15 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { ProcessingQueue } from '@/components/ProcessingQueue';
 import { BatchProgress } from '@/components/BatchProgress';
 import { CropModal } from '@/components/CropModal';
+import { BarcodeScanner } from '@/components/BarcodeScanner';
 import { useDarkMode, useStore } from '@/lib/store';
-import type { PhotoBatch } from '@/lib/types';
+import type { BookRecord, PhotoBatch } from '@/lib/types';
 import { createThumbnail, loadImage, makeId } from '@/lib/pipeline';
-import { syncPendingBatchesFromRepo } from '@/lib/pending-batches';
+import { processIsbnScan } from '@/lib/scan-pipeline';
+import { pushBatchToRepo, syncPendingBatchesFromRepo } from '@/lib/pending-batches';
 
 // 1200px wide is the realistic floor we still get useful spine-detection
 // out of. Phone in-app cameras frequently deliver 1280×720 streams, which
@@ -21,11 +23,104 @@ export default function UploadPage() {
   const {
     state,
     addBatch,
+    addBook,
     removeBatch,
     setPendingFile,
     hasPendingFile,
     processQueue,
   } = useStore();
+
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  // ---- Barcode scanning -------------------------------------------------
+  // The scanner mounts on demand and survives until the user taps Done.
+  // A single scan-batch is created the first time the user reads a barcode
+  // in this session; subsequent scans add into that same batch so all
+  // scanned books group together on Review.
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const scanBatchIdRef = useRef<string | null>(null);
+  const scanPositionRef = useRef(0);
+  const scanInflightRef = useRef(0);
+  const scanErrorRef = useRef<string | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+
+  function ensureScanBatch(): string {
+    if (scanBatchIdRef.current) return scanBatchIdRef.current;
+    const id = makeId();
+    const now = new Date();
+    const batch: PhotoBatch = {
+      id,
+      filename: `Barcode scans · ${now.toLocaleString()}`,
+      fileSize: 0,
+      thumbnail: '',
+      // Status='done' from the start — there's no pipeline pass to run
+      // for scanned books; the lookup happens per-scan in the background.
+      status: 'done',
+      spinesDetected: 0,
+      booksIdentified: 0,
+      books: [],
+      batchLabel: batchLabel.trim() || undefined,
+      batchNotes: batchNotes.trim() || undefined,
+    };
+    addBatch(batch);
+    scanBatchIdRef.current = id;
+    scanPositionRef.current = 0;
+    return id;
+  }
+
+  async function handleScan(isbn: string) {
+    const batchId = ensureScanBatch();
+    scanPositionRef.current += 1;
+    const position = scanPositionRef.current;
+    scanInflightRef.current += 1;
+    try {
+      const book = await processIsbnScan({
+        isbn,
+        position,
+        batchLabel: batchLabel.trim() || undefined,
+        batchNotes: batchNotes.trim() || undefined,
+      });
+      addBook(batchId, book);
+      // Surface the result back to the scanner for its status pill.
+      window.dispatchEvent(
+        new CustomEvent('carnegie:scan-matched', {
+          detail: { title: book.title, author: book.author },
+        })
+      );
+    } catch (err) {
+      scanErrorRef.current =
+        err instanceof Error ? err.message : 'Lookup failed.';
+      setScanError(scanErrorRef.current);
+    } finally {
+      scanInflightRef.current -= 1;
+    }
+  }
+
+  function handleScannerClose() {
+    setScannerOpen(false);
+    // Push the finalized scan batch to the repo so other devices see
+    // it on next sync. Wait briefly so any in-flight scans complete
+    // and their addBook dispatches land before we snapshot the batch.
+    const batchId = scanBatchIdRef.current;
+    scanBatchIdRef.current = null;
+    if (!batchId) return;
+    const flush = () => {
+      if (scanInflightRef.current > 0) {
+        window.setTimeout(flush, 200);
+        return;
+      }
+      const finalized = stateRef.current.batches.find((b) => b.id === batchId);
+      if (finalized && finalized.books.length > 0) {
+        pushBatchToRepo(finalized).catch(() => {});
+      } else if (finalized && finalized.books.length === 0) {
+        // Scanner closed without any successful scans — drop the empty
+        // batch so it doesn't clutter the queue.
+        removeBatch(batchId);
+      }
+    };
+    flush();
+  }
 
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
@@ -236,7 +331,17 @@ export default function UploadPage() {
         </div>
       )}
 
-      <PhotoUploader onFiles={handleFiles} disabled={isProcessing} />
+      <PhotoUploader
+        onFiles={handleFiles}
+        onScanRequest={() => setScannerOpen(true)}
+        disabled={isProcessing}
+      />
+
+      {scanError && (
+        <div className="bg-mahogany/10 dark:bg-tartan/30 border border-mahogany/40 dark:border-tartan/50 text-mahogany dark:text-orange-100 rounded-md px-3 py-2 text-[12px]">
+          Barcode lookup failed: {scanError}
+        </div>
+      )}
 
       {/* Batch inputs — under the dropzone so the photo CTA is the
           first thing on the page, with the metadata fields available
@@ -440,6 +545,13 @@ export default function UploadPage() {
           last in-page row when the user scrolls to the bottom. */}
       {processableQueued.length > 0 && (
         <div className="md:hidden h-16" aria-hidden />
+      )}
+
+      {/* Barcode scanner — viewfinder with multi-scan loop. Lookups
+          fire in the background and books appear on Review as they
+          resolve. The modal mounts only when scannerOpen is true. */}
+      {scannerOpen && (
+        <BarcodeScanner onScan={handleScan} onClose={handleScannerClose} />
       )}
 
       {/* Inline crop step. Renders one modal per queued file; advancing

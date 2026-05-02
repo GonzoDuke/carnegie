@@ -11,6 +11,8 @@ interface PhotoUploaderProps {
    * CropModal, so cropping mid-capture would be invisible anyway).
    */
   onFiles: (files: File[], opts: { source: 'gallery' | 'camera' }) => void;
+  /** Tap "Scan barcode" — the parent owns the scanner modal mount. */
+  onScanRequest?: () => void;
   disabled?: boolean;
 }
 
@@ -20,7 +22,7 @@ interface SessionThumb {
   name: string;
 }
 
-export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
+export function PhotoUploader({ onFiles, onScanRequest, disabled }: PhotoUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -285,6 +287,38 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
             </svg>
             Camera
           </button>
+          {onScanRequest && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 text-[14px] font-medium px-5 py-[9px] rounded-md bg-surface-card text-text-secondary border border-line hover:bg-surface-page transition disabled:opacity-50"
+              disabled={disabled}
+              onClick={(e) => {
+                e.stopPropagation();
+                onScanRequest();
+              }}
+              title="Scan a book's back-cover barcode to add it without photographing the spine"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M3 6v12" />
+                <path d="M6 6v12" />
+                <path d="M10 6v12" />
+                <path d="M13 6v12" />
+                <path d="M17 6v12" />
+                <path d="M20 6v12" />
+              </svg>
+              Scan barcode
+            </button>
+          )}
         </div>
       </div>
 
