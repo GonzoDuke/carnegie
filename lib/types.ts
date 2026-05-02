@@ -31,6 +31,14 @@ export interface BookLookupResult {
   source: 'openlibrary' | 'googlebooks' | 'isbndb' | 'none';
   /** Where in the cascade the LCC came from. Set by lookupBook post-processing. */
   lccSource?: 'ol' | 'loc' | 'wikidata' | 'inferred' | 'none';
+  /**
+   * URL to the book's cover art when one was discovered. Primary source is
+   * the Open Library Covers API keyed by ISBN; fallbacks are the Google
+   * Books `imageLinks.thumbnail` and the ISBNdb `image` field. The cover
+   * is best-effort — the BookCard falls back to the spine crop on
+   * <img> error or when this field is empty.
+   */
+  coverUrl?: string;
 }
 
 export interface BookRecord {
@@ -73,6 +81,13 @@ export interface BookRecord {
   lccSource: 'spine' | 'loc' | 'wikidata' | 'ol' | 'inferred' | 'lookup' | 'none';
   /** Cropped image of just this spine, as a data URI. Lets the reviewer see what the model saw. */
   spineThumbnail?: string;
+  /**
+   * URL to the book's cover art, sourced during the lookup step. Primary:
+   * Open Library Covers API by ISBN. Fallbacks: Google Books and ISBNdb.
+   * BookCard renders this in place of the spine crop and falls back to the
+   * crop on <img> error or when the field is empty.
+   */
+  coverUrl?: string;
   /** Higher-resolution OCR-quality crop, used by "Reread spine". Not persisted to localStorage. */
   ocrImage?: string;
   /** Which model performed Pass B for this spine: 's' (Sonnet) or 'o' (Opus). */

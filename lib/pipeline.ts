@@ -637,6 +637,7 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
     ddc: lookup.ddc,
     lccSource,
     spineThumbnail,
+    coverUrl: lookup.coverUrl,
     ocrImage: ocrCrop,
     ocrModel,
     original: {
@@ -1106,6 +1107,7 @@ export async function rereadBook(
     lookupSource: lookup.source,
     ddc: lookup.ddc,
     lccSource,
+    coverUrl: lookup.coverUrl,
   };
   if (tags) {
     patch.genreTags = tags.genreTags;

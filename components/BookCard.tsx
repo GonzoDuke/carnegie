@@ -191,15 +191,11 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
       )}
       {/* Header */}
       <div className={`flex items-start gap-3 ${selectable ? 'pl-7' : ''}`}>
-        {book.spineThumbnail && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={book.spineThumbnail}
-            alt={`Spine read for ${book.title || 'unknown book'}`}
-            className="w-12 h-32 object-cover rounded-md ring-1 ring-cream-300/70 dark:ring-ink-soft/70 flex-shrink-0 bg-cream-100 dark:bg-ink shadow-sm"
-            title="What the model saw on the shelf"
-          />
-        )}
+        <BookArt
+          coverUrl={book.coverUrl}
+          spineThumbnail={book.spineThumbnail}
+          title={book.title}
+        />
         <div className="flex-1 min-w-0">
           <EditableTitle
             value={book.title}
@@ -715,6 +711,57 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
       </div>
     </article>
   );
+}
+
+/**
+ * Front-of-card artwork. Prefers the cover URL captured at lookup time
+ * (Open Library by ISBN, with Google Books and ISBNdb fallbacks resolved
+ * server-side). Falls back to the spine crop on <img> error or when the
+ * cover URL is missing — so books without a published cover, or books
+ * whose lookup tier didn't surface one, still show *something*
+ * recognizable to the reviewer. `loading="lazy"` keeps the cover
+ * fetches off the critical render path on long Review lists.
+ */
+function BookArt({
+  coverUrl,
+  spineThumbnail,
+  title,
+}: {
+  coverUrl?: string;
+  spineThumbnail?: string;
+  title: string;
+}) {
+  const [coverFailed, setCoverFailed] = useState(false);
+  const showCover = !!coverUrl && !coverFailed;
+  const showSpine = !showCover && !!spineThumbnail;
+  const altLabel = title || 'unknown book';
+
+  if (showCover) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={coverUrl}
+        alt={`Cover of ${altLabel}`}
+        loading="lazy"
+        onError={() => setCoverFailed(true)}
+        className="w-20 h-32 object-cover rounded-md ring-1 ring-cream-300/70 dark:ring-ink-soft/70 flex-shrink-0 bg-cream-100 dark:bg-ink shadow-sm"
+        title="Cover from Open Library / Google Books / ISBNdb"
+      />
+    );
+  }
+  if (showSpine) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={spineThumbnail}
+        alt={`Spine read for ${altLabel}`}
+        loading="lazy"
+        className="w-12 h-32 object-cover rounded-md ring-1 ring-cream-300/70 dark:ring-ink-soft/70 flex-shrink-0 bg-cream-100 dark:bg-ink shadow-sm"
+        title="No published cover found — showing the spine read"
+      />
+    );
+  }
+  return null;
 }
 
 function ModifiedDot({ original }: { original: string }) {

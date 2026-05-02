@@ -612,6 +612,8 @@ interface IsbndbBook {
   subjects?: string[];
   dewey_decimal?: string | string[];
   language?: string;
+  /** Cover image URL (used as a tertiary fallback in BookLookupResult.coverUrl). */
+  image?: string;
 }
 
 // Module-level rate-limit gate. ISBNdb basic plan = 1 req/sec. Concurrent
@@ -667,6 +669,8 @@ interface IsbndbHit {
   author: string;
   ddc: string;
   subjects: string[];
+  /** Cover image URL, when ISBNdb returned one. Used as a fallback in coverUrl. */
+  coverUrl: string;
 }
 
 function isbndbBookToHit(b: IsbndbBook): IsbndbHit {
@@ -679,6 +683,7 @@ function isbndbBookToHit(b: IsbndbBook): IsbndbHit {
     author: (b.authors && b.authors[0]) ? String(b.authors[0]).trim() : '',
     ddc: (ddcRaw ?? '').toString().trim(),
     subjects: Array.isArray(b.subjects) ? b.subjects.map((s) => String(s).trim()).filter(Boolean) : [],
+    coverUrl: (b.image ?? '').trim(),
   };
 }
 
@@ -874,6 +879,11 @@ export async function lookupBook(
     source: 'none',
   };
   let tier = '';
+  // Cover-art fallbacks captured as we go. Primary path (Open Library by
+  // ISBN) is computed at the bottom; these only kick in when no ISBN is
+  // available to key the OL covers URL.
+  let gbCoverUrl = '';
+  let isbndbCoverUrl = '';
 
   // Tier 1: full title + cleaned author
   {
@@ -939,11 +949,18 @@ export async function lookupBook(
             publisher?: string;
             publishedDate?: string;
             categories?: string[];
+            imageLinks?: { thumbnail?: string; smallThumbnail?: string };
           };
         }>;
       };
       const vi = data.items?.[0]?.volumeInfo;
       if (vi) {
+        // Capture the Google Books cover for the no-ISBN fallback path.
+        // Prefer thumbnail over smallThumbnail; rewrite http→https because
+        // the Books API still serves http URLs that mixed-content-block
+        // on production.
+        const gbRaw = vi.imageLinks?.thumbnail ?? vi.imageLinks?.smallThumbnail ?? '';
+        if (gbRaw) gbCoverUrl = gbRaw.replace(/^http:\/\//i, 'https://');
         const ids = vi.industryIdentifiers ?? [];
         const isbn13 =
           ids.find((i) => i.type === 'ISBN_13' && !i.identifier.startsWith('9798'))?.identifier ??
@@ -1041,6 +1058,7 @@ export async function lookupBook(
         }
         result.subjects = merged.slice(0, 15);
       }
+      if (isbndbHit.coverUrl) isbndbCoverUrl = isbndbHit.coverUrl;
       // Only flip the metadata source label when the prior chain truly
       // returned nothing (`source: 'none'`). When OL/Google already
       // matched, ISBNdb is a gap-filler — keep their flag for diagnostics.
@@ -1070,6 +1088,24 @@ export async function lookupBook(
         result.publicationYear = wd.publicationYear;
       }
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Cover art. Per spec: Open Library Covers API (keyed by ISBN) is primary;
+  // Google Books and ISBNdb are fallbacks for when no ISBN is available.
+  // The `default=false` query param tells OL to 404 instead of returning a
+  // grey placeholder when the cover is missing, so the BookCard <img>
+  // onError handler can fall through to the spine crop.
+  // -------------------------------------------------------------------------
+  if (result.isbn) {
+    const cleaned = result.isbn.replace(/[^\dxX]/g, '');
+    if (cleaned) {
+      result.coverUrl = `https://covers.openlibrary.org/b/isbn/${cleaned}-M.jpg?default=false`;
+    }
+  } else if (gbCoverUrl) {
+    result.coverUrl = gbCoverUrl;
+  } else if (isbndbCoverUrl) {
+    result.coverUrl = isbndbCoverUrl;
   }
 
   return Object.assign(result, { tier: tier || 'none', lccSource });
