@@ -199,6 +199,15 @@ export function BarcodeScanner({ onScan, isIsbnInBatch, onClose }: BarcodeScanne
             // Stop scanning + freeze frame.
             const v = videoRef.current;
             if (v) v.pause();
+            // Tactile lock-on confirmation. Short single pulse so the
+            // user knows the scan registered without lifting their eye
+            // from the camera. Best-effort — silent on platforms with
+            // no Vibration API.
+            try {
+              navigator.vibrate?.(100);
+            } catch {
+              // ignore
+            }
             setStage({ kind: 'confirm', isbn });
             return;
           }
