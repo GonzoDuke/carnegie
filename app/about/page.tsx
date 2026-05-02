@@ -57,7 +57,7 @@ interface Stage {
 const STAGES: Stage[] = [
   {
     name: 'Detection',
-    body: 'Claude identifies individual book spines in a shelf photo and draws bounding boxes around each one.',
+    body: "Claude identifies individual book spines in a shelf photo and draws bounding boxes around each one (for spines the camera can't read, scan the ISBN barcode directly — it skips straight to lookup and tagging, filling in what the photo pipeline missed).",
   },
   {
     name: 'Reading',
@@ -74,10 +74,6 @@ const STAGES: Stage[] = [
   {
     name: 'Review',
     body: 'every result is presented for human approval. Nothing exports without a person confirming it.',
-  },
-  {
-    name: 'Barcode scanning',
-    body: "for spines the camera can't read, scan the ISBN barcode directly. It skips straight to lookup and tagging, filling in what the photo pipeline missed.",
   },
 ];
 
