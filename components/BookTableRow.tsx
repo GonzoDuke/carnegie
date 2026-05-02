@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import type { BookRecord, Confidence } from '@/lib/types';
 import { useStore } from '@/lib/store';
@@ -91,7 +92,7 @@ export function BookTableRow({ book }: { book: BookRecord }) {
     <>
       <div
         onClick={() => setOpen((v) => !v)}
-        className={`grid grid-cols-[52px_1fr_80px_200px_100px] items-center gap-3 px-[14px] py-[10px] border-b border-line-light cursor-pointer transition-colors ${rowTint}`}
+        className={`grid grid-cols-[52px_1fr_80px_200px_120px] items-center gap-3 px-[14px] py-[10px] border-b border-line-light cursor-pointer transition-colors ${rowTint}`}
         role="button"
         aria-expanded={open}
       >
@@ -163,8 +164,31 @@ export function BookTableRow({ book }: { book: BookRecord }) {
           )}
         </div>
 
-        {/* Actions — small ✓ ✕ */}
+        {/* Actions — Edit link, then small ✓ ✕. The Edit link is a Next
+            Link so the browser back-button works after returning from the
+            edit page; stopPropagation keeps the row click from toggling. */}
         <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+          <Link
+            href={`/review/${book.id}`}
+            aria-label="Edit"
+            title="Open the full edit view for this book"
+            className="w-7 h-7 rounded border border-line text-text-tertiary hover:border-navy hover:text-navy hover:bg-navy-soft transition flex items-center justify-center"
+          >
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.4}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              width="13"
+              height="13"
+              aria-hidden
+            >
+              <path d="M11 2.5l2.5 2.5L5 13.5H2.5V11z" />
+              <path d="M9 4.5l2.5 2.5" />
+            </svg>
+          </Link>
           <button
             type="button"
             onClick={() => setStatus('approved')}
