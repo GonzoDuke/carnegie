@@ -401,43 +401,62 @@ function BrandPanel() {
   return (
     <Link
       href="/"
-      className="cursor-pointer group flex items-center"
+      className="cursor-pointer group block relative"
       style={{
+        // True square — width matches sidebar (260), height equals
+        // width so the panel is a perfect 260×260 tile.
+        width: SIDEBAR_W,
+        height: SIDEBAR_W,
         backgroundColor: NAVY,
         backgroundImage: tartanLayers,
-        padding: 24,
-        gap: 14,
-        minHeight: 96,
       }}
       aria-label="Carnegie — go to upload"
     >
-      <SpineStackLogo />
-      <span className="flex flex-col leading-none">
-        <span
-          style={{
-            fontFamily:
-              '"Arial Black", "Helvetica Neue", Arial, system-ui, sans-serif',
-            fontSize: 16,
-            fontWeight: 900,
-            color: '#FFFFFF',
-            letterSpacing: '3px',
-            textTransform: 'uppercase',
-          }}
-        >
-          Carnegie
+      {/* Inner block positioned at 45% from top (slightly above true
+          center) and horizontally centered. Translate keeps the
+          block centered around its midpoint regardless of how the
+          wordmark wraps. */}
+      <div
+        className="flex flex-col items-center"
+        style={{
+          position: 'absolute',
+          top: '45%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          gap: 14,
+          width: '100%',
+          padding: '0 24px',
+          textAlign: 'center',
+        }}
+      >
+        <SpineStackLogo />
+        <span className="flex flex-col items-center leading-none">
+          <span
+            style={{
+              fontFamily:
+                '"Arial Black", "Helvetica Neue", Arial, system-ui, sans-serif',
+              fontSize: 16,
+              fontWeight: 900,
+              color: '#FFFFFF',
+              letterSpacing: '3px',
+              textTransform: 'uppercase',
+            }}
+          >
+            Carnegie
+          </span>
+          <span
+            style={{
+              fontSize: 8,
+              color: 'rgba(255,255,255,0.7)',
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+              marginTop: 6,
+            }}
+          >
+            Cataloging System
+          </span>
         </span>
-        <span
-          style={{
-            fontSize: 8,
-            color: 'rgba(255,255,255,0.7)',
-            letterSpacing: '2px',
-            textTransform: 'uppercase',
-            marginTop: 6,
-          }}
-        >
-          Cataloging System
-        </span>
-      </span>
+      </div>
     </Link>
   );
 }
