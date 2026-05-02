@@ -21,6 +21,7 @@
 
 import { useRouter } from 'next/navigation';
 import { use, useEffect, useMemo, useState } from 'react';
+import { Cover } from '@/components/Cover';
 import { TagChip } from '@/components/TagChip';
 import { TagPicker } from '@/components/TagPicker';
 import { useStore } from '@/lib/store';
@@ -76,7 +77,6 @@ export default function EditBookPage({ params }: PageProps) {
     book ? bookToForm(book) : null
   );
   const [picker, setPicker] = useState<'genre' | 'form' | null>(null);
-  const [coverFailed, setCoverFailed] = useState(false);
   const [rereading, setRereading] = useState(false);
   const [rereadErr, setRereadErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -259,8 +259,6 @@ export default function EditBookPage({ params }: PageProps) {
     );
   }
 
-  const showCover = !!book.coverUrl && !coverFailed;
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -276,27 +274,12 @@ export default function EditBookPage({ params }: PageProps) {
       <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr] gap-6 items-start">
         {/* LEFT — cover + spine + source meta + reread */}
         <aside className="space-y-3">
-          <div className="bg-surface-card border border-line rounded-lg overflow-hidden flex items-center justify-center aspect-[2/3] max-w-[260px]">
-            {showCover ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={book.coverUrl}
-                alt={`Cover of ${form.title || 'book'}`}
-                loading="lazy"
-                onError={() => setCoverFailed(true)}
-                className="w-full h-full object-cover"
-              />
-            ) : book.spineThumbnail ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={book.spineThumbnail}
-                alt={`Spine read for ${form.title || 'book'}`}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-[11px] text-text-quaternary">no cover</span>
-            )}
-          </div>
+          <Cover
+            coverUrl={book.coverUrl}
+            spineThumbnail={book.spineThumbnail}
+            alt={form.title || 'book'}
+            className="bg-surface-card border border-line rounded-lg overflow-hidden aspect-[2/3] max-w-[260px]"
+          />
 
           {book.spineThumbnail && book.coverUrl && (
             <div className="flex items-start gap-3">

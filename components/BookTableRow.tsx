@@ -6,6 +6,25 @@ import type { BookRecord, Confidence } from '@/lib/types';
 import { useStore } from '@/lib/store';
 import { TagChip } from './TagChip';
 import { TagPicker } from './TagPicker';
+import { Cover } from './Cover';
+
+/**
+ * Defensive stringifier for a warning entry. Any non-primitive that
+ * sneaks into book.warnings (legacy localStorage state, a malformed
+ * push site, etc) gets coerced to a stringified JSON dump rather than
+ * being passed to React as a child — which is what triggers the
+ * "Objects are not valid as a React child" #418 error in production.
+ */
+function stringifyWarning(w: unknown): string {
+  if (typeof w === 'string') return w;
+  if (w == null) return '';
+  if (typeof w === 'number' || typeof w === 'boolean') return String(w);
+  try {
+    return JSON.stringify(w);
+  } catch {
+    return '[unrenderable warning]';
+  }
+}
 
 /**
  * One row in the compact Review table — collapsed: cover, title + meta line,
@@ -22,13 +41,11 @@ export function BookTableRow({ book }: { book: BookRecord }) {
   const { updateBook, rereadBook } = useStore();
   const [open, setOpen] = useState(false);
   const [picker, setPicker] = useState<'genre' | 'form' | null>(null);
-  const [coverFailed, setCoverFailed] = useState(false);
   const [rereading, setRereading] = useState(false);
   const [rereadErr, setRereadErr] = useState<string | null>(null);
 
-  const showCover = !!book.coverUrl && !coverFailed;
   const hasWarning =
-    (book.warnings && book.warnings.length > 0) ||
+    (Array.isArray(book.warnings) && book.warnings.length > 0) ||
     !!book.previouslyExported ||
     !!(book.duplicateGroup && !book.duplicateResolved) ||
     book.confidence === 'LOW';
@@ -36,8 +53,13 @@ export function BookTableRow({ book }: { book: BookRecord }) {
   const isApproved = book.status === 'approved';
   const isRejected = book.status === 'rejected';
 
-  const tagsCondensed = book.genreTags.slice(0, 2);
-  const tagsExtra = book.genreTags.length + book.formTags.length - tagsCondensed.length;
+  // Defensive guards: a corrupt persisted BookRecord can in principle
+  // arrive with non-array tag fields. Default to empty arrays so the
+  // .slice / .length math below can't throw.
+  const safeGenre = Array.isArray(book.genreTags) ? book.genreTags : [];
+  const safeForm = Array.isArray(book.formTags) ? book.formTags : [];
+  const tagsCondensed = safeGenre.slice(0, 2);
+  const tagsExtra = safeGenre.length + safeForm.length - tagsCondensed.length;
 
   function setStatus(next: 'approved' | 'rejected') {
     updateBook(book.id, { status: book.status === next ? 'pending' : next });
@@ -45,16 +67,16 @@ export function BookTableRow({ book }: { book: BookRecord }) {
 
   function addTag(variant: 'genre' | 'form', tag: string) {
     if (variant === 'genre') {
-      updateBook(book.id, { genreTags: [...book.genreTags, tag] });
+      updateBook(book.id, { genreTags: [...safeGenre, tag] });
     } else {
-      updateBook(book.id, { formTags: [...book.formTags, tag] });
+      updateBook(book.id, { formTags: [...safeForm, tag] });
     }
   }
   function removeTag(variant: 'genre' | 'form', tag: string) {
     if (variant === 'genre') {
-      updateBook(book.id, { genreTags: book.genreTags.filter((t) => t !== tag) });
+      updateBook(book.id, { genreTags: safeGenre.filter((t) => t !== tag) });
     } else {
-      updateBook(book.id, { formTags: book.formTags.filter((t) => t !== tag) });
+      updateBook(book.id, { formTags: safeForm.filter((t) => t !== tag) });
     }
   }
 
@@ -96,29 +118,13 @@ export function BookTableRow({ book }: { book: BookRecord }) {
         role="button"
         aria-expanded={open}
       >
-        {/* Cover */}
-        <div className="w-9 h-[52px] rounded bg-surface-page border border-line-light overflow-hidden flex items-center justify-center text-[7px] text-text-quaternary">
-          {showCover ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={book.coverUrl}
-              alt={`Cover of ${book.title || 'unknown book'}`}
-              loading="lazy"
-              onError={() => setCoverFailed(true)}
-              className="w-full h-full object-cover"
-            />
-          ) : book.spineThumbnail ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={book.spineThumbnail}
-              alt={`Spine read for ${book.title || 'unknown book'}`}
-              loading="lazy"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <span className="opacity-60">no img</span>
-          )}
-        </div>
+        {/* Cover — Cover component handles the load-fail fallback chain */}
+        <Cover
+          coverUrl={book.coverUrl}
+          spineThumbnail={book.spineThumbnail}
+          alt={book.title || 'unknown book'}
+          className="w-9 h-[52px] rounded bg-surface-page border border-line-light overflow-hidden"
+        />
 
         {/* Title + metadata */}
         <div className="min-w-0 pr-2">
@@ -156,9 +162,10 @@ export function BookTableRow({ book }: { book: BookRecord }) {
 
         {/* Tags (compact) */}
         <div className="flex items-center gap-1 overflow-hidden">
-          {tagsCondensed.map((t) => (
-            <TagChip key={t} tag={t} variant="genre" size="sm" />
-          ))}
+          {tagsCondensed.map((t) => {
+            const tag = String(t);
+            return <TagChip key={tag} tag={tag} variant="genre" size="sm" />;
+          })}
           {tagsExtra > 0 && (
             <span className="text-[10px] text-text-quaternary">+{tagsExtra}</span>
           )}
@@ -248,33 +255,44 @@ export function BookTableRow({ book }: { book: BookRecord }) {
             <DetailField label="Batch" value={book.batchLabel || 'Unlabeled'} />
           </div>
 
-          {/* Inline warnings, if any */}
-          {book.warnings && book.warnings.length > 0 && (
+          {/* Inline warnings, if any. Each entry coerced to a string so a
+              corrupt persisted record (an object accidentally pushed onto
+              warnings in some previous version) can't escape into React's
+              render path and trigger a #418. */}
+          {Array.isArray(book.warnings) && book.warnings.length > 0 && (
             <ul className="text-[11px] text-carnegie-amber mb-3 space-y-0.5 list-disc list-inside">
               {book.warnings.map((w, i) => (
-                <li key={i}>{w}</li>
+                <li key={i}>{stringifyWarning(w)}</li>
               ))}
             </ul>
           )}
 
-          {/* Tags — full list with add/remove */}
+          {/* Tags — full list with add/remove. String-coerce each entry so
+              a non-string tag from a corrupt persisted record can't crash
+              the render. */}
           <div className="flex flex-wrap items-center gap-1.5 mb-3">
-            {book.genreTags.map((t) => (
-              <TagChip
-                key={`g-${t}`}
-                tag={t}
-                variant="genre"
-                onRemove={() => removeTag('genre', t)}
-              />
-            ))}
-            {book.formTags.map((t) => (
-              <TagChip
-                key={`f-${t}`}
-                tag={t}
-                variant="form"
-                onRemove={() => removeTag('form', t)}
-              />
-            ))}
+            {(book.genreTags ?? []).map((t) => {
+              const tag = String(t);
+              return (
+                <TagChip
+                  key={`g-${tag}`}
+                  tag={tag}
+                  variant="genre"
+                  onRemove={() => removeTag('genre', tag)}
+                />
+              );
+            })}
+            {(book.formTags ?? []).map((t) => {
+              const tag = String(t);
+              return (
+                <TagChip
+                  key={`f-${tag}`}
+                  tag={tag}
+                  variant="form"
+                  onRemove={() => removeTag('form', tag)}
+                />
+              );
+            })}
             <button
               type="button"
               onClick={() => setPicker(picker === 'genre' ? null : 'genre')}
