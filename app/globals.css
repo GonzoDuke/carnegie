@@ -7,8 +7,8 @@
 }
 
 html {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  font-size: 17px;
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
 }
 
 body {
@@ -75,16 +75,16 @@ body {
 }
 .animate-toast { animation: toast 2s ease-out forwards; }
 
-/* Typography hierarchy — five levels.
+/* Typography hierarchy — five levels (v3 redesign — all sans-serif).
    Centralized so page headers and card titles stay consistent across the
    app instead of drifting per-screen. Apply via class names on the element
    you want to style.
 
-   Level 1 — Page titles (Cormorant 32px / 500, accent green / limestone)
-   Level 2 — Page descriptions (Inter 15px / 400, muted)
-   Level 3 — Card titles (Source Serif 18px / 600)
-   Level 4 — Card metadata (Inter 13px / 400, muted)
-   Level 5 — Labels / helper (Inter 11px, all-caps for labels) */
+   Level 1 — Page titles (Outfit 18px / 600, text-primary)
+   Level 2 — Page descriptions (Outfit 13px / 400, muted)
+   Level 3 — Card / book titles (Outfit 14px / 600, text-primary)
+   Level 4 — Card metadata (Outfit 11px / 400, muted)
+   Level 5 — Labels / helper (Outfit 10–11px, all-caps for labels) */
 .typo-page-title {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
   font-size: 18px;
@@ -97,39 +97,45 @@ body {
 .dark .typo-page-title { color: #E4E2DC; }  /* dark text.primary */
 
 .typo-page-desc {
-  font-size: 15px;
-  font-weight: 400;
-  line-height: 1.55;
-  color: #6B6A65;
-  margin-bottom: 24px;
-}
-.dark .typo-page-desc { color: #9A9890; }
-
-.typo-card-title {
-  font-family: '"Source Serif 4"', '"Lora"', Georgia, serif;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.25;
-}
-
-.typo-card-meta {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
   font-size: 13px;
   font-weight: 400;
-  color: #9A9890;
+  line-height: 1.55;
+  color: #555550;
+  margin-bottom: 24px;
 }
-.dark .typo-card-meta { color: #9A9890; }
+.dark .typo-page-desc { color: #8A8880; }
 
-.typo-label {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: #B4A99A;
+.typo-card-title {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #141414;
 }
-.typo-helper {
+.dark .typo-card-title { color: #E4E2DC; }
+
+.typo-card-meta {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
   font-size: 11px;
   font-weight: 400;
-  color: #B4A99A;
+  color: #8A8A84;
+}
+.dark .typo-card-meta { color: #8A8880; }
+
+.typo-label {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #8A8A84;
+}
+.typo-helper {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: #B0B0A8;
 }
 
 /* Approve-button micro-interaction — when a card transitions into the

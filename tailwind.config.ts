@@ -105,12 +105,12 @@ const config: Config = {
         gold: { bg: '#FFF6E0', fg: '#7A5B14' },
       },
       fontFamily: {
-        // Outfit becomes primary; Cormorant + Source Serif stay defined here
-        // so existing usages don't crash before step 3 retires them, but
-        // they are no longer recommended.
-        serif: ['"Source Serif 4"', '"Lora"', 'Georgia', 'serif'],
-        display: ['"Outfit"', '"Inter"', 'system-ui', 'sans-serif'],
-        sans: ['"Outfit"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        // Sans-serif everywhere. The `serif` and `display` keys still exist
+        // so any straggling `font-serif` / `font-display` class falls back
+        // gracefully to Outfit instead of compiling to a broken stack.
+        sans: ['"Outfit"', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['"Outfit"', 'system-ui', '-apple-system', 'sans-serif'],
+        serif: ['"Outfit"', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       transitionTimingFunction: {
