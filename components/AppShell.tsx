@@ -373,7 +373,15 @@ function ClockIcon() {
 function BrandPanel() {
   // Clan colors with per-stripe alpha. Two passes produce the plaid:
   // a warp (vertical bands) layered over a weft (horizontal bands).
+  // A radial-gradient vignette sits on top of those two but still in
+  // the background layer (so the text in foreground wins paint
+  // order). The vignette is centered at 50%×45% — matching where
+  // the content block lives — so it darkens just the area behind
+  // the wordmark without a hard-edged box.
   const tartanLayers = [
+    'radial-gradient(ellipse at center 45%,' +
+      'rgba(0,0,0,0.45) 0%,' +
+      'transparent 70%)',
     'repeating-linear-gradient(180deg,' +
       'rgba(196,163,90,0.55) 0px 4px,' +
       'transparent 4px 14px,' +
@@ -423,7 +431,7 @@ function BrandPanel() {
           top: '45%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          gap: 14,
+          gap: 18,
           width: '100%',
           padding: '0 24px',
           textAlign: 'center',
@@ -435,10 +443,10 @@ function BrandPanel() {
             style={{
               fontFamily:
                 '"Arial Black", "Helvetica Neue", Arial, system-ui, sans-serif',
-              fontSize: 16,
+              fontSize: 22,
               fontWeight: 900,
               color: '#FFFFFF',
-              letterSpacing: '3px',
+              letterSpacing: '4px',
               textTransform: 'uppercase',
             }}
           >
@@ -446,11 +454,11 @@ function BrandPanel() {
           </span>
           <span
             style={{
-              fontSize: 8,
-              color: 'rgba(255,255,255,0.7)',
-              letterSpacing: '2px',
+              fontSize: 10,
+              color: 'rgba(255,255,255,0.75)',
+              letterSpacing: '2.5px',
               textTransform: 'uppercase',
-              marginTop: 6,
+              marginTop: 8,
             }}
           >
             Cataloging System
@@ -462,7 +470,7 @@ function BrandPanel() {
 }
 
 /**
- * 40×40 rounded-square tile with a stack of four colored bars
+ * 56×56 rounded-square tile with a stack of four colored bars
  * representing book spines on a shelf. Clean palette — no tartan
  * inside the tile so the brand mark stays legible at all scales.
  *
@@ -471,27 +479,30 @@ function BrandPanel() {
  *   red    #B83232
  *   gray   #8A8A84  shortest
  *
- * Each bar is 5px wide with 2px gaps; total stack width = 5×4 + 2×3
- * = 26px, leaving 7px of padding on each side of the 40px tile.
+ * Bars are 7px wide with 3px gaps; total stack width = 7×4 + 3×3
+ * = 37px, leaving ~9px padding on each side of the 56px tile. The
+ * 56-from-40 bump keeps everything in the same visual proportions
+ * the smaller version had — bar widths and gaps both scale 1.4×,
+ * heights scale 1.4× (rounded to integer pixels).
  */
 function SpineStackLogo() {
   const bars: { color: string; height: number }[] = [
-    { color: '#C4A35A', height: 30 },
-    { color: '#5B8DB8', height: 26 },
-    { color: '#B83232', height: 22 },
-    { color: '#8A8A84', height: 18 },
+    { color: '#C4A35A', height: 42 },
+    { color: '#5B8DB8', height: 36 },
+    { color: '#B83232', height: 30 },
+    { color: '#8A8A84', height: 24 },
   ];
   return (
     <div
       style={{
-        width: 40,
-        height: 40,
-        borderRadius: 8,
+        width: 56,
+        height: 56,
+        borderRadius: 11,
         background: '#141414',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 2,
+        gap: 3,
         flexShrink: 0,
       }}
       aria-hidden
@@ -500,10 +511,10 @@ function SpineStackLogo() {
         <span
           key={i}
           style={{
-            width: 5,
+            width: 7,
             height: b.height,
             background: b.color,
-            borderRadius: 1,
+            borderRadius: 1.5,
           }}
         />
       ))}
