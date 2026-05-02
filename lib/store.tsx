@@ -23,6 +23,7 @@ import {
 } from './pipeline';
 import { toTitleCase } from './csv-export';
 import { flagIfPreviouslyExported, loadLedger, syncLedgerFromRepo } from './export-ledger';
+import { syncCorrectionsFromRepo } from './corrections-log';
 import {
   deletePendingBatchFromRepo,
   pushBatchToRepo,
@@ -515,6 +516,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // device (typically a phone capture) so they appear in /review here.
   useEffect(() => {
     syncLedgerFromRepo().catch(() => {});
+    // Pull the latest tag-correction log so this session's inference
+    // calls can include corrections made on other devices as few-shot
+    // examples. No-op when GITHUB_TOKEN isn't configured.
+    syncCorrectionsFromRepo().catch(() => {});
     syncPendingBatchesFromRepo()
       .then((remoteBatches) => {
         if (!remoteBatches || remoteBatches.length === 0) return;

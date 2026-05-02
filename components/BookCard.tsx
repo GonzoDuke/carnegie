@@ -7,6 +7,7 @@ import { TagChip } from './TagChip';
 import { TagPicker } from './TagPicker';
 import { ConfidenceBadge } from './ConfidenceBadge';
 import { toAuthorLastFirst, toTitleCase } from '@/lib/csv-export';
+import { logCorrection } from '@/lib/corrections-log';
 
 interface BookCardProps {
   book: BookRecord;
@@ -134,11 +135,35 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
     updateBook(book.id, { status: isToggleOn ? next : 'pending' });
   }
 
+  // Snapshot of every tag the system suggested for this book on the
+  // first inference pass. Used to decide whether a tag-add/remove is a
+  // correction to system behavior (worth logging) or just the user
+  // editing their own previous additions (no-op).
+  const systemSuggestedSet = new Set<string>([
+    ...(book.original.genreTags ?? []),
+    ...(book.original.formTags ?? []),
+  ]);
+  const systemSuggestedTags = [
+    ...(book.original.genreTags ?? []),
+    ...(book.original.formTags ?? []),
+  ];
+
   function addTag(variant: 'genre' | 'form', tag: string) {
     if (variant === 'genre') {
       updateBook(book.id, { genreTags: [...book.genreTags, tag] });
     } else {
       updateBook(book.id, { formTags: [...book.formTags, tag] });
+    }
+    // Only log if the system didn't suggest this tag — that's a real
+    // miss for the inference pass to learn from.
+    if (!systemSuggestedSet.has(tag)) {
+      logCorrection({
+        title: book.title,
+        author: book.author,
+        lcc: book.lcc,
+        systemSuggestedTags,
+        addedTag: tag,
+      });
     }
   }
 
@@ -147,6 +172,18 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
       updateBook(book.id, { genreTags: book.genreTags.filter((t) => t !== tag) });
     } else {
       updateBook(book.id, { formTags: book.formTags.filter((t) => t !== tag) });
+    }
+    // Only log when the user is removing a tag the system suggested —
+    // removing a tag they themselves added is just an undo and isn't
+    // training signal.
+    if (systemSuggestedSet.has(tag)) {
+      logCorrection({
+        title: book.title,
+        author: book.author,
+        lcc: book.lcc,
+        systemSuggestedTags,
+        removedTag: tag,
+      });
     }
   }
 

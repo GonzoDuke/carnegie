@@ -170,10 +170,24 @@ export async function inferTagsClient(args: {
   lcc?: string;
   subjectHeadings?: string[];
 }): Promise<InferTagsResult> {
+  // Pull the user's most recent tag corrections from localStorage and
+  // forward them so the inference route can append them to the system
+  // prompt as few-shot examples. Reads through a dynamic import so the
+  // module stays SSR-safe — pipeline is also used server-side during
+  // some flows.
+  let corrections: unknown[] = [];
+  if (typeof window !== 'undefined') {
+    try {
+      const mod = await import('./corrections-log');
+      corrections = mod.recentCorrections(20);
+    } catch {
+      // ignore — corrections are best-effort
+    }
+  }
   const res = await fetch('/api/infer-tags', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(args),
+    body: JSON.stringify({ ...args, corrections }),
   });
   if (!res.ok) {
     return { genreTags: [], formTags: [], confidence: 'LOW', reasoning: '' };

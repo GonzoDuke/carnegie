@@ -3,9 +3,12 @@ import Anthropic from '@anthropic-ai/sdk';
 import { promises as fs } from 'fs';
 import path from 'path';
 import type { InferTagsResult } from '@/lib/types';
+import type { CorrectionEntry } from '@/lib/corrections-log';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
+
+const MAX_CORRECTIONS_IN_PROMPT = 20;
 
 let cachedSystemPrompt: string | null = null;
 async function loadSystemPrompt(): Promise<string> {
@@ -13,6 +16,58 @@ async function loadSystemPrompt(): Promise<string> {
   const p = path.join(process.cwd(), 'lib', 'system-prompt.md');
   cachedSystemPrompt = await fs.readFile(p, 'utf8');
   return cachedSystemPrompt;
+}
+
+function isCorrectionEntry(e: unknown): e is CorrectionEntry {
+  if (!e || typeof e !== 'object') return false;
+  const c = e as Partial<CorrectionEntry>;
+  return (
+    typeof c.title === 'string' &&
+    typeof c.author === 'string' &&
+    typeof c.lcc === 'string' &&
+    Array.isArray(c.systemSuggestedTags) &&
+    typeof c.timestamp === 'string' &&
+    (typeof c.removedTag === 'string' || typeof c.addedTag === 'string')
+  );
+}
+
+function formatCorrection(c: CorrectionEntry): string {
+  const lcc = c.lcc ? c.lcc : 'unknown';
+  const suggested =
+    c.systemSuggestedTags.length > 0
+      ? c.systemSuggestedTags.join(', ')
+      : 'no tags';
+  if (c.removedTag) {
+    return `CORRECTION: For "${c.title}" by ${c.author} (LCC: ${lcc}), the system suggested [${suggested}] but the user removed "${c.removedTag}" — do not suggest this tag for similar books.`;
+  }
+  if (c.addedTag) {
+    return `CORRECTION: For "${c.title}" by ${c.author} (LCC: ${lcc}), the system missed "${c.addedTag}" — suggest this tag for similar books.`;
+  }
+  return '';
+}
+
+function buildSystemWithCorrections(
+  basePrompt: string,
+  corrections: CorrectionEntry[]
+): string {
+  if (corrections.length === 0) return basePrompt;
+  // Newest corrections first so the most recent editorial judgment
+  // sits closest to the model's instructions.
+  const sorted = [...corrections].sort((a, b) =>
+    a.timestamp < b.timestamp ? 1 : -1
+  );
+  const limited = sorted.slice(0, MAX_CORRECTIONS_IN_PROMPT);
+  const lines = limited.map(formatCorrection).filter(Boolean);
+  if (lines.length === 0) return basePrompt;
+  const block = [
+    '',
+    '## Recent corrections from the user',
+    '',
+    'Treat each line below as a few-shot example of editorial judgment to follow on similar books:',
+    '',
+    ...lines,
+  ].join('\n');
+  return basePrompt + '\n' + block;
 }
 
 function extractJsonObject(text: string): unknown {
@@ -34,6 +89,9 @@ interface InferRequest {
   lcc?: string;
   existingGenreTags?: string[];
   subjectHeadings?: string[];
+  /** Recent tag corrections forwarded by the client. Up to 20 most
+   *  recent are appended to the system prompt as few-shot examples. */
+  corrections?: CorrectionEntry[];
 }
 
 export async function POST(req: NextRequest) {
@@ -53,7 +111,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'title is required' }, { status: 400 });
   }
 
-  const system = await loadSystemPrompt();
+  const basePrompt = await loadSystemPrompt();
+  const corrections = Array.isArray(body.corrections)
+    ? body.corrections.filter(isCorrectionEntry)
+    : [];
+  const system = buildSystemWithCorrections(basePrompt, corrections);
   const client = new Anthropic({ apiKey });
 
   const userMessage = `Tag the following book according to the rules in the system prompt. Return ONLY a single JSON object (no markdown fences) with fields: title, author, isbn, publication_year, publisher, lcc, genre_tags (array of strings), form_tags (array of strings), confidence ("HIGH"|"MEDIUM"|"LOW"), reasoning (short string).

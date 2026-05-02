@@ -10,6 +10,7 @@ import { Cover } from './Cover';
 import { ConfidenceBadge } from './ConfidenceBadge';
 import { Editable } from './Editable';
 import { fireUndo } from './UndoToast';
+import { logCorrection } from '@/lib/corrections-log';
 
 function stringifyWarning(w: unknown): string {
   if (typeof w === 'string') return w;
@@ -62,11 +63,32 @@ export function MobileBookCard({ book }: { book: BookRecord }) {
     }
   }
 
+  // System-inferred tag set for this book — used to decide whether a
+  // tag mutation is a correction to the model (worth logging) or just
+  // the user editing their own additions (no-op).
+  const originalGenre = Array.isArray(book.original?.genreTags)
+    ? book.original.genreTags
+    : [];
+  const originalForm = Array.isArray(book.original?.formTags)
+    ? book.original.formTags
+    : [];
+  const systemSuggestedSet = new Set<string>([...originalGenre, ...originalForm]);
+  const systemSuggestedTags = [...originalGenre, ...originalForm];
+
   function addTag(variant: 'genre' | 'form', tag: string) {
     if (variant === 'genre') {
       updateBook(book.id, { genreTags: [...safeGenre, tag] });
     } else {
       updateBook(book.id, { formTags: [...safeForm, tag] });
+    }
+    if (!systemSuggestedSet.has(tag)) {
+      logCorrection({
+        title: book.title,
+        author: book.author,
+        lcc: book.lcc,
+        systemSuggestedTags,
+        addedTag: tag,
+      });
     }
   }
   function removeTag(variant: 'genre' | 'form', tag: string) {
@@ -74,6 +96,15 @@ export function MobileBookCard({ book }: { book: BookRecord }) {
       updateBook(book.id, { genreTags: safeGenre.filter((t) => t !== tag) });
     } else {
       updateBook(book.id, { formTags: safeForm.filter((t) => t !== tag) });
+    }
+    if (systemSuggestedSet.has(tag)) {
+      logCorrection({
+        title: book.title,
+        author: book.author,
+        lcc: book.lcc,
+        systemSuggestedTags,
+        removedTag: tag,
+      });
     }
   }
 
