@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useDarkMode, useStore } from '@/lib/store';
 import { getLedgerBatches, loadLedger } from '@/lib/export-ledger';
-import { TartanLogo, TartanStripe } from '@/components/Tartan';
 import { confirmDiscardSession } from '@/lib/session';
 
 /**
@@ -101,48 +100,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           paddingBottom: 0,
         }}
       >
-        {/* Brand block — clickable, links to Upload. Vertical stack so
-            the bigger 48px tartan can sit above an all-caps wordmark
-            wide enough to command the top of the sidebar. */}
-        <Link
-          href="/"
-          className="flex flex-col items-start cursor-pointer group"
-          style={{
-            padding: 20,
-            marginBottom: 36,
-            gap: 12,
-          }}
-          aria-label="Carnegie — go to upload"
-        >
-          <span style={{ flexShrink: 0, lineHeight: 0 }}>
-            <TartanLogo size={48} />
-          </span>
-          <span className="flex flex-col leading-none">
-            <span
-              style={{
-                fontFamily: '"JetBrains Mono", ui-monospace, monospace',
-                fontSize: 20,
-                fontWeight: 700,
-                color: SIDE_TEXT_ACTIVE,
-                letterSpacing: '3px',
-                textTransform: 'uppercase',
-              }}
-            >
-              Carnegie
-            </span>
-            <span
-              style={{
-                fontSize: 9,
-                color: GOLD,
-                letterSpacing: '2px',
-                textTransform: 'uppercase',
-                marginTop: 6,
-              }}
-            >
-              Cataloging System
-            </span>
-          </span>
-        </Link>
+        {/* Brand panel — Carnegie tartan as the background, clan-color
+            stripes layered horizontally + vertically to make the
+            crosshatch weave. The rest of the sidebar stays solid
+            #141414; the tartan only lives in this top zone. */}
+        <BrandPanel />
+        <div style={{ marginBottom: 16 }} />
 
         {/* New session — sits above the Workflow nav, just below the
             brand block. Disables on an empty session so the destructive
@@ -210,16 +173,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <NavItem key={item.href} item={item} active={isActive(item.href)} />
         ))}
 
-        {/* Tartan accent stripe — the only decorative element in the whole
-            app per spec §5b. Sits just above the footer, full sidebar width. */}
-        <div className="mt-auto">
-          <TartanStripe height={4} />
-        </div>
-
-        {/* Footer — border-top line plus two muted stat lines. Numbers
+        {/* Footer — pinned to the bottom with a top border. Numbers
             read from the export ledger so they reflect cumulative
             cataloging across sessions. */}
         <div
+          className="mt-auto"
           style={{
             padding: '12px 16px',
             borderTop: `1px solid ${SIDE_FOOT_BORDER}`,
@@ -400,5 +358,142 @@ function ClockIcon() {
       <circle cx="8" cy="8" r="6" />
       <path d="M8 5v3l2 2" />
     </IconShell>
+  );
+}
+
+// ---- Brand panel ----------------------------------------------------------
+
+/**
+ * Tartan brand zone at the top of the sidebar. Two CSS
+ * repeating-linear-gradients (180deg warp, 90deg weft) layer over a
+ * navy ground to create the cross-hatch weave; the SpineStackLogo +
+ * wordmark sit on top. The gradients are sized to a 64px tile so the
+ * pattern repeats cleanly across the 260px-wide sidebar.
+ *
+ * Per spec: this is the only place tartan lives now — the prior
+ * sidebar accent stripe is gone, and the prior tartan-patterned C
+ * logo is replaced by the four-spine-stack icon.
+ */
+function BrandPanel() {
+  // Clan colors — kept opaque-rgb here so the per-stripe alpha can be
+  // composed at the gradient level instead of in a separate compose step.
+  const tartanLayers = [
+    // Horizontal warp stripes — fall top-to-bottom.
+    'repeating-linear-gradient(180deg,' +
+      'rgba(196,163,90,0.55) 0px 4px,' +
+      'transparent 4px 14px,' +
+      'rgba(45,90,58,0.50) 14px 20px,' +
+      'transparent 20px 26px,' +
+      'rgba(20,20,20,0.55) 26px 36px,' +
+      'transparent 36px 42px,' +
+      'rgba(184,50,50,0.55) 42px 48px,' +
+      'transparent 48px 54px,' +
+      'rgba(196,163,90,0.55) 54px 58px,' +
+      'transparent 58px 64px)',
+    // Vertical weft stripes — read left-to-right.
+    'repeating-linear-gradient(90deg,' +
+      'rgba(196,163,90,0.40) 0px 4px,' +
+      'transparent 4px 18px,' +
+      'rgba(45,90,58,0.40) 18px 24px,' +
+      'transparent 24px 30px,' +
+      'rgba(20,20,20,0.45) 30px 40px,' +
+      'transparent 40px 46px,' +
+      'rgba(184,50,50,0.40) 46px 52px,' +
+      'transparent 52px 58px,' +
+      'rgba(196,163,90,0.40) 58px 62px,' +
+      'transparent 62px 64px)',
+  ].join(',');
+
+  return (
+    <Link
+      href="/"
+      className="cursor-pointer group flex items-center"
+      style={{
+        backgroundColor: NAVY,
+        backgroundImage: tartanLayers,
+        padding: 24,
+        gap: 14,
+        minHeight: 96,
+      }}
+      aria-label="Carnegie — go to upload"
+    >
+      <SpineStackLogo />
+      <span className="flex flex-col leading-none">
+        <span
+          style={{
+            fontFamily:
+              '"Arial Black", "Helvetica Neue", Arial, system-ui, sans-serif',
+            fontSize: 16,
+            fontWeight: 900,
+            color: '#FFFFFF',
+            letterSpacing: '3px',
+            textTransform: 'uppercase',
+          }}
+        >
+          Carnegie
+        </span>
+        <span
+          style={{
+            fontSize: 8,
+            color: 'rgba(255,255,255,0.7)',
+            letterSpacing: '2px',
+            textTransform: 'uppercase',
+            marginTop: 6,
+          }}
+        >
+          Cataloging System
+        </span>
+      </span>
+    </Link>
+  );
+}
+
+/**
+ * 40×40 rounded-square tile with a stack of four colored bars
+ * representing book spines on a shelf. Clean palette — no tartan
+ * inside the tile so the brand mark stays legible at all scales.
+ *
+ *   gold   #C4A35A  tallest
+ *   blue   #5B8DB8
+ *   red    #B83232
+ *   gray   #8A8A84  shortest
+ *
+ * Each bar is 5px wide with 2px gaps; total stack width = 5×4 + 2×3
+ * = 26px, leaving 7px of padding on each side of the 40px tile.
+ */
+function SpineStackLogo() {
+  const bars: { color: string; height: number }[] = [
+    { color: '#C4A35A', height: 30 },
+    { color: '#5B8DB8', height: 26 },
+    { color: '#B83232', height: 22 },
+    { color: '#8A8A84', height: 18 },
+  ];
+  return (
+    <div
+      style={{
+        width: 40,
+        height: 40,
+        borderRadius: 8,
+        background: '#141414',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 2,
+        flexShrink: 0,
+      }}
+      aria-hidden
+    >
+      {bars.map((b, i) => (
+        <span
+          key={i}
+          style={{
+            width: 5,
+            height: b.height,
+            background: b.color,
+            borderRadius: 1,
+          }}
+        />
+      ))}
+    </div>
   );
 }

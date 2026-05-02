@@ -1,16 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Carnegie home-screen icon. Mirrors the sidebar TartanLogo: a navy
-       base with horizontal warp + vertical weft stripes in the five clan
-       colors (navy / green / red / black / gold), a white "C" centered
-       on top with a faint dark stroke halo so it stays readable over
-       the busiest crossings.
+  <!-- Carnegie home-screen icon. Navy ground with the four-spine-stack
+       glyph centered — a clean version of the brand mark that lives
+       in the sidebar. Per spec: no tartan inside the icon, just the
+       spine bars.
 
-       Coordinates here are 16× the values in components/Tartan.tsx so
-       the visual match is exact. The corner radius (128 = 25% of the
-       canvas) matches the sidebar logo's 8 / 32 ratio. The "C" glyph
-       sits at the centre, well inside the maskable safe zone, so the
-       manifest's `purpose: "any maskable"` icon works on both square
-       and circular OS masks. -->
+       Colors:
+         navy   #1B3A5C   ground
+         gold   #C4A35A   tallest spine
+         blue   #5B8DB8
+         red    #B83232
+         gray   #8A8A84   shortest spine
+
+       Geometry: 4 bars × 50px wide on a 16px gap (= 230px total),
+       centered horizontally. Heights 290 / 250 / 210 / 170 px,
+       vertically centered on the canvas. 25% rounded corners
+       (rx=128) match the sidebar tile and the maskable safe zone. -->
   <defs>
     <clipPath id="carnegie-icon-clip">
       <rect width="512" height="512" rx="128"/>
@@ -18,34 +22,11 @@
   </defs>
   <g clip-path="url(#carnegie-icon-clip)" shape-rendering="crispEdges">
     <rect width="512" height="512" fill="#1B3A5C"/>
-
-    <!-- Horizontal stripes (warp) -->
-    <rect x="0" y="32"  width="512" height="32" fill="#C4A35A" opacity="0.55"/>
-    <rect x="0" y="112" width="512" height="48" fill="#2D5A3A" opacity="0.5"/>
-    <rect x="0" y="208" width="512" height="80" fill="#141414" opacity="0.55"/>
-    <rect x="0" y="336" width="512" height="48" fill="#B83232" opacity="0.55"/>
-    <rect x="0" y="432" width="512" height="32" fill="#C4A35A" opacity="0.55"/>
-
-    <!-- Vertical stripes (weft) -->
-    <rect x="48"  y="0" width="32" height="512" fill="#C4A35A" opacity="0.4"/>
-    <rect x="144" y="0" width="48" height="512" fill="#2D5A3A" opacity="0.4"/>
-    <rect x="240" y="0" width="80" height="512" fill="#141414" opacity="0.45"/>
-    <rect x="368" y="0" width="48" height="512" fill="#B83232" opacity="0.4"/>
-    <rect x="464" y="0" width="32" height="512" fill="#C4A35A" opacity="0.4"/>
+    <!-- Spines, gold → blue → red → gray. Each bar is 50px wide with
+         a 16px gap. Stack starts at x=141 to center 230px in 512. -->
+    <rect x="141" y="111" width="50" height="290" fill="#C4A35A" rx="6"/>
+    <rect x="207" y="131" width="50" height="250" fill="#5B8DB8" rx="6"/>
+    <rect x="273" y="151" width="50" height="210" fill="#B83232" rx="6"/>
+    <rect x="339" y="171" width="50" height="170" fill="#8A8A84" rx="6"/>
   </g>
-
-  <!-- "C" glyph. Monospace stack so the letter reads correctly even when
-       the OS doesn't load JetBrains Mono (PWA icons commonly render in
-       environments without web font support). paint-order: stroke gives
-       the letter a thin dark halo so it stays legible over the busiest
-       tartan crossings. -->
-  <text
-    x="256"
-    y="352"
-    text-anchor="middle"
-    font-family="'JetBrains Mono', 'Courier New', ui-monospace, monospace"
-    font-size="256"
-    font-weight="600"
-    fill="#FFFFFF"
-    style="paint-order: stroke; stroke: rgba(20,20,20,0.55); stroke-width: 11.2">C</text>
 </svg>
