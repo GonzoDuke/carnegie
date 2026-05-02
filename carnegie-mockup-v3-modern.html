@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carnegie — Mockup v3 Modern</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F6F6F4;
+  --sidebar-bg: #141414;
+  --sidebar-hover: #1F1F1F;
+  --sidebar-active: #252525;
+  --sidebar-text: #707070;
+  --sidebar-text-active: #E0E0E0;
+  --accent: #5B5FE6;
+  --accent-soft: rgba(91,95,230,0.08);
+  --accent-mid: rgba(91,95,230,0.15);
+  --accent-text: #4547A9;
+  --card: #FFFFFF;
+  --card-hover: #FBFBFA;
+  --border: #E4E4E0;
+  --border-light: #EFEFEC;
+  --text-1: #141414;
+  --text-2: #555550;
+  --text-3: #8A8A84;
+  --text-4: #B0B0A8;
+  --green: #1A8754;
+  --green-bg: rgba(26,135,84,0.07);
+  --red: #D14343;
+  --red-bg: rgba(209,67,67,0.06);
+  --amber: #C08800;
+  --amber-bg: rgba(192,136,0,0.07);
+  --tag-1: #EEF0FF; --tag-1t: #4547A9;
+  --tag-2: #E6F5EE; --tag-2t: #1A6B45;
+  --tag-3: #FFF0F0; --tag-3t: #A33030;
+  --tag-4: #E8F2FC; --tag-4t: #2A5F9E;
+  --tag-5: #FFF6E0; --tag-5t: #7A5B14;
+  --tag-6: #FFF0E8; --tag-6t: #8B3A1D;
+  --tag-7: #F0F0EC; --tag-7t: #4A4840;
+  --tag-8: #EEF6E6; --tag-8t: #3A6B1A;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text-1);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.app{display:grid;grid-template-columns:200px 1fr;height:100vh}
+
+/* SIDEBAR */
+.side{background:var(--sidebar-bg);display:flex;flex-direction:column;padding:20px 0;user-select:none}
+.s-brand{padding:0 16px;margin-bottom:28px;cursor:pointer;display:flex;align-items:center;gap:10px}
+.s-logo{
+  width:32px;height:32px;border-radius:8px;
+  background:var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600;color:#fff;
+}
+.s-name-block{}
+.s-name{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:#E0E0E0;letter-spacing:0.5px}
+.s-sub{font-size:9px;color:var(--sidebar-text);letter-spacing:1px;text-transform:uppercase;margin-top:1px}
+.s-section{font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#444;padding:0 16px;margin:20px 0 6px}
+.s-item{
+  display:flex;align-items:center;gap:9px;
+  padding:7px 16px;color:var(--sidebar-text);cursor:pointer;
+  font-size:13px;font-weight:400;
+  border-left:2px solid transparent;
+  transition:all 60ms;
+}
+.s-item:hover{background:var(--sidebar-hover);color:var(--sidebar-text-active)}
+.s-item.active{background:var(--sidebar-active);color:var(--sidebar-text-active);border-left-color:var(--accent);font-weight:500}
+.s-icon{width:15px;height:15px;opacity:0.4;flex-shrink:0}
+.s-item.active .s-icon{opacity:0.7}
+.s-badge{margin-left:auto;font-size:10px;font-weight:600;background:var(--accent-mid);color:var(--accent);padding:1px 6px;border-radius:6px}
+.s-foot{padding:12px 16px;border-top:1px solid #222;margin-top:auto}
+.s-stat{font-size:11px;color:#444}
+
+/* MAIN */
+.content{overflow-y:auto}
+.p-head{
+  padding:20px 28px 14px;
+  border-bottom:1px solid var(--border);
+  background:var(--card);
+  position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.p-title{font-size:18px;font-weight:600;color:var(--text-1)}
+.p-actions{display:flex;gap:6px}
+.p-body{padding:20px 28px 60px}
+.screen{display:none}.screen.active{display:block}
+
+/* BUTTONS */
+.btn{font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;padding:7px 16px;border-radius:6px;cursor:pointer;transition:all 80ms;border:none}
+.btn-p{background:var(--accent);color:#fff}
+.btn-p:hover{background:#4A4EC8}
+.btn-o{background:var(--card);color:var(--text-2);border:1px solid var(--border)}
+.btn-o:hover{background:var(--bg)}
+.btn-accent-soft{background:var(--accent-soft);color:var(--accent-text);font-weight:600}
+.btn-accent-soft:hover{background:var(--accent-mid)}
+
+/* UPLOAD */
+.u-fields{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.fld label{font-size:10px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-3);display:block;margin-bottom:3px}
+.fld input{
+  width:100%;background:var(--card);border:1px solid var(--border);border-radius:6px;
+  padding:8px 12px;font-family:'Outfit',sans-serif;font-size:13px;color:var(--text-1);outline:none;
+  transition:border-color 80ms;
+}
+.fld input::placeholder{color:var(--text-4)}
+.fld input:focus{border-color:var(--accent)}
+.fld .h{font-size:10px;color:var(--text-4);margin-top:2px}
+
+.dz{
+  background:var(--card);border:1.5px dashed var(--border);border-radius:10px;
+  padding:40px 24px;text-align:center;margin-bottom:16px;transition:all 100ms;
+}
+.dz:hover{border-color:var(--accent);background:var(--accent-soft)}
+.dz-text{font-size:15px;color:var(--text-2);margin-bottom:3px;font-weight:500}
+.dz-hint{font-size:11px;color:var(--text-4);margin-bottom:14px}
+.dz-btns{display:flex;gap:8px;justify-content:center}
+
+.ql{}
+.qi{
+  display:flex;align-items:center;gap:10px;padding:7px 12px;
+  background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;
+}
+.qi-thumb{width:34px;height:26px;border-radius:3px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--text-4)}
+.qi-info{flex:1}.qi-name{font-size:13px;font-weight:500}.qi-meta{font-size:11px;color:var(--text-3)}
+.qi-st{font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:0.3px}
+.qi-done{background:var(--green-bg);color:var(--green)}
+.qi-proc{background:var(--accent-soft);color:var(--accent)}
+.qi-wait{background:var(--bg);color:var(--text-4)}
+.q-footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+.q-count{font-size:12px;color:var(--text-3)}
+
+/* REVIEW */
+.r-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.r-counts{display:flex;gap:14px;font-size:12px;color:var(--text-3)}
+.r-counts b{font-weight:600;font-size:13px}
+.rc-p b{color:var(--accent)}
+.rc-a b{color:var(--green)}
+.rc-r b{color:var(--red)}
+.rc-l b{color:var(--amber)}
+.r-filters{display:flex;gap:3px}
+.rf{
+  font-family:'Outfit',sans-serif;font-size:12px;padding:4px 10px;border-radius:5px;
+  background:none;border:none;color:var(--text-3);cursor:pointer;
+}
+.rf:hover{background:var(--border-light);color:var(--text-2)}
+.rf.active{background:var(--accent-soft);color:var(--accent-text);font-weight:500}
+
+.r-table{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.rt-h{
+  display:grid;grid-template-columns:52px 1fr 80px 200px 100px;
+  padding:7px 14px;background:var(--bg);border-bottom:1px solid var(--border);
+  font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3);
+  align-items:center;
+}
+.rt-r{
+  display:grid;grid-template-columns:52px 1fr 80px 200px 100px;
+  padding:9px 14px;border-bottom:1px solid var(--border-light);align-items:center;
+  transition:background 60ms;cursor:default;
+}
+.rt-r:last-child{border-bottom:none}
+.rt-r:hover{background:var(--card-hover)}
+.rt-r.approved{background:var(--accent-soft)}
+.rt-r.rejected{opacity:0.3}
+
+.rt-cover{
+  width:36px;height:52px;border-radius:4px;
+  background:var(--bg);border:1px solid var(--border-light);
+  object-fit:cover;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  font-size:7px;color:var(--text-4);
+}
+.rt-cover img{width:100%;height:100%;object-fit:cover;border-radius:3px}
+
+.rt-tc{padding-right:12px}
+.rt-bt{font-size:14px;font-weight:600;color:var(--text-1);line-height:1.3}
+.rt-bm{font-size:11px;color:var(--text-3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt-bm .mono{font-family:'JetBrains Mono',monospace;font-size:10px}
+.sep{margin:0 4px;color:var(--text-4)}
+
+.conf{font-size:9px;font-weight:600;padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.3px;display:inline-block}
+.c-h{background:var(--green-bg);color:var(--green)}
+.c-m{background:var(--amber-bg);color:var(--amber)}
+.c-l{background:var(--red-bg);color:var(--red)}
+
+.rt-tags{display:flex;flex-wrap:wrap;gap:3px}
+.t{font-size:10px;padding:2px 7px;border-radius:3px;white-space:nowrap}
+.t-more{font-size:10px;color:var(--text-4);padding:2px 3px}
+
+.rt-acts{display:flex;gap:4px;justify-content:flex-end}
+.ra{
+  font-family:'Outfit',sans-serif;font-size:11px;padding:4px 10px;border-radius:5px;
+  border:1px solid var(--border);background:var(--card);color:var(--text-3);cursor:pointer;
+  transition:all 60ms;
+}
+.ra:hover{background:var(--bg);color:var(--text-2)}
+.ra-a:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.ra-a.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.ra-r:hover{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+.ra-r.on{background:var(--red-bg);border-color:var(--red);color:var(--red)}
+
+.w-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--amber);margin-right:4px;vertical-align:middle}
+
+/* Expand detail */
+.rt-detail{display:none;grid-column:1/-1;background:var(--bg);padding:12px 14px 12px 66px;border-bottom:1px solid var(--border)}
+.rt-detail.open{display:block}
+.d-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;font-size:12px;margin-bottom:8px}
+.d-label{font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3);font-weight:500}
+.d-val{color:var(--text-1)}
+.d-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.d-tag{font-size:11px;padding:3px 9px;border-radius:4px}
+.tag-add-s{
+  font-size:10px;padding:2px 7px;border-radius:3px;
+  border:1px dashed var(--border);color:var(--text-4);
+  cursor:pointer;background:none;font-family:'Outfit',sans-serif;
+}
+.tag-add-s:hover{border-color:var(--accent);color:var(--accent)}
+
+/* EXPORT */
+.e-sum{font-size:13px;color:var(--text-2);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.e-sum b{font-weight:600}
+.csv-w{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px;max-height:280px;overflow-y:auto}
+.csv-t{width:100%;border-collapse:collapse;font-size:12px}
+.csv-t th{background:var(--bg);padding:7px 12px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3);font-weight:500;border-bottom:1px solid var(--border);position:sticky;top:0}
+.csv-t td{padding:6px 12px;border-bottom:1px solid var(--border-light)}
+.csv-t tr:nth-child(even) td{background:rgba(246,246,244,0.5)}
+.csv-t .mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-2)}
+.csv-t .tc{font-size:11px;color:var(--text-2);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.e-bar{display:flex;justify-content:space-between;align-items:center}
+.e-note{font-size:11px;color:var(--text-4)}
+.v-block{margin-top:20px;padding-top:14px;border-top:2px solid var(--accent)}
+.v-head{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--accent);margin-bottom:5px}
+.v-row{font-size:12px;color:var(--text-2);margin-bottom:3px;display:flex;gap:8px;align-items:baseline}
+.v-dom{font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-3);width:70px;flex-shrink:0}
+.v-tn{font-weight:600;color:var(--text-1)}
+</style>
+</head>
+<body>
+<div class="app">
+
+<aside class="side">
+  <div class="s-brand" onclick="go('upload')">
+    <div class="s-logo">C</div>
+    <div class="s-name-block">
+      <div class="s-name">Carnegie</div>
+      <div class="s-sub">Cataloging System</div>
+    </div>
+  </div>
+  <div class="s-section">Workflow</div>
+  <div class="s-item active" onclick="go('upload')">
+    <svg class="s-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M8 10V2M8 2L5 5M8 2l3 3M2 10v3h12v-3"/></svg>
+    Upload
+  </div>
+  <div class="s-item" onclick="go('review')">
+    <svg class="s-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 8h6M5 5.5h6M5 10.5h3"/></svg>
+    Review
+    <span class="s-badge">13</span>
+  </div>
+  <div class="s-item" onclick="go('export')">
+    <svg class="s-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M8 2v8M8 10l3-3M8 10L5 7M2 12v2h12v-2"/></svg>
+    Export
+  </div>
+  <div class="s-section" style="margin-top:28px">Library</div>
+  <div class="s-item">
+    <svg class="s-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="1" width="3" height="14" rx="0.5"/><rect x="6.5" y="2.5" width="3" height="12.5" rx="0.5"/><path d="M11.5 14l3-12.5"/></svg>
+    Vocabulary
+  </div>
+  <div class="s-item">
+    <svg class="s-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+    History
+  </div>
+  <div class="s-foot">
+    <div class="s-stat">73 books cataloged</div>
+    <div class="s-stat">5 batches exported</div>
+  </div>
+</aside>
+
+<div class="content">
+
+  <!-- UPLOAD -->
+  <div class="screen active" id="s-upload">
+    <div class="p-head">
+      <div class="p-title">Upload</div>
+    </div>
+    <div class="p-body">
+      <div class="u-fields">
+        <div class="fld">
+          <label>Batch label</label>
+          <input placeholder='Shelf 3, Box 4, Upstairs hallway...' value="Shelf 2 — Office">
+          <div class="h">Groups photos by physical location</div>
+        </div>
+        <div class="fld">
+          <label>Notes</label>
+          <input placeholder='First editions, signed copies...'>
+          <div class="h">Free-form → LibraryThing COMMENTS</div>
+        </div>
+      </div>
+      <div class="dz">
+        <div class="dz-text">Drop bookshelf photos here</div>
+        <div class="dz-hint">Landscape · fill the frame · 2-3 ft · flash off</div>
+        <div class="dz-btns">
+          <button class="btn btn-p">Choose photos</button>
+          <button class="btn btn-o">📷 Camera</button>
+        </div>
+      </div>
+      <div class="ql">
+        <div class="qi">
+          <div class="qi-thumb">IMG</div>
+          <div class="qi-info"><div class="qi-name">20260501_143022.jpg</div><div class="qi-meta">8.2 MB · 14 spines · 13 identified</div></div>
+          <span class="qi-st qi-done">Done</span>
+        </div>
+        <div class="qi">
+          <div class="qi-thumb">IMG</div>
+          <div class="qi-info"><div class="qi-name">20260501_143035.jpg</div><div class="qi-meta">7.1 MB · Reading spine 8 of 11...</div></div>
+          <span class="qi-st qi-proc">Processing</span>
+        </div>
+        <div class="qi">
+          <div class="qi-thumb">IMG</div>
+          <div class="qi-info"><div class="qi-name">20260501_143048.jpg</div><div class="qi-meta">9.4 MB</div></div>
+          <span class="qi-st qi-wait">Queued</span>
+        </div>
+      </div>
+      <div class="q-footer">
+        <div class="q-count">3 photos · 25 spines · 13 identified</div>
+        <button class="btn btn-p">Process all</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REVIEW -->
+  <div class="screen" id="s-review">
+    <div class="p-head">
+      <div class="p-title">Review</div>
+      <div class="p-actions">
+        <button class="btn btn-accent-soft">Approve all HIGH</button>
+      </div>
+    </div>
+    <div class="p-body">
+      <div class="r-bar">
+        <div class="r-counts">
+          <span><b>13</b> total</span>
+          <span class="rc-p"><b>5</b> pending</span>
+          <span class="rc-a"><b>7</b> approved</span>
+          <span class="rc-r"><b>0</b> rejected</span>
+          <span class="rc-l"><b>1</b> low</span>
+        </div>
+        <div class="r-filters">
+          <button class="rf active">All</button>
+          <button class="rf">Pending</button>
+          <button class="rf">Approved</button>
+          <button class="rf">Low</button>
+        </div>
+      </div>
+
+      <div class="r-table">
+        <div class="rt-h">
+          <span></span><span>Book</span><span>Conf.</span><span>Tags</span><span style="text-align:right">Action</span>
+        </div>
+
+        <div class="rt-r approved" onclick="toggleD(this)">
+          <div class="rt-cover"><img src="https://covers.openlibrary.org/b/isbn/9780199742677-M.jpg" alt="cover"></div>
+          <div class="rt-tc">
+            <div class="rt-bt">Holy Sh*t: A Brief History of Swearing</div>
+            <div class="rt-bm">Melissa Mohr<span class="sep">·</span><span class="mono">9780199742677</span><span class="sep">·</span>2013</div>
+          </div>
+          <div><span class="conf c-h">High</span></div>
+          <div class="rt-tags">
+            <span class="t" style="background:var(--tag-5);color:var(--tag-5t)">Linguistics</span>
+            <span class="t" style="background:var(--tag-5);color:var(--tag-5t)">History of lang.</span>
+            <span class="t-more">+1</span>
+          </div>
+          <div class="rt-acts">
+            <button class="ra ra-a on" onclick="event.stopPropagation()">✓</button>
+            <button class="ra ra-r" onclick="event.stopPropagation()">✕</button>
+          </div>
+        </div>
+        <div class="rt-detail">
+          <div class="d-grid">
+            <div><span class="d-label">Publisher</span><div class="d-val">Oxford University Press</div></div>
+            <div><span class="d-label">LCC</span><div class="d-val">PE3724 .M64 2013</div></div>
+            <div><span class="d-label">Source</span><div class="d-val">Open Library · spine #5</div></div>
+            <div><span class="d-label">Batch</span><div class="d-val">Shelf 2 — Office</div></div>
+          </div>
+          <div class="d-tags">
+            <span class="d-tag" style="background:var(--tag-5);color:var(--tag-5t)">Linguistics</span>
+            <span class="d-tag" style="background:var(--tag-5);color:var(--tag-5t)">History of language</span>
+            <span class="d-tag" style="background:var(--tag-6);color:var(--tag-6t)">Cultural history</span>
+            <button class="tag-add-s">+ add</button>
+          </div>
+          <button class="btn btn-o" style="font-size:12px;padding:5px 12px">↻ Reread</button>
+        </div>
+
+        <div class="rt-r" onclick="toggleD(this)">
+          <div class="rt-cover"><img src="https://covers.openlibrary.org/b/isbn/9780062993151-M.jpg" alt="cover"></div>
+          <div class="rt-tc">
+            <div class="rt-bt">Cultish: The Language of Fanaticism</div>
+            <div class="rt-bm">Amanda Montell<span class="sep">·</span><span class="mono">9780062993151</span><span class="sep">·</span>2021</div>
+          </div>
+          <div><span class="conf c-h">High</span></div>
+          <div class="rt-tags">
+            <span class="t" style="background:var(--tag-5);color:var(--tag-5t)">Linguistics</span>
+            <span class="t" style="background:var(--tag-8);color:var(--tag-8t)">Social criticism</span>
+          </div>
+          <div class="rt-acts">
+            <button class="ra ra-a" onclick="event.stopPropagation()">✓</button>
+            <button class="ra ra-r" onclick="event.stopPropagation()">✕</button>
+          </div>
+        </div>
+
+        <div class="rt-r" onclick="toggleD(this)">
+          <div class="rt-cover"><img src="https://covers.openlibrary.org/b/isbn/9780399168437-M.jpg" alt="cover"></div>
+          <div class="rt-tc">
+            <div class="rt-bt"><span class="w-dot"></span>F You Very Much</div>
+            <div class="rt-bm">Danny Wallace<span class="sep">·</span><span class="mono">9780399168437</span><span class="sep">·</span>2018</div>
+          </div>
+          <div><span class="conf c-m">Med</span></div>
+          <div class="rt-tags">
+            <span class="t" style="background:var(--tag-8);color:var(--tag-8t)">Social criticism</span>
+            <span class="t" style="background:var(--tag-3);color:var(--tag-3t)">Behavioral psych</span>
+          </div>
+          <div class="rt-acts">
+            <button class="ra ra-a" onclick="event.stopPropagation()">✓</button>
+            <button class="ra ra-r" onclick="event.stopPropagation()">✕</button>
+          </div>
+        </div>
+
+        <div class="rt-r approved" onclick="toggleD(this)">
+          <div class="rt-cover"><img src="https://covers.openlibrary.org/b/isbn/9780195393112-M.jpg" alt="cover"></div>
+          <div class="rt-tc">
+            <div class="rt-bt">The F-Word</div>
+            <div class="rt-bm">Jesse Sheidlower<span class="sep">·</span><span class="mono">9780195393112</span><span class="sep">·</span>2009</div>
+          </div>
+          <div><span class="conf c-h">High</span></div>
+          <div class="rt-tags">
+            <span class="t" style="background:var(--tag-5);color:var(--tag-5t)">Etymology</span>
+            <span class="t" style="background:var(--tag-5);color:var(--tag-5t)">Linguistics</span>
+          </div>
+          <div class="rt-acts">
+            <button class="ra ra-a on" onclick="event.stopPropagation()">✓</button>
+            <button class="ra ra-r" onclick="event.stopPropagation()">✕</button>
+          </div>
+        </div>
+
+        <div class="rt-r" onclick="toggleD(this)">
+          <div class="rt-cover"><img src="https://covers.openlibrary.org/b/isbn/9780385535693-M.jpg" alt="cover"></div>
+          <div class="rt-tc">
+            <div class="rt-bt"><span class="w-dot"></span>Assholes: A Theory</div>
+            <div class="rt-bm">Aaron James<span class="sep">·</span><span class="mono">9780385535693</span><span class="sep">·</span>2012</div>
+          </div>
+          <div><span class="conf c-l">Low</span></div>
+          <div class="rt-tags">
+            <span class="t" style="background:var(--tag-1);color:var(--tag-1t)">Ethics</span>
+            <span class="t" style="background:var(--tag-8);color:var(--tag-8t)">Social criticism</span>
+          </div>
+          <div class="rt-acts">
+            <button class="ra ra-a" onclick="event.stopPropagation()">✓</button>
+            <button class="ra ra-r" onclick="event.stopPropagation()">✕</button>
+          </div>
+        </div>
+
+        <div class="rt-r approved" onclick="toggleD(this)">
+          <div class="rt-cover"><img src="https://covers.openlibrary.org/b/isbn/9780393881264-M.jpg" alt="cover"></div>
+          <div class="rt-tc">
+            <div class="rt-bt">Foolproof</div>
+            <div class="rt-bm">Sander van der Linden<span class="sep">·</span><span class="mono">9780393881264</span><span class="sep">·</span>2023</div>
+          </div>
+          <div><span class="conf c-h">High</span></div>
+          <div class="rt-tags">
+            <span class="t" style="background:var(--tag-7);color:var(--tag-7t)">Disinformation</span>
+            <span class="t" style="background:var(--tag-7);color:var(--tag-7t)">Media literacy</span>
+          </div>
+          <div class="rt-acts">
+            <button class="ra ra-a on" onclick="event.stopPropagation()">✓</button>
+            <button class="ra ra-r" onclick="event.stopPropagation()">✕</button>
+          </div>
+        </div>
+
+        <div class="rt-r approved" onclick="toggleD(this)">
+          <div class="rt-cover"><img src="https://covers.openlibrary.org/b/isbn/9781610391757-M.jpg" alt="cover"></div>
+          <div class="rt-tc">
+            <div class="rt-bt">Ascent of the A-Word</div>
+            <div class="rt-bm">Geoffrey Nunberg<span class="sep">·</span><span class="mono">9781610391757</span><span class="sep">·</span>2012</div>
+          </div>
+          <div><span class="conf c-h">High</span></div>
+          <div class="rt-tags">
+            <span class="t" style="background:var(--tag-5);color:var(--tag-5t)">Linguistics</span>
+            <span class="t" style="background:var(--tag-6);color:var(--tag-6t)">Cultural history</span>
+          </div>
+          <div class="rt-acts">
+            <button class="ra ra-a on" onclick="event.stopPropagation()">✓</button>
+            <button class="ra ra-r" onclick="event.stopPropagation()">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:center;margin-top:14px">
+        <button class="btn btn-accent-soft" style="padding:8px 24px">Approve remaining (5)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPORT -->
+  <div class="screen" id="s-export">
+    <div class="p-head"><div class="p-title">Export</div></div>
+    <div class="p-body">
+      <div class="e-sum">
+        <b>7</b> approved<span class="sep" style="margin:0 5px">·</span>
+        <b>0</b> rejected<span class="sep" style="margin:0 5px">·</span>
+        <b style="color:var(--accent)">5</b> pending
+        <span style="margin-left:10px;font-size:12px;color:var(--amber)">⚠ Only approved books export</span>
+      </div>
+      <div class="csv-w">
+        <table class="csv-t">
+          <thead><tr><th>Title</th><th>Author</th><th>ISBN</th><th>Year</th><th>Tags</th></tr></thead>
+          <tbody>
+            <tr><td>Holy Sh*t</td><td>Mohr, Melissa</td><td class="mono">9780199742677</td><td>2013</td><td class="tc">Linguistics, History of language, Cultural history</td></tr>
+            <tr><td>The F-Word</td><td>Sheidlower, Jesse</td><td class="mono">9780195393112</td><td>2009</td><td class="tc">Etymology, Linguistics, Reference</td></tr>
+            <tr><td>Ascent of the A-Word</td><td>Nunberg, Geoffrey</td><td class="mono">9781610391757</td><td>2012</td><td class="tc">Linguistics, Cultural history</td></tr>
+            <tr><td>Foolproof</td><td>van der Linden, Sander</td><td class="mono">9780393881264</td><td>2023</td><td class="tc">Disinformation, Media literacy</td></tr>
+            <tr><td>Sh*t Is F*cked Up</td><td>Harris, Malcolm</td><td class="mono">9781668035207</td><td>2023</td><td class="tc">Social criticism, Protest & activism</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="e-bar">
+        <div class="e-note">skinsbury-lt-import-2026-05-01-5books.csv</div>
+        <button class="btn btn-p" style="padding:8px 24px">Download CSV (5 books)</button>
+      </div>
+      <div class="v-block">
+        <div class="v-head">Vocabulary updates · 1 new tag</div>
+        <div class="v-row">
+          <span class="v-dom">Literature</span>
+          <span class="v-tn">[Proposed] Profanity studies</span>
+          <span style="font-size:11px;color:var(--text-4)">— from "Holy Sh*t"</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+function go(n){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.s-item').forEach(i=>i.classList.remove('active'));
+  document.getElementById('s-'+n).classList.add('active');
+  const m={upload:0,review:1,export:2};
+  if(m[n]!==undefined)document.querySelectorAll('.s-item')[m[n]].classList.add('active');
+}
+function toggleD(row){
+  const d=row.nextElementSibling;
+  if(d&&d.classList.contains('rt-detail'))d.classList.toggle('open');
+}
+document.querySelectorAll('.ra-a').forEach(b=>{
+  b.addEventListener('click',function(e){
+    e.stopPropagation();
+    const r=this.closest('.rt-r'),x=r.querySelector('.ra-r');
+    if(this.classList.contains('on')){this.classList.remove('on');r.classList.remove('approved')}
+    else{this.classList.add('on');r.classList.add('approved');r.classList.remove('rejected');if(x)x.classList.remove('on')}
+  });
+});
+document.querySelectorAll('.ra-r').forEach(b=>{
+  b.addEventListener('click',function(e){
+    e.stopPropagation();
+    const r=this.closest('.rt-r'),a=r.querySelector('.ra-a');
+    if(this.classList.contains('on')){this.classList.remove('on');r.classList.remove('rejected')}
+    else{this.classList.add('on');r.classList.add('rejected');r.classList.remove('approved');if(a)a.classList.remove('on')}
+  });
+});
+document.querySelectorAll('.rf').forEach(f=>{f.addEventListener('click',function(){document.querySelectorAll('.rf').forEach(ff=>ff.classList.remove('active'));this.classList.add('active')})});
+</script>
+</body>
+</html>
