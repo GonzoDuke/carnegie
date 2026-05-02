@@ -121,7 +121,12 @@ export function MobileShell() {
             <Link
               key={t.href}
               href={t.href}
-              className="flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] transition-colors"
+              aria-label={t.label}
+              // py-2.5 + ~22-26px icon + label keeps every tab >= 48px
+              // tall on a real phone — comfortably above the 44px iOS
+              // minimum. The Link itself fills its grid column so the
+              // tap target spans the full quarter of the viewport.
+              className="flex flex-col items-center justify-center gap-0.5 py-2.5 min-h-[48px] text-[11px] transition-colors"
               style={{
                 color: active ? NAVY : '#707070',
                 fontWeight: active ? 600 : 500,
@@ -130,15 +135,16 @@ export function MobileShell() {
             >
               <span
                 style={{
-                  width: 22,
-                  height: 22,
                   display: 'inline-flex',
                   opacity: active ? 0.9 : 0.6,
                 }}
+                // Icon scales up when the label is hidden under 360px so
+                // the tab still reads as a real target.
+                className="w-[22px] h-[22px] max-[359px]:w-[26px] max-[359px]:h-[26px]"
               >
                 {t.icon}
               </span>
-              <span>{t.label}</span>
+              <span className="max-[359px]:hidden">{t.label}</span>
             </Link>
           );
         })}
