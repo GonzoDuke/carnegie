@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useDarkMode, useStore } from '@/lib/store';
 import { getLedgerBatches, loadLedger } from '@/lib/export-ledger';
+import { TartanLogo, TartanStripe } from '@/components/Tartan';
 
 /**
  * Carnegie shell — left sidebar (200px, near-black) + scrollable content area.
@@ -93,21 +94,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           style={{ marginBottom: 28 }}
           aria-label="Carnegie — go to upload"
         >
-          <span
-            className="flex items-center justify-center"
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              background: NAVY,
-              fontFamily: '"JetBrains Mono", ui-monospace, monospace',
-              fontSize: 16,
-              fontWeight: 600,
-              color: '#fff',
-              flexShrink: 0,
-            }}
-          >
-            C
+          <span style={{ flexShrink: 0, lineHeight: 0 }}>
+            <TartanLogo size={32} />
           </span>
           <span className="flex flex-col leading-none">
             <span
@@ -145,11 +133,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <NavItem key={item.href} item={item} active={isActive(item.href)} />
         ))}
 
-        {/* Footer — pushed to the bottom with margin-top:auto. Border-top
-            line plus two muted stat lines. Numbers read from the export
-            ledger so they reflect cumulative cataloging across sessions. */}
+        {/* Tartan accent stripe — the only decorative element in the whole
+            app per spec §5b. Sits just above the footer, full sidebar width. */}
+        <div className="mt-auto">
+          <TartanStripe height={4} />
+        </div>
+
+        {/* Footer — border-top line plus two muted stat lines. Numbers
+            read from the export ledger so they reflect cumulative
+            cataloging across sessions. */}
         <div
-          className="mt-auto"
           style={{
             padding: '12px 16px',
             borderTop: `1px solid ${SIDE_FOOT_BORDER}`,
