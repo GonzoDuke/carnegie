@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useStore } from '@/lib/store';
 import { ExportPreview } from '@/components/ExportPreview';
@@ -205,19 +204,20 @@ export default function ExportPage() {
 
   // ?auto=1 — fired by the Review screen's "Approve all & export"
   // shortcut. Triggers downloadCsv once on mount when there's anything
-  // to export. Guarded with a ref so a navigation back to /export with
-  // the param still present doesn't re-fire.
-  const searchParams = useSearchParams();
+  // to export. Reads the query string from window directly (avoids the
+  // useSearchParams Suspense-boundary requirement). Guarded with a ref
+  // so a re-render with the param still present doesn't re-fire.
   const autoTriggered = useRef(false);
   useEffect(() => {
     if (autoTriggered.current) return;
-    if (searchParams.get('auto') !== '1') return;
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('auto') !== '1') return;
     if (booksToExport.length === 0) return;
     autoTriggered.current = true;
-    // Defer one tick so the page renders before the download blob fires.
     window.setTimeout(() => downloadCsv(), 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, booksToExport.length]);
+  }, [booksToExport.length]);
 
   // Vocabulary updates — proposed tags from this export set, ready to be
   // promoted into tag-vocabulary.json.

@@ -187,6 +187,19 @@ body {
 .animate-backdrop-in  { animation: backdrop-in 220ms ease-out both; }
 .animate-backdrop-out { animation: backdrop-out 180ms ease-in both; }
 
+/* Sidebar stats — shimmer placeholder while the ledger sync resolves,
+   then a soft fade-in when the real numbers land. */
+@keyframes stats-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.animate-stats-shimmer { animation: stats-shimmer 1.4s linear infinite; }
+@keyframes stats-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-stats-fade { animation: stats-fade 240ms ease-out; }
+
 /* Camera thumbnail — slides in from below (or right on wide layouts) when
    a fresh capture lands in the strip. Each new thumb mounts with this
    class, so the strip "fills up" rather than blinking new entries in. */

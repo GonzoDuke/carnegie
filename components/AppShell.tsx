@@ -212,16 +212,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             }}
           >
             {stats ? (
-              <>
+              <div className="animate-stats-fade">
                 <div style={{ fontSize: 11, color: SIDE_SECTION }}>
                   {stats.books} {stats.books === 1 ? 'book' : 'books'} cataloged
                 </div>
                 <div style={{ fontSize: 11, color: SIDE_SECTION }}>
                   {stats.batches} {stats.batches === 1 ? 'batch' : 'batches'} exported
                 </div>
-              </>
+              </div>
             ) : (
-              <div style={{ fontSize: 11, color: SIDE_SECTION }}>—</div>
+              // Skeleton placeholders while the ledger sync completes.
+              // Two stub bars (books / batches) at the same heights as
+              // the real lines, with a subtle shimmer so it reads as
+              // "loading" rather than "empty".
+              <div aria-hidden className="space-y-1.5">
+                <div
+                  className="h-[11px] rounded animate-stats-shimmer"
+                  style={{
+                    width: 110,
+                    background: 'linear-gradient(90deg, #1F1F1F 0%, #2A2A2A 50%, #1F1F1F 100%)',
+                    backgroundSize: '200% 100%',
+                  }}
+                />
+                <div
+                  className="h-[11px] rounded animate-stats-shimmer"
+                  style={{
+                    width: 90,
+                    background: 'linear-gradient(90deg, #1F1F1F 0%, #2A2A2A 50%, #1F1F1F 100%)',
+                    backgroundSize: '200% 100%',
+                  }}
+                />
+              </div>
             )}
           </div>
         </div>
