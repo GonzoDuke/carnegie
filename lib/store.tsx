@@ -141,6 +141,7 @@ type Action =
   | { type: 'REMOVE_BATCH'; id: string }
   | { type: 'ADD_BOOK'; batchId: string; book: BookRecord }
   | { type: 'UPDATE_BOOK'; id: string; patch: Partial<BookRecord> }
+  | { type: 'REMOVE_BOOKS'; ids: string[] }
   | { type: 'MERGE_DUPLICATES'; winnerId: string; loserIds: string[] }
   | { type: 'UNMERGE_BOOK'; id: string }
   | { type: 'KEEP_BOTH_DUPLICATES'; groupId: string }
@@ -218,6 +219,27 @@ function reducer(state: State, action: Action): State {
           bk.id === action.id ? { ...bk, ...action.patch } : bk
         ),
       };
+    case 'REMOVE_BOOKS': {
+      // Bulk hard-removal — drops the named books from every batch
+      // and from allBooks, with no Unmerge snapshot retained. Used by
+      // the Review-mount ISBN dedup pass and any future cleanup path
+      // that wants permanent removal rather than merge.
+      if (action.ids.length === 0) return state;
+      const idSet = new Set(action.ids);
+      return {
+        ...state,
+        batches: state.batches.map((b) => {
+          const filtered = b.books.filter((bk) => !idSet.has(bk.id));
+          if (filtered.length === b.books.length) return b;
+          return {
+            ...b,
+            books: filtered,
+            booksIdentified: filtered.length,
+          };
+        }),
+        allBooks: state.allBooks.filter((bk) => !idSet.has(bk.id)),
+      };
+    }
     case 'MERGE_DUPLICATES': {
       // Locate the surviving record + the snapshots we need to fold into it.
       const winner = state.allBooks.find((b) => b.id === action.winnerId);
@@ -338,6 +360,9 @@ interface StoreApi {
   removeBatch: (id: string) => void;
   addBook: (batchId: string, book: BookRecord) => void;
   updateBook: (id: string, patch: Partial<BookRecord>) => void;
+  /** Hard-remove the named books from every batch + allBooks. No
+   *  Unmerge snapshot retained — use mergeDuplicates for that. */
+  removeBooks: (ids: string[]) => void;
   clear: () => void;
 
   /** Register a File against a queued batch so the orchestrator can read it later. */
@@ -723,6 +748,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       },
       addBook: (batchId, book) => dispatch({ type: 'ADD_BOOK', batchId, book }),
       updateBook: (id, patch) => dispatch({ type: 'UPDATE_BOOK', id, patch }),
+      removeBooks: (ids) => dispatch({ type: 'REMOVE_BOOKS', ids }),
       clear: () => {
         pendingFiles.current.clear();
         // Tear down every remote pending-batch entry so the next session

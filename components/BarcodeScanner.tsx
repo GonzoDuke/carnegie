@@ -1,25 +1,34 @@
 'use client';
 
 /**
- * Barcode scanner modal — point the camera at a back-cover EAN-13
- * barcode, the app reads the ISBN, fires the lookup + tag-infer
- * chain in the background, and drops a BookRecord into the active
- * batch. Multi-scan loop: scan one, scan the next, tap Done when
- * you're finished.
+ * Barcode scanner — confirm-on-every-scan flow.
  *
- * Detection: we feature-detect the native `BarcodeDetector` API
- * (Chromium, available on Android Chrome's PWA shell) and fall
- * back to `@zxing/browser` on Safari / Firefox. Both produce the
- * same `{rawValue, format}` shape; we filter for `ean_13` and a
- * 978/979 prefix so non-ISBN codes never reach the lookup chain.
+ * State machine:
+ *   scanning      camera live, detection loop running
+ *   confirm       barcode detected; video paused, ISBN shown,
+ *                 user taps "Use this ISBN" or "Rescan"
+ *   dup-confirm   the ISBN the user is about to confirm is already
+ *                 in the active batch; user must explicitly opt in
+ *                 to "Add another copy" (default = No)
+ *   between       previous scan committed; "Scan another?" Yes / Done
+ *   error         camera permission denied or no detector available
+ *
+ * The scanner NEVER fires onScan(isbn) without an explicit user tap.
+ * Cameras pick up barcodes instantly and repeatedly — auto-confirm
+ * would create dozens of duplicate records on every shutter.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface BarcodeScannerProps {
-  /** Fired with the cleaned ISBN-13 each time a new barcode is read. */
+  /** Fired only when the user taps "Use this ISBN" (and confirms a
+   *  duplicate-in-batch warning if the ISBN is already in the batch). */
   onScan: (isbn: string) => void;
-  /** Fired when the user taps Done. The parent unmounts the modal. */
+  /** Synchronous predicate: does this ISBN already exist in the active
+   *  batch? Used to gate the Use-this-ISBN tap behind a duplicate
+   *  confirmation step. */
+  isIsbnInBatch: (isbn: string) => boolean;
+  /** User tapped Done. Parent unmounts the modal. */
   onClose: () => void;
 }
 
@@ -36,25 +45,24 @@ declare global {
   }
 }
 
-type Status =
-  | { kind: 'idle' }
-  | { kind: 'reading'; isbn: string }
-  | { kind: 'matched'; title: string; author: string }
-  | { kind: 'no-isbn' }
+type Stage =
+  | { kind: 'scanning' }
+  | { kind: 'confirm'; isbn: string }
+  | { kind: 'dup-confirm'; isbn: string }
+  | { kind: 'between' }
   | { kind: 'error'; message: string };
 
-export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
+export function BarcodeScanner({ onScan, isIsbnInBatch, onClose }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const detectorRef = useRef<DetectorLike | null>(null);
   const rafRef = useRef<number | null>(null);
-  const lastReadRef = useRef<{ isbn: string; at: number } | null>(null);
-  const lastNonIsbnAtRef = useRef<number>(0);
   const mountedRef = useRef(true);
+  const detectingRef = useRef(false);
 
+  const [stage, setStage] = useState<Stage>({ kind: 'scanning' });
   const [scanCount, setScanCount] = useState(0);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [status, setStatus] = useState<Status>({ kind: 'idle' });
   const [isExiting, setIsExiting] = useState(false);
 
   const stopStream = useCallback(() => {
@@ -66,6 +74,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
+    detectingRef.current = false;
   }, []);
 
   const close = useCallback(() => {
@@ -88,8 +97,6 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
           });
           return;
         }
-        // Fallback: ZXing — dynamic import so non-iOS users don't pay
-        // the bundle cost. The wrapper exposes a detect()-shaped API.
         const { BrowserMultiFormatReader } = await import('@zxing/browser');
         const reader = new BrowserMultiFormatReader();
         detectorRef.current = {
@@ -102,7 +109,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
             }
           },
         };
-      } catch (err) {
+      } catch {
         if (!cancelled) {
           setCameraError(
             'No barcode-detection support on this browser. Try Chrome on Android, Edge, or Safari 16+.'
@@ -116,8 +123,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
     };
   }, []);
 
-  // Open the rear camera at the highest resolution the device offers
-  // — barcodes need every pixel of detail.
+  // Open the rear camera at high resolution.
   useEffect(() => {
     let cancelled = false;
     async function openCamera() {
@@ -157,23 +163,32 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
     };
   }, []);
 
-  // Detection loop. Runs on rAF while the modal is mounted; reads at
-  // ~30fps cap, debounces duplicate ISBN reads to once every 2s so a
-  // single stable barcode in frame doesn't fire 60 times/sec.
+  // Detection loop. Active ONLY while stage.kind === 'scanning'. The
+  // moment a valid ISBN is read, we stop the loop and pause the video
+  // so the user sees a frozen frame with the detected ISBN overlaid.
   useEffect(() => {
     mountedRef.current = true;
+    if (stage.kind !== 'scanning') return;
+
+    let cancelled = false;
     function tick() {
-      if (!mountedRef.current) return;
+      if (cancelled || !mountedRef.current) return;
       const detector = detectorRef.current;
       const video = videoRef.current;
       if (!detector || !video || video.readyState < 2 || video.paused) {
         rafRef.current = requestAnimationFrame(tick);
         return;
       }
+      if (detectingRef.current) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      detectingRef.current = true;
       detector
         .detect(video)
         .then((results) => {
-          if (!mountedRef.current) return;
+          detectingRef.current = false;
+          if (cancelled || !mountedRef.current) return;
           const isbnHit = results.find(
             (r) =>
               r.format === 'ean_13' &&
@@ -181,43 +196,36 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
           );
           if (isbnHit) {
             const isbn = isbnHit.rawValue.replace(/[^\d]/g, '');
-            const now = Date.now();
-            const last = lastReadRef.current;
-            if (last && last.isbn === isbn && now - last.at < 2000) return;
-            lastReadRef.current = { isbn, at: now };
-            setScanCount((n) => n + 1);
-            setStatus({ kind: 'reading', isbn });
-            onScan(isbn);
+            // Stop scanning + freeze frame.
+            const v = videoRef.current;
+            if (v) v.pause();
+            setStage({ kind: 'confirm', isbn });
             return;
           }
-          // Any non-ISBN result triggers a brief "Not an ISBN" hint,
-          // but only at most once every 1.5s so it doesn't strobe.
-          if (results.length > 0) {
-            const now = Date.now();
-            if (now - lastNonIsbnAtRef.current > 1500) {
-              lastNonIsbnAtRef.current = now;
-              setStatus({ kind: 'no-isbn' });
-              window.setTimeout(() => {
-                if (mountedRef.current) {
-                  setStatus((s) => (s.kind === 'no-isbn' ? { kind: 'idle' } : s));
-                }
-              }, 1200);
-            }
-          }
+          rafRef.current = requestAnimationFrame(tick);
         })
         .catch(() => {
-          // ignore single-frame errors
+          detectingRef.current = false;
+          if (!cancelled && mountedRef.current) {
+            rafRef.current = requestAnimationFrame(tick);
+          }
         });
-      rafRef.current = requestAnimationFrame(tick);
     }
     rafRef.current = requestAnimationFrame(tick);
     return () => {
-      mountedRef.current = false;
+      cancelled = true;
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
-  }, [onScan]);
+  }, [stage.kind]);
 
-  // Allow Escape to close, matching the camera modal.
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      stopStream();
+    };
+  }, [stopStream]);
+
+  // Allow Escape to close.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') close();
@@ -226,38 +234,28 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, [close]);
 
-  // Public API: parents can show "matched" feedback after a lookup
-  // resolves. Exposed via window event so the parent doesn't need a
-  // ref to this component. Fire with `window.dispatchEvent(new
-  // CustomEvent('carnegie:scan-matched', { detail: { title, author } }))`.
-  useEffect(() => {
-    function onMatched(e: Event) {
-      const ev = e as CustomEvent<{ title: string; author: string }>;
-      setStatus({
-        kind: 'matched',
-        title: ev.detail?.title ?? '',
-        author: ev.detail?.author ?? '',
-      });
-      window.setTimeout(() => {
-        if (mountedRef.current) setStatus({ kind: 'idle' });
-      }, 1800);
+  // Restart the live preview after a Rescan or Yes-scan-another tap.
+  function resumeScanning() {
+    const v = videoRef.current;
+    if (v) {
+      v.play().catch(() => {});
     }
-    window.addEventListener('carnegie:scan-matched', onMatched);
-    return () => window.removeEventListener('carnegie:scan-matched', onMatched);
-  }, []);
+    setStage({ kind: 'scanning' });
+  }
 
-  const statusText =
-    status.kind === 'idle'
-      ? 'Aim at the barcode'
-      : status.kind === 'reading'
-        ? `Found ${status.isbn} — looking up…`
-        : status.kind === 'matched'
-          ? status.title
-            ? `✓ ${status.title}${status.author ? ` — ${status.author}` : ''}`
-            : '✓ Found it'
-          : status.kind === 'no-isbn'
-            ? 'Not an ISBN — try again'
-            : status.message;
+  function onUseIsbn(isbn: string) {
+    if (isIsbnInBatch(isbn)) {
+      setStage({ kind: 'dup-confirm', isbn });
+      return;
+    }
+    commit(isbn);
+  }
+
+  function commit(isbn: string) {
+    onScan(isbn);
+    setScanCount((n) => n + 1);
+    setStage({ kind: 'between' });
+  }
 
   return (
     <div
@@ -285,10 +283,10 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
           className="absolute inset-0 w-full h-full object-cover"
         />
 
-        {/* Targeting rectangle. Brass border, dark mask outside it.
-            Sized to a 70%-wide horizontal band — back-cover EAN-13
-            barcodes are roughly that aspect on a typical book. */}
-        {!cameraError && (
+        {/* Targeting rectangle — only while actively scanning. Hidden
+            once we've frozen the frame so it doesn't fight the
+            confirm-overlay copy. */}
+        {!cameraError && stage.kind === 'scanning' && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
             <div
               className="relative"
@@ -303,36 +301,124 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
           </div>
         )}
 
-        {/* Top bar: scan count on the left, Done pill on the right. */}
+        {/* Top bar: counter on the left, Done pill on the right. */}
         <div className="absolute top-0 inset-x-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/55 to-transparent pointer-events-none">
           <span className="text-[12px] uppercase tracking-wider text-cream-200 font-medium">
             {scanCount === 0
-              ? 'Scan barcode'
+              ? stage.kind === 'scanning'
+                ? 'Aim at the barcode'
+                : 'Scan barcode'
               : `${scanCount} scanned this session`}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={close}
-          className="absolute top-3 right-3 z-10 px-5 py-2 rounded-full bg-white text-ink text-base font-semibold shadow-lg ring-1 ring-black/10 active:scale-95 transition"
-        >
-          Done
-        </button>
-
-        {/* Status pill — bottom-center, dark glassy chip. */}
-        <div className="absolute bottom-5 inset-x-0 flex justify-center px-4 pointer-events-none">
-          <div
-            className={`max-w-full truncate text-[13px] font-medium px-4 py-2 rounded-full backdrop-blur-md ${
-              status.kind === 'matched'
-                ? 'bg-emerald-700/85 text-white'
-                : status.kind === 'no-isbn' || status.kind === 'error'
-                  ? 'bg-mahogany/85 text-white'
-                  : 'bg-black/55 text-cream-100'
-            }`}
+        {stage.kind !== 'confirm' && stage.kind !== 'dup-confirm' && (
+          <button
+            type="button"
+            onClick={close}
+            className="absolute top-3 right-3 z-10 px-5 py-2 rounded-full bg-white text-ink text-base font-semibold shadow-lg ring-1 ring-black/10 active:scale-95 transition"
           >
-            {statusText}
+            Done
+          </button>
+        )}
+
+        {/* Confirm overlay — shown when a barcode has been detected.
+            Frozen camera frame underneath; centered card on top with
+            the ISBN, Use this ISBN, and Rescan. */}
+        {stage.kind === 'confirm' && (
+          <div className="absolute inset-0 flex items-center justify-center p-6 bg-black/55">
+            <div className="w-full max-w-sm bg-cream-50 dark:bg-ink text-ink dark:text-cream-50 rounded-xl p-5 shadow-2xl space-y-3">
+              <div className="text-[11px] uppercase tracking-wider text-text-tertiary">
+                Detected ISBN
+              </div>
+              <div className="text-[22px] font-mono font-semibold tracking-tight">
+                {stage.isbn}
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => onUseIsbn(stage.isbn)}
+                  className="flex-1 py-2.5 rounded-md bg-navy text-white text-[14px] font-semibold active:scale-[0.99] transition"
+                >
+                  Use this ISBN
+                </button>
+                <button
+                  type="button"
+                  onClick={resumeScanning}
+                  className="flex-1 py-2.5 rounded-md border border-line text-text-secondary text-[14px] font-medium transition"
+                >
+                  Rescan
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Duplicate-in-batch confirm. Same frozen frame; different
+            copy. Default action is "No, don't add" — the user has to
+            explicitly opt in to a duplicate copy. */}
+        {stage.kind === 'dup-confirm' && (
+          <div className="absolute inset-0 flex items-center justify-center p-6 bg-black/55">
+            <div className="w-full max-w-sm bg-cream-50 dark:bg-ink text-ink dark:text-cream-50 rounded-xl p-5 shadow-2xl space-y-3">
+              <div className="text-[14px] font-semibold">
+                ISBN already in this batch
+              </div>
+              <div className="text-[13px] text-text-secondary leading-relaxed">
+                <span className="font-mono">{stage.isbn}</span> is already
+                attached to a book you&rsquo;ve scanned in this session. Add
+                another copy?
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={resumeScanning}
+                  className="flex-1 py-2.5 rounded-md bg-navy text-white text-[14px] font-semibold active:scale-[0.99] transition"
+                  autoFocus
+                >
+                  No, keep scanning
+                </button>
+                <button
+                  type="button"
+                  onClick={() => commit(stage.isbn)}
+                  className="flex-1 py-2.5 rounded-md border border-line text-text-secondary text-[14px] font-medium transition"
+                >
+                  Yes, add copy
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Between-scans prompt — fired after a successful Use this
+            ISBN. Camera stays paused; the user explicitly says Yes
+            to scan another or Done to close the modal. */}
+        {stage.kind === 'between' && (
+          <div className="absolute inset-0 flex items-center justify-center p-6 bg-black/55">
+            <div className="w-full max-w-sm bg-cream-50 dark:bg-ink text-ink dark:text-cream-50 rounded-xl p-5 shadow-2xl space-y-3">
+              <div className="text-[14px] font-semibold">Scan another?</div>
+              <div className="text-[13px] text-text-secondary">
+                The lookup for that ISBN is running in the background. Books
+                appear on the Review tab as soon as their metadata resolves.
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={resumeScanning}
+                  className="flex-1 py-2.5 rounded-md bg-navy text-white text-[14px] font-semibold active:scale-[0.99] transition"
+                  autoFocus
+                >
+                  Yes, scan another
+                </button>
+                <button
+                  type="button"
+                  onClick={close}
+                  className="flex-1 py-2.5 rounded-md border border-line text-text-secondary text-[14px] font-medium transition"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {cameraError && (
           <div className="absolute inset-0 flex items-center justify-center p-6 bg-black/60">

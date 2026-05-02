@@ -82,12 +82,6 @@ export default function UploadPage() {
         batchNotes: batchNotes.trim() || undefined,
       });
       addBook(batchId, book);
-      // Surface the result back to the scanner for its status pill.
-      window.dispatchEvent(
-        new CustomEvent('carnegie:scan-matched', {
-          detail: { title: book.title, author: book.author },
-        })
-      );
     } catch (err) {
       scanErrorRef.current =
         err instanceof Error ? err.message : 'Lookup failed.';
@@ -547,11 +541,26 @@ export default function UploadPage() {
         <div className="md:hidden h-16" aria-hidden />
       )}
 
-      {/* Barcode scanner — viewfinder with multi-scan loop. Lookups
-          fire in the background and books appear on Review as they
-          resolve. The modal mounts only when scannerOpen is true. */}
+      {/* Barcode scanner — confirm-on-every-scan flow. The user must
+          explicitly tap "Use this ISBN" before a lookup is dispatched;
+          duplicates within the same batch trigger a second confirm
+          step. The modal mounts only when scannerOpen is true. */}
       {scannerOpen && (
-        <BarcodeScanner onScan={handleScan} onClose={handleScannerClose} />
+        <BarcodeScanner
+          onScan={handleScan}
+          isIsbnInBatch={(isbn) => {
+            const id = scanBatchIdRef.current;
+            if (!id) return false;
+            const batch = stateRef.current.batches.find((b) => b.id === id);
+            if (!batch) return false;
+            const cleaned = isbn.replace(/[^\dxX]/g, '').toUpperCase();
+            return batch.books.some(
+              (bk) =>
+                (bk.isbn || '').replace(/[^\dxX]/g, '').toUpperCase() === cleaned
+            );
+          }}
+          onClose={handleScannerClose}
+        />
       )}
 
       {/* Inline crop step. Renders one modal per queued file; advancing
