@@ -21,6 +21,18 @@ export interface LedgerEntry {
    * ledger entries (pre v3 step 7) didn't capture tags.
    */
   tags?: string[];
+  /**
+   * Display fields captured at export time so the History screen can
+   * re-download a CSV that matches what the user actually shipped.
+   * Optional because older ledger entries (pre v3 step 8) only carried
+   * the normalized forms.
+   */
+  title?: string;
+  author?: string;
+  authorLF?: string;
+  publisher?: string;
+  publicationYear?: number;
+  batchNotes?: string;
 }
 
 export function normalizeIsbn(isbn: string | undefined | null): string {
@@ -212,6 +224,12 @@ export function bookToLedgerEntry(book: BookRecord, date: Date = new Date()): Le
     date: date.toISOString().slice(0, 10),
     batchLabel: book.batchLabel,
     tags: tags.length > 0 ? tags : undefined,
+    title: book.title || undefined,
+    author: book.author || undefined,
+    authorLF: book.authorLF || undefined,
+    publisher: book.publisher || undefined,
+    publicationYear: book.publicationYear || undefined,
+    batchNotes: book.batchNotes || undefined,
   };
 }
 
