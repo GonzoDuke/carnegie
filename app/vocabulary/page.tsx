@@ -161,11 +161,14 @@ export default function VocabularyPage() {
     return rows;
   }, [vocab, sortedDomainKeys]);
 
-  const filteredRows = useMemo(
-    () =>
-      selection === 'all' ? allRows : allRows.filter((r) => r.domain === selection),
-    [allRows, selection]
-  );
+  const [search, setSearch] = useState('');
+  const filteredRows = useMemo(() => {
+    const byDomain =
+      selection === 'all' ? allRows : allRows.filter((r) => r.domain === selection);
+    const q = search.trim().toLowerCase();
+    if (!q) return byDomain;
+    return byDomain.filter((r) => r.tag.toLowerCase().includes(q));
+  }, [allRows, selection, search]);
 
   /** Push the current `vocab` state to the GitHub Contents API. */
   async function commitVocab(
@@ -304,6 +307,33 @@ export default function VocabularyPage() {
           {error}
         </div>
       )}
+
+      {/* Tag search (phone) — same filter source as the desktop view. */}
+      <div className="relative mb-2">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search tags…"
+          className="w-full bg-surface-card border border-line rounded-md pl-8 pr-8 py-2 text-[14px] text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-navy"
+        />
+        <span
+          aria-hidden
+          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-quaternary text-[14px]"
+        >
+          ⌕
+        </span>
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch('')}
+            aria-label="Clear search"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full text-text-quaternary"
+          >
+            ×
+          </button>
+        )}
+      </div>
 
       {/* Single-column tag stack. Each row: tag name, domain label,
           usage count, delete button. */}
@@ -522,6 +552,35 @@ export default function VocabularyPage() {
               {error}
             </div>
           )}
+
+          {/* Tag search — filters live across every domain. The
+              left-rail domain selection still applies, so an active
+              search inside a single domain narrows further. */}
+          <div className="relative">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search tags…"
+              className="w-full bg-surface-card border border-line rounded-md pl-9 pr-9 py-[10px] text-[14px] text-text-primary placeholder:text-text-quaternary focus:outline-none focus:border-navy"
+            />
+            <span
+              aria-hidden
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-quaternary text-[14px]"
+            >
+              ⌕
+            </span>
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full text-text-quaternary hover:text-navy hover:bg-surface-page transition flex items-center justify-center"
+              >
+                ×
+              </button>
+            )}
+          </div>
 
           {/* Tag table */}
           <div className="bg-surface-card border border-line rounded-lg overflow-hidden">
