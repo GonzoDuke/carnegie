@@ -56,10 +56,6 @@ interface Stage {
 
 const STAGES: Stage[] = [
   {
-    name: 'Scanning',
-    body: 'point your phone camera at a barcode and the ISBN goes straight to lookup. No photo processing needed.',
-  },
-  {
     name: 'Detection',
     body: 'Claude identifies individual book spines in a shelf photo and draws bounding boxes around each one.',
   },
@@ -78,6 +74,10 @@ const STAGES: Stage[] = [
   {
     name: 'Review',
     body: 'every result is presented for human approval. Nothing exports without a person confirming it.',
+  },
+  {
+    name: 'Barcode scanning',
+    body: "for spines the camera can't read, scan the ISBN barcode directly. It skips straight to lookup and tagging, filling in what the photo pipeline missed.",
   },
 ];
 
