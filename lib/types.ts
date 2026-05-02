@@ -66,6 +66,13 @@ export interface BookRecord {
   notes?: string;
   /** True when the user added this book via "Add missing book" rather than auto-detection. */
   manuallyAdded?: boolean;
+  /**
+   * True when this record came from the barcode-scan flow (ISBN read
+   * directly off an EAN-13 → ISBN-keyed lookup → tag inference). Used
+   * to surface a "Scanned" badge on the Review surfaces in place of
+   * the spine thumbnail. Cover URL serves as the visual either way.
+   */
+  scannedFromBarcode?: boolean;
   lookupSource: 'openlibrary' | 'googlebooks' | 'isbndb' | 'none';
   /** Dewey Decimal Classification, when a tier surfaced one. */
   ddc?: string;

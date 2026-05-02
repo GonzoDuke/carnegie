@@ -1,0 +1,305 @@
+/**
+ * Barcode-scan pipeline. The user reads an ISBN-13 off a back-cover
+ * EAN barcode → we run an ISBN-keyed metadata lookup against Open
+ * Library → fall back to Google Books on miss → infer tags → produce
+ * a `BookRecord` ready to drop into the live batch.
+ *
+ * No spine detection, no Pass-B Opus call. The lookup chain reuses
+ * the same sources as the photo pipeline (Open Library, Library of
+ * Congress SRU for LCC) but keyed on ISBN instead of title/author.
+ *
+ * Empty-result case: a successfully-read ISBN with no metadata
+ * anywhere still produces a BookRecord with the ISBN pre-filled and
+ * `confidence: 'LOW'`, plus a warning instructing the user to fill
+ * in the rest by hand. Matches the "manually added" path on Review.
+ */
+
+import type { BookRecord, Confidence, InferTagsResult } from './types';
+import { lookupLccByIsbn, normalizeLcc } from './book-lookup';
+import { inferTagsClient, makeId } from './pipeline';
+import { toAuthorLastFirst, toTitleCase } from './csv-export';
+
+const DEFAULT_HEADERS = {
+  Accept: 'application/json',
+  'User-Agent': 'Carnegie/3.0 (https://carnegielib.vercel.app)',
+};
+
+interface IsbnLookupResult {
+  /** Empty when no source returned a title. The caller treats that
+   *  as the no-match path. */
+  title: string;
+  author: string;
+  publisher: string;
+  publicationYear: number;
+  lcc: string;
+  subjects: string[];
+  /** Cover URL discovered during lookup (Open Library covers API
+   *  preferred; Google Books thumbnail as a fallback). */
+  coverUrl: string;
+  /** Which source filled in the title — used for the BookRecord's
+   *  lookupSource field and for telemetry. */
+  source: 'openlibrary' | 'googlebooks' | 'none';
+}
+
+interface OpenLibraryDoc {
+  title?: string;
+  author_name?: string[];
+  isbn?: string[];
+  publisher?: string[];
+  first_publish_year?: number;
+  publish_year?: number[];
+  publish_date?: string[];
+  lcc?: string[];
+  lc_classifications?: string[];
+  subject?: string[];
+}
+
+function parsePublishYear(d?: string[]): number {
+  if (!d || d.length === 0) return 0;
+  for (const s of d) {
+    const m = s.match(/\b(1[5-9]\d{2}|20\d{2}|21\d{2})\b/);
+    if (m) return parseInt(m[1], 10);
+  }
+  return 0;
+}
+
+/**
+ * Open Library — primary source. The /search.json?isbn=… endpoint
+ * returns the work plus the matching edition's metadata. Cover URL
+ * is the deterministic /b/isbn/{isbn}-L.jpg form (no separate
+ * roundtrip needed; the Cover component handles 404 fallback).
+ */
+async function lookupOpenLibrary(isbn: string): Promise<IsbnLookupResult | null> {
+  try {
+    const url =
+      `https://openlibrary.org/search.json?isbn=${encodeURIComponent(isbn)}` +
+      '&fields=key,title,author_name,isbn,publisher,first_publish_year,publish_year,publish_date,lcc,lc_classifications,subject';
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(10000),
+      cache: 'no-store',
+      headers: DEFAULT_HEADERS,
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { docs?: OpenLibraryDoc[] };
+    const doc = data.docs?.[0];
+    if (!doc || !doc.title) return null;
+
+    const lccRaw =
+      (doc.lcc && doc.lcc[0]) ||
+      (doc.lc_classifications && doc.lc_classifications[0]) ||
+      '';
+    const lcc = normalizeLcc(lccRaw);
+    return {
+      title: doc.title,
+      author: doc.author_name?.[0] ?? '',
+      publisher: doc.publisher?.[0] ?? '',
+      publicationYear:
+        doc.first_publish_year ||
+        (doc.publish_year && doc.publish_year[0]) ||
+        parsePublishYear(doc.publish_date) ||
+        0,
+      lcc,
+      subjects: doc.subject?.slice(0, 10) ?? [],
+      coverUrl: `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`,
+      source: 'openlibrary',
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Google Books — fallback. Used when OL has nothing for the ISBN.
+ * Cover URL is rewritten to https because GB still serves http for
+ * thumbnails which mixed-content-blocks on production.
+ */
+async function lookupGoogleBooks(isbn: string): Promise<IsbnLookupResult | null> {
+  try {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY;
+    const base = `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}`;
+    const url = apiKey ? `${base}&key=${apiKey}` : base;
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(10000),
+      cache: 'no-store',
+      headers: DEFAULT_HEADERS,
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      items?: Array<{
+        volumeInfo: {
+          title?: string;
+          authors?: string[];
+          publisher?: string;
+          publishedDate?: string;
+          categories?: string[];
+          imageLinks?: { thumbnail?: string; smallThumbnail?: string };
+        };
+      }>;
+    };
+    const vi = data.items?.[0]?.volumeInfo;
+    if (!vi || !vi.title) return null;
+    const cover = (vi.imageLinks?.thumbnail || vi.imageLinks?.smallThumbnail || '').replace(
+      /^http:\/\//i,
+      'https://'
+    );
+    return {
+      title: vi.title,
+      author: vi.authors?.[0] ?? '',
+      publisher: vi.publisher ?? '',
+      publicationYear: vi.publishedDate ? parseInt(vi.publishedDate.slice(0, 4), 10) || 0 : 0,
+      lcc: '',
+      subjects: vi.categories ?? [],
+      coverUrl: cover,
+      source: 'googlebooks',
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Public entry point: ISBN → metadata. Tries Open Library first,
+ * falls back to Google Books. LoC SRU then fills in LCC if both
+ * tiers came back without one (mirrors the photo pipeline). Returns
+ * `source: 'none'` when nothing matched at all — the caller still
+ * builds a BookRecord (with the ISBN pre-filled) so the user can
+ * complete it on Review.
+ */
+export async function lookupBookByIsbn(isbn: string): Promise<IsbnLookupResult> {
+  const cleaned = isbn.replace(/[^\dxX]/g, '').toUpperCase();
+  if (cleaned.length !== 10 && cleaned.length !== 13) {
+    return {
+      title: '',
+      author: '',
+      publisher: '',
+      publicationYear: 0,
+      lcc: '',
+      subjects: [],
+      coverUrl: '',
+      source: 'none',
+    };
+  }
+  let hit = await lookupOpenLibrary(cleaned);
+  if (!hit) hit = await lookupGoogleBooks(cleaned);
+  if (!hit) {
+    return {
+      title: '',
+      author: '',
+      publisher: '',
+      publicationYear: 0,
+      lcc: '',
+      subjects: [],
+      coverUrl: '',
+      source: 'none',
+    };
+  }
+  if (!hit.lcc) {
+    try {
+      hit.lcc = normalizeLcc(await lookupLccByIsbn(cleaned)) || '';
+    } catch {
+      // ignore — LCC stays empty
+    }
+  }
+  return hit;
+}
+
+interface ProcessIsbnArgs {
+  isbn: string;
+  /** Position number assigned to the synthetic spine read. The Review
+   *  table sorts by this so multiple scanned books appear in scan order. */
+  position: number;
+  /** Inherited from the active batch (set on the page-level inputs). */
+  batchLabel?: string;
+  batchNotes?: string;
+  sourcePhoto?: string;
+}
+
+/**
+ * Run the ISBN lookup + tag inference and return a BookRecord ready
+ * for `addBook(batchId, book)`. Empty-result case still returns a
+ * record with the ISBN pre-filled, `confidence: 'LOW'`, and a
+ * warning so the user knows to complete it manually.
+ */
+export async function processIsbnScan(args: ProcessIsbnArgs): Promise<BookRecord> {
+  const cleanedIsbn = args.isbn.replace(/[^\dxX]/g, '').toUpperCase();
+  const lookup = await lookupBookByIsbn(cleanedIsbn);
+
+  let tags: InferTagsResult = {
+    genreTags: [],
+    formTags: [],
+    confidence: 'LOW',
+    reasoning: '',
+  };
+  if (lookup.title) {
+    tags = await inferTagsClient({
+      title: lookup.title,
+      author: lookup.author,
+      isbn: cleanedIsbn,
+      publisher: lookup.publisher,
+      publicationYear: lookup.publicationYear,
+      lcc: lookup.lcc,
+      subjectHeadings: lookup.subjects,
+    });
+  }
+
+  const noMatch = lookup.source === 'none' || !lookup.title;
+  const confidence: Confidence = noMatch
+    ? 'LOW'
+    : lookup.lcc
+      ? tags.confidence
+      : 'MEDIUM'; // looked up cleanly but no LCC — slight downgrade
+
+  const warnings: string[] = [];
+  if (noMatch) {
+    warnings.push(
+      `Barcode ${cleanedIsbn} read but no metadata match in any source — fill in title/author manually.`
+    );
+  } else if (!lookup.lcc) {
+    warnings.push('No LCC found for this edition — tag inference fell back to subject headings only.');
+  }
+
+  const titleClean = lookup.title ? toTitleCase(lookup.title.trim()) : '';
+  const authorClean = lookup.author?.trim() ?? '';
+
+  return {
+    id: makeId(),
+    spineRead: {
+      position: args.position,
+      rawText: `[scanned ISBN ${cleanedIsbn}]`,
+      title: titleClean,
+      author: authorClean,
+      publisher: lookup.publisher,
+      confidence: noMatch ? 'LOW' : 'HIGH',
+    },
+    title: titleClean,
+    author: authorClean,
+    authorLF: authorClean ? toAuthorLastFirst(authorClean) : '',
+    isbn: cleanedIsbn,
+    publisher: lookup.publisher,
+    publicationYear: lookup.publicationYear,
+    lcc: lookup.lcc,
+    genreTags: tags.genreTags,
+    formTags: tags.formTags,
+    confidence,
+    reasoning: tags.reasoning,
+    status: 'pending',
+    warnings,
+    sourcePhoto: args.sourcePhoto ?? `barcode-scan-${cleanedIsbn}`,
+    batchLabel: args.batchLabel,
+    batchNotes: args.batchNotes,
+    lookupSource: lookup.source,
+    lccSource: lookup.lcc ? 'ol' : 'none',
+    coverUrl: lookup.coverUrl || undefined,
+    scannedFromBarcode: true,
+    original: {
+      title: titleClean,
+      author: authorClean,
+      isbn: cleanedIsbn,
+      publisher: lookup.publisher,
+      publicationYear: lookup.publicationYear,
+      lcc: lookup.lcc,
+      genreTags: tags.genreTags,
+      formTags: tags.formTags,
+    },
+  };
+}
