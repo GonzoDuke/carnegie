@@ -330,7 +330,7 @@ export default function ExportPage() {
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-cream-50 dark:bg-ink-soft/60 border border-green-300 dark:border-green-800 rounded-lg p-4">
+        <div className="bg-cream-50/60 border border-green-300 dark:border-green-800 rounded-lg p-4">
           <div className="text-[10px] uppercase tracking-wider text-ink/50 dark:text-cream-300/50 mb-1">
             Approved · will export
           </div>
@@ -344,13 +344,13 @@ export default function ExportPage() {
             )}
           </div>
         </div>
-        <div className="bg-cream-50 dark:bg-ink-soft/60 border border-cream-300 dark:border-ink-soft rounded-lg p-4">
+        <div className="bg-cream-50/60 border border-cream-300 dark:border-ink-soft rounded-lg p-4">
           <div className="text-[10px] uppercase tracking-wider text-ink/50 dark:text-cream-300/50 mb-1">
             Pending · excluded
           </div>
           <div className="text-3xl font-serif text-amber-700 dark:text-amber-400">{pending}</div>
         </div>
-        <div className="bg-cream-50 dark:bg-ink-soft/60 border border-cream-300 dark:border-ink-soft rounded-lg p-4">
+        <div className="bg-cream-50/60 border border-cream-300 dark:border-ink-soft rounded-lg p-4">
           <div className="text-[10px] uppercase tracking-wider text-ink/50 dark:text-cream-300/50 mb-1">
             Rejected · excluded
           </div>
@@ -374,7 +374,7 @@ export default function ExportPage() {
 
       {/* Batch + label-routing controls */}
       {hasMultipleBatches && (
-        <div className="bg-cream-50 dark:bg-ink-soft/60 border border-cream-300 dark:border-ink-soft rounded-lg p-5 space-y-5">
+        <div className="bg-cream-50/60 border border-cream-300 dark:border-ink-soft rounded-lg p-5 space-y-5">
           <div>
             <div className="text-xs uppercase tracking-wider font-semibold text-ink/60 dark:text-cream-300/60 mb-2">
               Batches to export
@@ -430,7 +430,7 @@ export default function ExportPage() {
 
       {/* Where to put the batch label */}
       {hasAnyBatchLabel && (
-        <div className="bg-cream-50 dark:bg-ink-soft/60 border border-cream-300 dark:border-ink-soft rounded-lg p-5 space-y-3">
+        <div className="bg-cream-50/60 border border-cream-300 dark:border-ink-soft rounded-lg p-5 space-y-3">
           <div className="text-xs uppercase tracking-wider font-semibold text-ink/60 dark:text-cream-300/60">
             Where to put the batch label in LibraryThing
           </div>
@@ -492,7 +492,7 @@ export default function ExportPage() {
           2px navy top border anchors it as a deliberate next step rather
           than a floating panel (spec §8). */}
       {promotions.length > 0 && (
-        <div className="bg-surface-card dark:bg-ink-soft border-t-2 border-t-navy border-x border-b border-line dark:border-[#2E2C29] rounded-b rounded-tr p-5 space-y-3">
+        <div className="bg-surface-card border-t-2 border-t-navy border-x border-b border-line rounded-b rounded-tr p-5 space-y-3">
           <div className="flex items-baseline gap-2 flex-wrap">
             <h2 className="text-[10px] uppercase tracking-[1px] font-semibold text-navy">
               Vocabulary updates

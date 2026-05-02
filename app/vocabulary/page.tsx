@@ -244,14 +244,14 @@ export default function VocabularyPage() {
 
       <div className="grid grid-cols-[180px_1fr] gap-6">
         {/* LEFT — domain rail */}
-        <aside className="bg-surface-card dark:bg-ink-soft border border-line dark:border-[#2E2C29] rounded-lg overflow-hidden h-max">
+        <aside className="bg-surface-card border border-line rounded-lg overflow-hidden h-max">
           <DomainRow
             label="All"
             count={allRows.length}
             active={selection === 'all'}
             onClick={() => setSelection('all')}
           />
-          <div className="border-t border-line-light dark:border-[#2E2C29]" />
+          <div className="border-t border-line-light" />
           {DOMAIN_KEYS.map((k) => {
             const def = vocab.domains[k];
             if (!def) return null;
@@ -270,7 +270,7 @@ export default function VocabularyPage() {
         {/* RIGHT — add bar + tag table + changelog */}
         <section className="space-y-4">
           {/* Add tag bar */}
-          <div className="bg-surface-card dark:bg-ink-soft border border-line dark:border-[#2E2C29] rounded-lg p-3 flex flex-wrap items-end gap-2">
+          <div className="bg-surface-card border border-line rounded-lg p-3 flex flex-wrap items-end gap-2">
             <div className="flex-1 min-w-[200px]">
               <label className="typo-label block mb-1">New tag name</label>
               <input
@@ -315,8 +315,8 @@ export default function VocabularyPage() {
           )}
 
           {/* Tag table */}
-          <div className="bg-surface-card dark:bg-ink-soft border border-line dark:border-[#2E2C29] rounded-lg overflow-hidden">
-            <div className="grid grid-cols-[1fr_180px_80px_60px] items-center gap-3 px-[14px] py-[7px] bg-surface-page dark:bg-ink/40 border-b border-line dark:border-[#2E2C29]">
+          <div className="bg-surface-card border border-line rounded-lg overflow-hidden">
+            <div className="grid grid-cols-[1fr_180px_80px_60px] items-center gap-3 px-[14px] py-[7px] bg-surface-page border-b border-line">
               <span className="typo-label">Tag</span>
               <span className="typo-label">Domain</span>
               <span className="typo-label">Usage</span>
@@ -335,7 +335,7 @@ export default function VocabularyPage() {
                 return (
                   <div
                     key={`${row.domain}:${row.tag}`}
-                    className="grid grid-cols-[1fr_180px_80px_60px] items-center gap-3 px-[14px] py-[8px] border-b border-line-light dark:border-[#2E2C29] last:border-b-0 text-[13px]"
+                    className="grid grid-cols-[1fr_180px_80px_60px] items-center gap-3 px-[14px] py-[8px] border-b border-line-light last:border-b-0 text-[13px]"
                   >
                     <span className="text-text-primary truncate">{row.tag}</span>
                     <span className="text-[12px] text-text-tertiary truncate">
@@ -394,7 +394,7 @@ export default function VocabularyPage() {
           </div>
 
           {/* Changelog (collapsible) */}
-          <div className="bg-surface-card dark:bg-ink-soft border border-line dark:border-[#2E2C29] rounded-lg overflow-hidden">
+          <div className="bg-surface-card border border-line rounded-lg overflow-hidden">
             <button
               type="button"
               onClick={() => setChangelogOpen((v) => !v)}
@@ -413,7 +413,7 @@ export default function VocabularyPage() {
               <span className="text-text-tertiary">{changelogOpen ? '▾' : '▸'}</span>
             </button>
             {changelogOpen && (
-              <div className="border-t border-line-light dark:border-[#2E2C29] px-[14px] py-[10px] space-y-1.5 max-h-[420px] overflow-y-auto">
+              <div className="border-t border-line-light px-[14px] py-[10px] space-y-1.5 max-h-[420px] overflow-y-auto">
                 {parsedChangelog.length === 0 ? (
                   <div className="text-[12px] text-text-tertiary italic">
                     No changelog entries found.

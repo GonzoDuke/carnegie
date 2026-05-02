@@ -85,18 +85,18 @@ export function BookTableRow({ book }: { book: BookRecord }) {
     ? 'bg-[#FAF4E5] dark:bg-[#3A2F1B]/60'
     : isRejected
       ? 'opacity-30'
-      : 'hover:bg-[#FBFBFA] dark:hover:bg-[#2E2C29]';
+      : 'hover:bg-surface-card-hover';
 
   return (
     <>
       <div
         onClick={() => setOpen((v) => !v)}
-        className={`grid grid-cols-[52px_1fr_80px_200px_100px] items-center gap-3 px-[14px] py-[10px] border-b border-line-light dark:border-[#2E2C29] cursor-pointer transition-colors ${rowTint}`}
+        className={`grid grid-cols-[52px_1fr_80px_200px_100px] items-center gap-3 px-[14px] py-[10px] border-b border-line-light cursor-pointer transition-colors ${rowTint}`}
         role="button"
         aria-expanded={open}
       >
         {/* Cover */}
-        <div className="w-9 h-[52px] rounded bg-surface-page dark:bg-ink/40 border border-line-light dark:border-[#2E2C29] overflow-hidden flex items-center justify-center text-[7px] text-text-quaternary">
+        <div className="w-9 h-[52px] rounded bg-surface-page border border-line-light overflow-hidden flex items-center justify-center text-[7px] text-text-quaternary">
           {showCover ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -196,7 +196,7 @@ export function BookTableRow({ book }: { book: BookRecord }) {
 
       {/* Detail panel */}
       {open && (
-        <div className="bg-surface-page dark:bg-ink/40 px-[66px] py-[14px] border-b border-line dark:border-[#2E2C29]">
+        <div className="bg-surface-page px-[66px] py-[14px] border-b border-line">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 mb-3">
             <DetailField label="Publisher" value={book.publisher || '—'} />
             <DetailField

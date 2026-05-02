@@ -42,20 +42,26 @@ const config: Config = {
           amber: '#C08800',            // medium confidence / warning
           'amber-soft': '#FBF4E6',     // ~ rgba(192,136,0,0.07)
         },
+        // The v3 surface / line / text tokens are wired to CSS variables
+        // defined in globals.css so they swap on .dark automatically.
+        // Consumers write `bg-surface-card` / `text-text-primary` / etc.
+        // and pick up the right value in either mode without per-call
+        // dark: overrides. The `<alpha-value>` placeholder lets Tailwind's
+        // opacity utilities (`/40`, `/60`) keep working.
         surface: {
-          page: '#F6F6F4',
-          card: '#FFFFFF',
-          'card-hover': '#FBFBFA',
+          page: 'rgb(var(--color-surface-page) / <alpha-value>)',
+          card: 'rgb(var(--color-surface-card) / <alpha-value>)',
+          'card-hover': 'rgb(var(--color-surface-card-hover) / <alpha-value>)',
         },
         line: {
-          DEFAULT: '#E4E4E0',          // border
-          light: '#EFEFEC',            // internal dividers
+          DEFAULT: 'rgb(var(--color-line) / <alpha-value>)',
+          light: 'rgb(var(--color-line-light) / <alpha-value>)',
         },
         text: {
-          primary: '#141414',
-          secondary: '#555550',
-          tertiary: '#8A8A84',
-          quaternary: '#B0B0A8',
+          primary: 'rgb(var(--color-text-primary) / <alpha-value>)',
+          secondary: 'rgb(var(--color-text-secondary) / <alpha-value>)',
+          tertiary: 'rgb(var(--color-text-tertiary) / <alpha-value>)',
+          quaternary: 'rgb(var(--color-text-quaternary) / <alpha-value>)',
         },
 
         // ---- Legacy tokens, repointed to the new palette -----------------

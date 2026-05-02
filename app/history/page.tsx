@@ -230,7 +230,7 @@ export default function HistoryPage() {
       <h1 className="typo-page-title">History</h1>
 
       {/* Lifetime stats line */}
-      <div className="text-[13px] text-text-secondary border-b border-line dark:border-[#2E2C29] pb-3">
+      <div className="text-[13px] text-text-secondary border-b border-line pb-3">
         {lifetime.books === 0 ? (
           <>No batches exported yet.</>
         ) : (
@@ -250,14 +250,14 @@ export default function HistoryPage() {
       </div>
 
       {statusMsg && (
-        <div className="bg-surface-card dark:bg-ink-soft border border-line dark:border-[#2E2C29] rounded-md px-3 py-2 text-[12px] text-text-secondary">
+        <div className="bg-surface-card border border-line rounded-md px-3 py-2 text-[12px] text-text-secondary">
           {statusMsg}
         </div>
       )}
 
       {/* Batch table */}
       {groups.length === 0 ? (
-        <div className="bg-surface-card dark:bg-ink-soft border border-line dark:border-[#2E2C29] rounded-lg p-10 text-center">
+        <div className="bg-surface-card border border-line rounded-lg p-10 text-center">
           <p className="text-[14px] font-semibold text-text-primary mb-1">
             No exported batches yet
           </p>
@@ -266,8 +266,8 @@ export default function HistoryPage() {
           </p>
         </div>
       ) : (
-        <div className="bg-surface-card dark:bg-ink-soft border border-line dark:border-[#2E2C29] rounded-lg overflow-hidden">
-          <div className="grid grid-cols-[1fr_120px_60px_1fr_180px] items-center gap-3 px-[14px] py-[7px] bg-surface-page dark:bg-ink/40 border-b border-line dark:border-[#2E2C29]">
+        <div className="bg-surface-card border border-line rounded-lg overflow-hidden">
+          <div className="grid grid-cols-[1fr_120px_60px_1fr_180px] items-center gap-3 px-[14px] py-[7px] bg-surface-page border-b border-line">
             <span className="typo-label">Batch</span>
             <span className="typo-label">Date</span>
             <span className="typo-label">Books</span>
@@ -286,7 +286,7 @@ export default function HistoryPage() {
               <div key={key}>
                 <div
                   onClick={() => setOpenKey(isOpen ? null : key)}
-                  className="grid grid-cols-[1fr_120px_60px_1fr_180px] items-center gap-3 px-[14px] py-[10px] border-b border-line-light dark:border-[#2E2C29] cursor-pointer transition-colors hover:bg-surface-card-hover dark:hover:bg-ink/40"
+                  className="grid grid-cols-[1fr_120px_60px_1fr_180px] items-center gap-3 px-[14px] py-[10px] border-b border-line-light cursor-pointer transition-colors hover:bg-surface-card-hover"
                   role="button"
                   aria-expanded={isOpen}
                 >
@@ -352,7 +352,7 @@ export default function HistoryPage() {
                 </div>
 
                 {isConfirming && (
-                  <div className="px-[66px] py-3 bg-carnegie-red-soft/40 border-b border-line dark:border-[#2E2C29] text-[12px] text-text-secondary">
+                  <div className="px-[66px] py-3 bg-carnegie-red-soft/40 border-b border-line text-[12px] text-text-secondary">
                     Delete batch{' '}
                     {g.batchLabel ? (
                       <>
@@ -368,8 +368,8 @@ export default function HistoryPage() {
                 )}
 
                 {isOpen && (
-                  <div className="bg-surface-page dark:bg-ink/40 px-[66px] py-3 border-b border-line dark:border-[#2E2C29]">
-                    <div className="grid grid-cols-[1fr_180px_140px_1fr] gap-3 px-2 py-1.5 text-[10px] uppercase tracking-[0.5px] text-text-tertiary font-semibold border-b border-line-light dark:border-[#2E2C29]">
+                  <div className="bg-surface-page px-[66px] py-3 border-b border-line">
+                    <div className="grid grid-cols-[1fr_180px_140px_1fr] gap-3 px-2 py-1.5 text-[10px] uppercase tracking-[0.5px] text-text-tertiary font-semibold border-b border-line-light">
                       <span>Title</span>
                       <span>Author</span>
                       <span>ISBN</span>
@@ -378,7 +378,7 @@ export default function HistoryPage() {
                     {g.entries.map((e, i) => (
                       <div
                         key={`${e.isbn}-${i}`}
-                        className="grid grid-cols-[1fr_180px_140px_1fr] gap-3 px-2 py-1.5 text-[12px] border-b border-line-light/60 dark:border-[#2E2C29]/60 last:border-b-0 items-center"
+                        className="grid grid-cols-[1fr_180px_140px_1fr] gap-3 px-2 py-1.5 text-[12px] border-b border-line-light/60/60 last:border-b-0 items-center"
                       >
                         <span className="text-text-primary truncate">
                           {e.title ?? e.titleNorm ?? <em className="italic">untitled</em>}

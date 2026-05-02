@@ -213,7 +213,7 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
           isDragging
             ? 'border-navy bg-navy-soft scale-[1.005]'
             : 'border-line hover:border-navy hover:bg-navy-soft/50'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} bg-surface-card dark:bg-ink-soft`}
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} bg-surface-card`}
         onClick={() => !disabled && inputRef.current?.click()}
       >
         <input
@@ -294,7 +294,7 @@ export function PhotoUploader({ onFiles, disabled }: PhotoUploaderProps) {
           />
 
           <div
-            className={`relative w-[min(94vw,1100px)] h-[min(78vh,820px)] rounded-2xl overflow-hidden shadow-2xl bg-cream-50 dark:bg-ink-soft border border-cream-300 dark:border-brass/20 flex flex-col md:flex-row ${
+            className={`relative w-[min(94vw,1100px)] h-[min(78vh,820px)] rounded-2xl overflow-hidden shadow-2xl bg-cream-50 border border-cream-300 dark:border-brass/20 flex flex-col md:flex-row ${
               isExiting ? 'animate-modal-out' : 'animate-modal-in'
             }`}
           >

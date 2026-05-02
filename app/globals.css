@@ -4,6 +4,29 @@
 
 :root {
   color-scheme: light dark;
+  /* Carnegie v3 palette as RGB triplets so Tailwind utilities can compose
+     opacity (`text-text-primary/50` etc). The .dark scope below swaps the
+     values, so consumers only need to write the base utility. */
+  --color-text-primary: 20 20 20;
+  --color-text-secondary: 85 85 80;
+  --color-text-tertiary: 138 138 132;
+  --color-text-quaternary: 176 176 168;
+  --color-surface-page: 246 246 244;
+  --color-surface-card: 255 255 255;
+  --color-surface-card-hover: 251 251 250;
+  --color-line: 228 228 224;
+  --color-line-light: 239 239 236;
+}
+.dark {
+  --color-text-primary: 228 226 220;
+  --color-text-secondary: 138 136 128;
+  --color-text-tertiary: 110 108 102;
+  --color-text-quaternary: 85 85 80;
+  --color-surface-page: 26 24 22;
+  --color-surface-card: 36 34 32;
+  --color-surface-card-hover: 44 42 40;
+  --color-line: 58 56 54;
+  --color-line-light: 46 44 41;
 }
 
 html {
@@ -12,15 +35,10 @@ html {
 }
 
 body {
-  background-color: #F6F6F4; /* surface.page */
-  color: #141414;            /* text.primary */
+  background-color: rgb(var(--color-surface-page));
+  color: rgb(var(--color-text-primary));
   transition: background-color 200ms ease, color 200ms ease;
   line-height: 1.55;
-}
-
-.dark body {
-  background-color: #1A1816; /* dark page */
-  color: #E4E2DC;            /* dark text.primary */
 }
 
 /* Subtle paper texture for the upload zone — Carnegie green + brass tint */
@@ -91,37 +109,33 @@ body {
   font-weight: 600;
   letter-spacing: 0;
   line-height: 1.25;
-  color: #141414;             /* text.primary */
+  color: rgb(var(--color-text-primary));
   margin-bottom: 4px;
 }
-.dark .typo-page-title { color: #E4E2DC; }  /* dark text.primary */
 
 .typo-page-desc {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
   font-size: 13px;
   font-weight: 400;
   line-height: 1.55;
-  color: #555550;
+  color: rgb(var(--color-text-secondary));
   margin-bottom: 24px;
 }
-.dark .typo-page-desc { color: #8A8880; }
 
 .typo-card-title {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.3;
-  color: #141414;
+  color: rgb(var(--color-text-primary));
 }
-.dark .typo-card-title { color: #E4E2DC; }
 
 .typo-card-meta {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
   font-size: 11px;
   font-weight: 400;
-  color: #8A8A84;
+  color: rgb(var(--color-text-tertiary));
 }
-.dark .typo-card-meta { color: #8A8880; }
 
 .typo-label {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
@@ -129,13 +143,13 @@ body {
   font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: #8A8A84;
+  color: rgb(var(--color-text-tertiary));
 }
 .typo-helper {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
   font-size: 11px;
   font-weight: 400;
-  color: #B0B0A8;
+  color: rgb(var(--color-text-quaternary));
 }
 
 /* Approve-button micro-interaction — when a card transitions into the

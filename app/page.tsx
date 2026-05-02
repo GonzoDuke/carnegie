@@ -267,7 +267,7 @@ export default function UploadPage() {
         </div>
       )}
 
-      <div className="flex justify-between items-start pt-3 mt-2 border-t border-line dark:border-[#3A3836]">
+      <div className="flex justify-between items-start pt-3 mt-2 border-t border-line">
         <div>
           <div className="text-[12px] text-text-tertiary">
             {state.batches.length} photo{state.batches.length !== 1 ? 's' : ''} ·{' '}

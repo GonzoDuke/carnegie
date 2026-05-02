@@ -145,7 +145,7 @@ export default function ReviewPage() {
               className={`text-xs px-3 py-1.5 rounded-md transition ${
                 filter === f.id
                   ? 'bg-accent text-cream-50'
-                  : 'bg-cream-100 dark:bg-ink-soft text-ink/70 dark:text-cream-300/70 hover:bg-accent-soft dark:hover:bg-accent/20'
+                  : 'bg-cream-100 text-ink/70 dark:text-cream-300/70 hover:bg-accent-soft dark:hover:bg-accent/20'
               }`}
             >
               {f.label}
@@ -165,7 +165,7 @@ export default function ReviewPage() {
               className={`text-xs px-3 py-1.5 rounded-md transition ${
                 sort === s.id
                   ? 'bg-accent text-cream-50'
-                  : 'bg-cream-100 dark:bg-ink-soft text-ink/70 dark:text-cream-300/70 hover:bg-accent-soft dark:hover:bg-accent/20'
+                  : 'bg-cream-100 text-ink/70 dark:text-cream-300/70 hover:bg-accent-soft dark:hover:bg-accent/20'
               }`}
             >
               {s.label}
@@ -203,7 +203,7 @@ export default function ReviewPage() {
             ↻ Re-tag by domain ▾
           </button>
           {retagDomainOpen && (
-            <div className="absolute right-0 top-full mt-1 z-20 w-72 bg-cream-50 dark:bg-ink-soft border border-cream-300 dark:border-ink-soft rounded-md shadow-lg p-2 space-y-0.5">
+            <div className="absolute right-0 top-full mt-1 z-20 w-72 bg-cream-50 border border-cream-300 dark:border-ink-soft rounded-md shadow-lg p-2 space-y-0.5">
               {(Object.entries(VOCAB.domains) as [DomainKey, typeof VOCAB.domains[DomainKey]][])
                 .filter(([k]) => k !== '_unclassified')
                 .map(([key, def]) => {
@@ -245,8 +245,8 @@ export default function ReviewPage() {
 
       {/* Compact book table — replaces the v2 grouped-card layout. Sticky
           column header, click any row to expand its detail panel. */}
-      <div className="bg-surface-card dark:bg-ink-soft border border-line dark:border-[#2E2C29] rounded-lg overflow-hidden">
-        <div className="grid grid-cols-[52px_1fr_80px_200px_100px] items-center gap-3 px-[14px] py-[7px] bg-surface-page dark:bg-ink/40 border-b border-line dark:border-[#2E2C29] sticky top-0 z-[5]">
+      <div className="bg-surface-card border border-line rounded-lg overflow-hidden">
+        <div className="grid grid-cols-[52px_1fr_80px_200px_100px] items-center gap-3 px-[14px] py-[7px] bg-surface-page border-b border-line sticky top-0 z-[5]">
           <span />
           <span className="typo-label">Book</span>
           <span className="typo-label">Conf.</span>
@@ -345,7 +345,7 @@ function Stat({
             : { rail: '#1B3A5C', text: 'text-accent dark:text-accent', tint: 'bg-accent/5 dark:bg-accent/15' };
   return (
     <div
-      className={`relative bg-cream-50 dark:bg-ink-soft/60 border border-cream-300 dark:border-ink-soft rounded-xl p-4 pl-5 transition-colors ${
+      className={`relative bg-cream-50/60 border border-cream-300 dark:border-ink-soft rounded-xl p-4 pl-5 transition-colors ${
         active ? accent.tint : ''
       }`}
       style={{ borderLeft: `3px solid ${accent.rail}` }}
