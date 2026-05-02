@@ -16,6 +16,7 @@ import {
   flagDuplicates,
   detectSpines,
   loadImage,
+  makeId,
   rereadBook as runReread,
   retagBook as runRetag,
   type RereadOptions,
@@ -145,6 +146,7 @@ type Action =
   | { type: 'MERGE_DUPLICATES'; winnerId: string; loserIds: string[] }
   | { type: 'UNMERGE_BOOK'; id: string }
   | { type: 'KEEP_BOTH_DUPLICATES'; groupId: string }
+  | { type: 'ADD_COPY'; sourceId: string }
   | { type: 'SET_PROCESSING'; processing: ProcessingState | null }
   | { type: 'PATCH_PROCESSING'; patch: Partial<ProcessingState> }
   | { type: 'CLEAR' };
@@ -342,6 +344,63 @@ function reducer(state: State, action: Action): State {
         allBooks: state.allBooks.map(patch),
       };
     }
+    case 'ADD_COPY': {
+      // Manually clone a record into an independent second copy. Use case:
+      // user owns multiple physical copies of the same title (paperback +
+      // hardcover, gift + personal, two prints) and the dedup flow either
+      // never separated them or already collapsed them in a prior session.
+      // The new record carries a fresh id, resets status to pending, and
+      // gets a "Copy N" prefix on its notes so it's distinguishable in the
+      // Review queue and the LT export.
+      const source = state.allBooks.find((b) => b.id === action.sourceId);
+      if (!source) return state;
+      const sourceBatch = state.batches.find((b) =>
+        b.books.some((bk) => bk.id === source.id)
+      );
+      if (!sourceBatch) return state;
+      // Number copies by counting existing books that share the same source
+      // photo + spine position (the original counts as #1, so the new copy
+      // starts at #2 and increments cleanly across repeated clicks).
+      const lineage = state.allBooks.filter(
+        (b) =>
+          b.sourcePhoto === source.sourcePhoto &&
+          b.spineRead.position === source.spineRead.position
+      );
+      const copyNumber = lineage.length + 1;
+      const copyNote = `Copy ${copyNumber}.`;
+      const mergedNote = source.notes
+        ? `${copyNote} ${source.notes}`
+        : copyNote;
+      const copy: BookRecord = {
+        ...source,
+        id: makeId(),
+        status: 'pending',
+        notes: mergedNote,
+        duplicateGroup: undefined,
+        duplicateOf: undefined,
+        duplicateResolved: undefined,
+        mergedFrom: undefined,
+        previouslyExported: undefined,
+        warnings: source.warnings.filter(
+          (w) => !/^possible duplicate\b/i.test(w)
+        ),
+      };
+      return {
+        ...state,
+        batches: state.batches.map((b) => {
+          if (b.id !== sourceBatch.id) return b;
+          // Insert the copy right after its source so the two cards sit
+          // adjacent in the Review queue.
+          const next: BookRecord[] = [];
+          for (const bk of b.books) {
+            next.push(bk);
+            if (bk.id === source.id) next.push(copy);
+          }
+          return { ...b, books: next, booksIdentified: next.length };
+        }),
+        allBooks: [...state.allBooks, copy],
+      };
+    }
     case 'SET_PROCESSING':
       return { ...state, processing: action.processing };
     case 'PATCH_PROCESSING':
@@ -389,6 +448,10 @@ interface StoreApi {
   unmergeBook: (id: string) => void;
   /** Mark every book in this duplicate group as legitimately separate copies. */
   keepBothDuplicates: (groupId: string) => void;
+  /** Clone the named book into an independent second copy with a fresh id
+   *  and a "Copy N" notes prefix. Used when the user owns multiple physical
+   *  copies of the same title that the dedup flow collapsed or never split. */
+  addCopy: (sourceId: string) => void;
 }
 
 const StoreCtx = createContext<StoreApi | null>(null);
@@ -776,6 +839,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       unmergeBook: (id) => dispatch({ type: 'UNMERGE_BOOK', id }),
       keepBothDuplicates: (groupId) =>
         dispatch({ type: 'KEEP_BOTH_DUPLICATES', groupId }),
+      addCopy: (sourceId) => dispatch({ type: 'ADD_COPY', sourceId }),
     }),
     [state, processQueue, rereadBook, bulkRetag]
   );

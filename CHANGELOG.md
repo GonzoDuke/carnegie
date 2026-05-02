@@ -5,6 +5,26 @@ Source documents live in [lib/archive/](lib/archive/). Newest first.
 
 ---
 
+## v3.5.0 — 2026-05-02
+
+Separate-copies fix. The dedup flow was silently merging records that were
+legitimately distinct physical copies of the same title. Two changes:
+
+- **Killed the silent ISBN dedup pass on Review mount.** It used to remove
+  any same-ISBN-within-batch entries on page load with only a toast for
+  notice. `flagDuplicates` already flags duplicates with a Merge / Keep-both
+  banner, so the silent removal was redundant *and* destructive when a
+  reader genuinely owned two copies. Removed the on-mount pass plus its
+  toast UI.
+- **Added an "Add copy" button** to the BookCard expanded panel. Clones the
+  record with a fresh id, prefixes notes with `Copy N.` (numbered by
+  spine-position lineage so repeated clicks increment cleanly), resets
+  status to pending, clears all duplicate/merge/exported flags, and inserts
+  the clone immediately after its source in the same batch. Recovers the
+  second copy when a prior session already auto-merged it away.
+
+---
+
 ## v3.0.0 — 2026-05-02
 
 Mobile-first release. The app stops being a desktop tool that "also works on

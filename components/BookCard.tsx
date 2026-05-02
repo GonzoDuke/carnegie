@@ -17,7 +17,7 @@ interface BookCardProps {
 }
 
 export function BookCard({ book, selectable, selected, onToggleSelected }: BookCardProps) {
-  const { updateBook, rereadBook, state, mergeDuplicates, unmergeBook, keepBothDuplicates } =
+  const { updateBook, rereadBook, state, mergeDuplicates, unmergeBook, keepBothDuplicates, addCopy } =
     useStore();
   const [showReasoning, setShowReasoning] = useState(false);
   const [picker, setPicker] = useState<'genre' | 'form' | null>(null);
@@ -603,6 +603,14 @@ export function BookCard({ book, selectable, selected, onToggleSelected }: BookC
           </span>
         </div>
         <div className="flex gap-2 relative">
+          <button
+            onClick={() => addCopy(book.id)}
+            disabled={book.rereading}
+            className="text-xs px-3 py-1.5 rounded-md border border-cream-300 dark:border-ink-soft hover:border-accent hover:text-accent disabled:opacity-50 transition"
+            title="Clone this record as an independent second copy. Use when you own multiple physical copies of the same title."
+          >
+            + Add copy
+          </button>
           <button
             onClick={() => {
               setRereadOpen((v) => !v);

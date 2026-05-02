@@ -6,9 +6,20 @@
  *   - 640px max-width text column, 48px top padding
  *   - Outfit typography stack, with the five "How it works" stages
  *     styled as weight-600 name + em-dash + body
+ *   - Footer pulls the version number from package.json so a single
+ *     bump in package.json keeps everything in sync (no separate
+ *     constant to forget about).
  */
 
+import { version as PKG_VERSION } from '../../package.json';
+
 const NAVY = '#1B3A5C';
+
+// Trim a 3.5.0 → 3.5 for display. Anything that doesn't end in .0 is
+// shown verbatim so a real patch release surfaces correctly.
+const SHORT_VERSION = PKG_VERSION.endsWith('.0')
+  ? PKG_VERSION.slice(0, PKG_VERSION.lastIndexOf('.'))
+  : PKG_VERSION;
 
 // Same repeating-linear-gradient layers used by the sidebar BrandPanel,
 // minus the radial vignette (which is keyed to wordmark placement and
@@ -143,6 +154,18 @@ export default function AboutPage() {
       <Body className="!mt-2">
         A librarian with too many books and not enough shelves.
       </Body>
+
+      <div
+        className="text-center"
+        style={{
+          marginTop: 32,
+          fontFamily: 'Outfit, system-ui, sans-serif',
+          fontSize: 11,
+          color: 'var(--text-4)',
+        }}
+      >
+        ver. {SHORT_VERSION}
+      </div>
 
       <div className="h-12" aria-hidden />
     </div>

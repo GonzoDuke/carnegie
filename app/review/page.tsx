@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BookTableRow } from '@/components/BookTableRow';
 import { MobileBookCard } from '@/components/MobileBookCard';
 import { DebugErrorBoundary } from '@/components/DebugErrorBoundary';
@@ -42,45 +42,8 @@ const SORTS: { id: Sort; label: string; title: string }[] = [
 const CONFIDENCE_RANK = { LOW: 0, MEDIUM: 1, HIGH: 2 } as const;
 
 export default function ReviewPage() {
-  const { state, updateBook, addBook, addBatch, removeBooks, getPendingFile, bulkRetag, clear } = useStore();
+  const { state, updateBook, addBook, addBatch, getPendingFile, bulkRetag, clear } = useStore();
   const [filter, setFilter] = useState<Filter>('all');
-  const [dedupToast, setDedupToast] = useState<string | null>(null);
-  // One-shot guard so the ISBN dedup pass doesn't loop on every render
-  // when state.batches changes mid-session.
-  const dedupRanRef = useRef(false);
-
-  // ISBN dedup pass on mount — collapses any duplicate-ISBN-within-batch
-  // wreckage left over from older flows (the original auto-loop scanner
-  // could create dozens of dupes from a single barcode in frame). Keeps
-  // the first occurrence per ISBN-per-batch, removes the rest, surfaces
-  // a toast counting what was cleaned up.
-  useEffect(() => {
-    if (dedupRanRef.current) return;
-    if (state.batches.length === 0) return;
-    dedupRanRef.current = true;
-    const toRemove: string[] = [];
-    for (const batch of state.batches) {
-      const seen = new Map<string, string>(); // normalized ISBN -> winner book id
-      for (const book of batch.books) {
-        const isbn = (book.isbn || '').replace(/[^\dxX]/g, '').toUpperCase();
-        if (!isbn) continue;
-        const winner = seen.get(isbn);
-        if (winner) {
-          toRemove.push(book.id);
-        } else {
-          seen.set(isbn, book.id);
-        }
-      }
-    }
-    if (toRemove.length > 0) {
-      removeBooks(toRemove);
-      setDedupToast(
-        `Removed ${toRemove.length} duplicate ${toRemove.length === 1 ? 'entry' : 'entries'} (same ISBN, same batch).`
-      );
-      window.setTimeout(() => setDedupToast(null), 6000);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   const [sort, setSort] = useState<Sort>('position');
   const [addingFor, setAddingFor] = useState<PhotoBatch | null>(null);
   const [retagBusy, setRetagBusy] = useState(false);
@@ -420,14 +383,6 @@ export default function ReviewPage() {
       {retagToast && (
         <div className="bg-brass-soft dark:bg-brass/15 border border-brass/40 rounded-md px-4 py-2 text-sm text-brass-deep dark:text-brass">
           {retagToast}
-        </div>
-      )}
-
-      {/* ISBN dedup toast — surfaces only when the on-mount pass actually
-          collapsed something. Auto-dismisses after a few seconds. */}
-      {dedupToast && (
-        <div className="bg-navy-soft border border-navy/30 rounded-md px-4 py-2 text-sm text-navy">
-          {dedupToast}
         </div>
       )}
 
