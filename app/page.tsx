@@ -13,6 +13,7 @@ import { createThumbnail, loadImage, makeId } from '@/lib/pipeline';
 import { processIsbnScan } from '@/lib/scan-pipeline';
 import { pushBatchToRepo, syncPendingBatchesFromRepo } from '@/lib/pending-batches';
 import { getLedgerBatches } from '@/lib/export-ledger';
+import { fireUndo } from '@/components/UndoToast';
 
 // 1200px wide is the realistic floor we still get useful spine-detection
 // out of. Phone in-app cameras frequently deliver 1280×720 streams, which
@@ -28,6 +29,7 @@ export default function UploadPage() {
     removeBatch,
     setPendingFile,
     hasPendingFile,
+    getPendingFile,
     processQueue,
   } = useStore();
 
@@ -409,7 +411,26 @@ export default function UploadPage() {
   }
 
   function handleRemove(id: string) {
+    // Snapshot the batch + its source File so the undo handler can
+    // restore both. The cross-device GitHub file is already deleted by
+    // removeBatch's own side-effect; on undo we re-push so the remote
+    // copy comes back too.
+    const snapshot = stateRef.current.batches.find((b) => b.id === id);
+    const file = snapshot ? getPendingFileFromMap(id) : null;
     removeBatch(id);
+    if (snapshot) {
+      fireUndo(`Removed "${snapshot.filename}".`, () => {
+        addBatch(snapshot);
+        if (file) setPendingFile(snapshot.id, file);
+        if (snapshot.status === 'done' && snapshot.books.length > 0) {
+          pushBatchToRepo(snapshot).catch(() => {});
+        }
+      });
+    }
+  }
+  // The store's pendingFiles map is private; we proxy via getPendingFile.
+  function getPendingFileFromMap(id: string): File | null {
+    return getPendingFile(id);
   }
 
   // Only batches with a stored File handle can be processed. After a hard

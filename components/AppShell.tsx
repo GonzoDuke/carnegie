@@ -7,6 +7,7 @@ import { useDarkMode, useStore } from '@/lib/store';
 import { getLedgerBatches, loadLedger } from '@/lib/export-ledger';
 import { confirmDiscardSession } from '@/lib/session';
 import { MobileShell } from './MobileShell';
+import { fireUndo } from './UndoToast';
 
 /**
  * Carnegie shell — left sidebar (200px, near-black) + scrollable content area.
@@ -41,17 +42,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // the stored preference on every page-load regardless of route.
   useDarkMode();
 
-  const { state, clear } = useStore();
+  const { state, clear, addBatch } = useStore();
 
   function onNewSession() {
     if (!confirmDiscardSession(state.allBooks)) return;
+    // Snapshot every batch before the wipe. The undo handler restores
+    // them via ADD_BATCH (which re-unions embedded books into allBooks).
+    // Pending File handles can't be reconstructed — that's by design;
+    // the user must re-upload to re-process.
+    const snapshot = state.batches;
+    const batchCount = snapshot.length;
     clear();
-    // Page-local state (batch label / notes inputs on the upload page)
-    // can't be reset from up here — broadcast a window event and let
-    // any listening page wipe its own inputs in response. The upload
-    // page is the only current listener.
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('carnegie:session-cleared'));
+    }
+    if (batchCount > 0) {
+      fireUndo(
+        `Cleared session (${batchCount} ${batchCount === 1 ? 'batch' : 'batches'}).`,
+        () => {
+          for (const b of snapshot) addBatch(b);
+        }
+      );
     }
   }
   const sessionEmpty = state.allBooks.length === 0 && state.batches.length === 0;

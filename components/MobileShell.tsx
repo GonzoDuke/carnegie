@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { confirmDiscardSession } from '@/lib/session';
+import { fireUndo } from './UndoToast';
 
 const NAVY = '#1B3A5C';
 
@@ -25,18 +26,26 @@ interface TabDef {
  */
 export function MobileShell() {
   const pathname = usePathname();
-  const { state, clear } = useStore();
+  const { state, clear, addBatch } = useStore();
 
   const sessionEmpty =
     state.allBooks.length === 0 && state.batches.length === 0;
 
   function onNewSession() {
     if (!confirmDiscardSession(state.allBooks)) return;
+    const snapshot = state.batches;
+    const batchCount = snapshot.length;
     clear();
-    // Mirror AppShell — page-local input state (batch label / notes)
-    // listens for this and resets itself.
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('carnegie:session-cleared'));
+    }
+    if (batchCount > 0) {
+      fireUndo(
+        `Cleared session (${batchCount} ${batchCount === 1 ? 'batch' : 'batches'}).`,
+        () => {
+          for (const b of snapshot) addBatch(b);
+        }
+      );
     }
   }
 

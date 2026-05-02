@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { StoreProvider } from '@/lib/store';
 import { AppShell } from '@/components/AppShell';
+import { UndoToast } from '@/components/UndoToast';
 
 export const metadata: Metadata = {
   title: 'Carnegie',
@@ -56,6 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <StoreProvider>
           <AppShell>{children}</AppShell>
+          <UndoToast />
         </StoreProvider>
       </body>
     </html>

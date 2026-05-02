@@ -9,6 +9,7 @@ import { TagPicker } from './TagPicker';
 import { Cover } from './Cover';
 import { ConfidenceBadge } from './ConfidenceBadge';
 import { Editable } from './Editable';
+import { fireUndo } from './UndoToast';
 
 function stringifyWarning(w: unknown): string {
   if (typeof w === 'string') return w;
@@ -51,7 +52,14 @@ export function MobileBookCard({ book }: { book: BookRecord }) {
     book.confidence === 'LOW';
 
   function setStatus(next: 'approved' | 'rejected') {
-    updateBook(book.id, { status: book.status === next ? 'pending' : next });
+    const prior = book.status;
+    const target = prior === next ? 'pending' : next;
+    updateBook(book.id, { status: target });
+    if (target === 'rejected' && prior !== 'rejected') {
+      fireUndo(`Rejected "${book.title || 'untitled book'}".`, () =>
+        updateBook(book.id, { status: prior })
+      );
+    }
   }
 
   function addTag(variant: 'genre' | 'form', tag: string) {

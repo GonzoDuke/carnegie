@@ -13,6 +13,7 @@ import type { PhotoBatch } from '@/lib/types';
 import { flagIfPreviouslyExported } from '@/lib/export-ledger';
 import { confirmDiscardSession } from '@/lib/session';
 import { syncPendingBatchesFromRepo } from '@/lib/pending-batches';
+import { fireUndo } from '@/components/UndoToast';
 
 type Filter = 'all' | 'pending' | 'approved' | 'rejected' | 'low';
 type Sort =
@@ -251,7 +252,18 @@ export default function ReviewPage() {
             <button
               type="button"
               onClick={() => {
-                if (confirmDiscardSession(state.allBooks)) clear();
+                if (!confirmDiscardSession(state.allBooks)) return;
+                const snapshot = state.batches;
+                const batchCount = snapshot.length;
+                clear();
+                if (batchCount > 0) {
+                  fireUndo(
+                    `Cleared session (${batchCount} ${batchCount === 1 ? 'batch' : 'batches'}).`,
+                    () => {
+                      for (const b of snapshot) addBatch(b);
+                    }
+                  );
+                }
               }}
               disabled={state.allBooks.length === 0 && state.batches.length === 0}
               className="text-[12px] font-medium px-3 py-1.5 rounded-md border border-line text-text-secondary hover:border-carnegie-red hover:text-carnegie-red hover:bg-carnegie-red-soft transition disabled:opacity-40 disabled:cursor-not-allowed"

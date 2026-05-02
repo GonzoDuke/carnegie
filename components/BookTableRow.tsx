@@ -8,6 +8,7 @@ import { TagChip } from './TagChip';
 import { TagPicker } from './TagPicker';
 import { Cover } from './Cover';
 import { Editable, ReadOnlyField } from './Editable';
+import { fireUndo } from './UndoToast';
 
 /**
  * Defensive stringifier for a warning entry. Any non-primitive that
@@ -63,7 +64,16 @@ export function BookTableRow({ book }: { book: BookRecord }) {
   const tagsExtra = safeGenre.length + safeForm.length - tagsCondensed.length;
 
   function setStatus(next: 'approved' | 'rejected') {
-    updateBook(book.id, { status: book.status === next ? 'pending' : next });
+    const prior = book.status;
+    const target = prior === next ? 'pending' : next;
+    updateBook(book.id, { status: target });
+    // Reject is the destructive direction — surface an undo toast so a
+    // mis-tap is recoverable for 5s. Approve toggles don't need it.
+    if (target === 'rejected' && prior !== 'rejected') {
+      fireUndo(`Rejected "${book.title || 'untitled book'}".`, () =>
+        updateBook(book.id, { status: prior })
+      );
+    }
   }
 
   function addTag(variant: 'genre' | 'form', tag: string) {
