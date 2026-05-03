@@ -181,11 +181,18 @@ export function bookToCsvRow(b: BookRecord, options: CsvOptions = {}): string[] 
   const comments = commentParts.join(' · ');
   return [
     b.title,
-    // Always recompute from the raw author string. Books cataloged before
-    // multi-author splitting landed have a malformed authorLF cached
-    // (e.g. "Wineburg, Mike Caulfield & Sam"), so we can't trust it —
-    // recomputing produces correct LibraryThing format every time.
-    toAuthorLastFirst(b.author),
+    // CSV author column: trust `authorLF` only when it carries a
+    // multi-author "Last, First; Last, First" value (which the
+    // canonical-title commit writes for books whose lookup returned a
+    // full author list). For single-author cases we recompute from
+    // `author` — that protects against stale localStorage records
+    // where `authorLF` was cached in the malformed
+    // "Wineburg, Mike Caulfield & Sam" form before the multi-author
+    // splitter shipped. Two regimes, one rule: if it has a semicolon,
+    // it's the new canonical form; otherwise recompute.
+    b.authorLF && b.authorLF.includes(';')
+      ? b.authorLF
+      : toAuthorLastFirst(b.author),
     b.isbn,
     b.publisher,
     b.publicationYear ? String(b.publicationYear) : '',
