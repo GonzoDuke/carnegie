@@ -18,6 +18,69 @@ const LOC_HEADERS: Record<string, string> = {
 };
 
 /**
+ * Damerau-flavored Levenshtein distance via the standard rolling-row
+ * matrix. Quadratic in min(len(a), len(b)) — fine for book titles
+ * (typically <100 chars). Returns the number of single-character
+ * insertions, deletions, or substitutions to turn `a` into `b`.
+ */
+export function levenshteinDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  // Always iterate over the shorter string for the inner loop.
+  let s = a.length < b.length ? a : b;
+  let t = a.length < b.length ? b : a;
+  const m = s.length;
+  const n = t.length;
+  let prev = new Array(m + 1);
+  let curr = new Array(m + 1);
+  for (let i = 0; i <= m; i++) prev[i] = i;
+  for (let j = 1; j <= n; j++) {
+    curr[0] = j;
+    const tj = t.charCodeAt(j - 1);
+    for (let i = 1; i <= m; i++) {
+      const cost = s.charCodeAt(i - 1) === tj ? 0 : 1;
+      const del = curr[i - 1] + 1;
+      const ins = prev[i] + 1;
+      const sub = prev[i - 1] + cost;
+      curr[i] = del < ins ? (del < sub ? del : sub) : ins < sub ? ins : sub;
+    }
+    const tmp = prev;
+    prev = curr;
+    curr = tmp;
+  }
+  return prev[m];
+}
+
+/**
+ * Normalized 0..1 string similarity. 1 = identical, 0 = completely
+ * different. Calculated as `1 - distance / max(len)`. Caller should
+ * lowercase / strip punctuation before comparing if loose-match
+ * semantics are wanted.
+ */
+export function stringSimilarity(a: string, b: string): number {
+  const max = Math.max(a.length, b.length);
+  if (max === 0) return 1;
+  return 1 - levenshteinDistance(a, b) / max;
+}
+
+/**
+ * Strip characters that mangle external API queries — wildcards (*),
+ * mentions (@), hashes (#), shell-y money signs ($), exclamation
+ * marks (!) — and collapse runs of whitespace. Used by lookupBook
+ * to clean spine-read titles like "Holy Sh*t" before they hit OL,
+ * Google Books, ISBNdb, or Wikidata, where a literal `*` becomes a
+ * wildcard or breaks the SPARQL CONTAINS filter.
+ */
+export function sanitizeForSearch(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/[\*@#\$!]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+/**
  * Open Library returns LCC in a padded internal form like
  *   "BL-0053.00000000.J36 2012"
  *   "Q--0335.00000000.M6 2024"
@@ -79,6 +142,166 @@ export async function lookupLccByIsbn(isbn: string): Promise<string> {
     `https://lx2.loc.gov/sru/voyager?version=1.1&operation=searchRetrieve` +
     `&query=bath.isbn=${cleaned}&maximumRecords=1&recordSchema=marcxml`;
   return loFetch050(url, 8000);
+}
+
+/**
+ * Richer MARC fetch by ISBN. Returns LCC, DDC (082), LCSH subject
+ * headings (600/610/611/630/650/651), main author (100), title
+ * statement (245), publisher (264 b / 260 b), edition (250), page
+ * count parsed from physical description (300 a), and added-entry
+ * co-authors (700/710).
+ *
+ * The existing string-returning lookupLccByIsbn is intentionally
+ * kept untouched alongside this — every existing caller's signature
+ * stays exactly the same. New callers that want MARC enrichment use
+ * this helper.
+ */
+export interface MarcResult {
+  lcc: string | null;
+  ddc: string | null;
+  lcshSubjects: string[];
+  author: string | null;
+  title: string | null;
+  publisher: string | null;
+  pageCount: number | null;
+  edition: string | null;
+  coAuthors: string[];
+}
+
+const LOC_HEADERS_MARC: Record<string, string> = {
+  'User-Agent': 'Carnegie/1.0 (personal cataloging tool)',
+  Accept: 'application/xml',
+};
+
+function marcDatafields(xml: string, tag: string): string[] {
+  const re = new RegExp(
+    `<datafield[^>]*tag="${tag}"[^>]*>([\\s\\S]*?)<\\/datafield>`,
+    'g'
+  );
+  const out: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(xml)) !== null) out.push(m[1]);
+  return out;
+}
+
+function marcSubfield(block: string, code: string): string {
+  const m = block.match(
+    new RegExp(`<subfield[^>]*code="${code}"[^>]*>([^<]*)<\\/subfield>`)
+  );
+  return m ? m[1].trim() : '';
+}
+
+function marcSubfieldsAll(block: string): string[] {
+  const re = /<subfield[^>]*code="[^"]*"[^>]*>([^<]*)<\/subfield>/g;
+  const out: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(block)) !== null) {
+    const v = m[1].trim();
+    if (v) out.push(v);
+  }
+  return out;
+}
+
+function trimTrailingPunct(s: string): string {
+  return s.replace(/[\s,;:./]+$/, '').trim();
+}
+
+export async function lookupFullMarcByIsbn(
+  isbn: string
+): Promise<MarcResult | null> {
+  if (!isbn) return null;
+  const cleaned = isbn.replace(/[^\dxX]/g, '');
+  if (!cleaned) return null;
+  const url =
+    `https://lx2.loc.gov/sru/voyager?version=1.1&operation=searchRetrieve` +
+    `&query=bath.isbn=${cleaned}&maximumRecords=1&recordSchema=marcxml`;
+  try {
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(8000),
+      cache: 'no-store',
+      headers: LOC_HEADERS_MARC,
+    });
+    if (!res.ok) return null;
+    const xml = await res.text();
+    if (!/<record\b/.test(xml)) return null;
+
+    // 050 — LCC: subfield a + b joined.
+    const lcc050 = marcDatafields(xml, '050')[0] ?? '';
+    const lccA = marcSubfield(lcc050, 'a');
+    const lccB = marcSubfield(lcc050, 'b');
+    const lcc = [lccA, lccB].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim() || null;
+
+    // 082 — DDC: subfield a.
+    const ddcBlock = marcDatafields(xml, '082')[0] ?? '';
+    const ddc = marcSubfield(ddcBlock, 'a') || null;
+
+    // 100 — main personal-author entry: subfield a.
+    const authorBlock = marcDatafields(xml, '100')[0] ?? '';
+    const author = marcSubfield(authorBlock, 'a')
+      ? trimTrailingPunct(marcSubfield(authorBlock, 'a'))
+      : null;
+
+    // 245 — title statement: a + b.
+    const titleBlock = marcDatafields(xml, '245')[0] ?? '';
+    const titleA = marcSubfield(titleBlock, 'a');
+    const titleB = marcSubfield(titleBlock, 'b');
+    const titleRaw = [titleA, titleB].filter(Boolean).join(' ');
+    const title = titleRaw ? trimTrailingPunct(titleRaw) : null;
+
+    // 264 (preferred) / 260 — publisher subfield b.
+    const pubBlock = marcDatafields(xml, '264')[0] ?? marcDatafields(xml, '260')[0] ?? '';
+    const publisher = pubBlock
+      ? trimTrailingPunct(marcSubfield(pubBlock, 'b')) || null
+      : null;
+
+    // 250 — edition statement subfield a.
+    const editionBlock = marcDatafields(xml, '250')[0] ?? '';
+    const edition = marcSubfield(editionBlock, 'a')
+      ? trimTrailingPunct(marcSubfield(editionBlock, 'a'))
+      : null;
+
+    // 300 — physical description; pageCount from subfield a (e.g. "vii, 384 p.").
+    const physBlock = marcDatafields(xml, '300')[0] ?? '';
+    const physA = marcSubfield(physBlock, 'a');
+    const pageMatch = physA.match(/(\d{2,4})\s*p\.?/);
+    const pageCount = pageMatch ? parseInt(pageMatch[1], 10) || null : null;
+
+    // 600/610/611/630/650/651 — LCSH subject headings. Concatenate all
+    // subfields per datafield; cap at 25 to stay well under any prompt budget.
+    const subjectTags = ['600', '610', '611', '630', '650', '651'];
+    const lcshSubjects: string[] = [];
+    for (const t of subjectTags) {
+      for (const block of marcDatafields(xml, t)) {
+        const subs = marcSubfieldsAll(block).map(trimTrailingPunct).filter(Boolean);
+        if (subs.length > 0) lcshSubjects.push(subs.join(' — '));
+      }
+    }
+    const dedupedLcsh = Array.from(new Set(lcshSubjects)).slice(0, 25);
+
+    // 700/710 — added entries (co-authors / corporate co-authors).
+    const coAuthors: string[] = [];
+    for (const t of ['700', '710']) {
+      for (const block of marcDatafields(xml, t)) {
+        const a = marcSubfield(block, 'a');
+        if (a) coAuthors.push(trimTrailingPunct(a));
+      }
+    }
+    const dedupedCoAuthors = Array.from(new Set(coAuthors)).slice(0, 10);
+
+    return {
+      lcc,
+      ddc,
+      lcshSubjects: dedupedLcsh,
+      author,
+      title,
+      publisher,
+      pageCount,
+      edition,
+      coAuthors: dedupedCoAuthors,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**

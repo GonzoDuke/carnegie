@@ -5,6 +5,14 @@ import { useState, useEffect } from 'react';
 interface CoverProps {
   /** Open Library / Google Books / ISBNdb-sourced cover URL. */
   coverUrl?: string;
+  /**
+   * Optional ordered list of cover-art URLs the cascade collected
+   * (OL by ISBN → GB thumb → ISBNdb image, deduped). When present,
+   * an <img> onError advances to the next entry instead of dropping
+   * straight to the spine fallback. Old records without this field
+   * keep the existing single-URL behavior.
+   */
+  coverUrlFallbacks?: string[];
   /** Cropped spine image used as the first fallback. */
   spineThumbnail?: string;
   /** Alt text — usually the book title. */
@@ -28,24 +36,37 @@ interface CoverProps {
  */
 export function Cover({
   coverUrl,
+  coverUrlFallbacks,
   spineThumbnail,
   alt,
   className = '',
   imgClassName = 'w-full h-full object-cover',
 }: CoverProps) {
-  // Track which source has failed in this mount. Reset whenever the
-  // input URLs change so a Reread that swaps cover/thumbnail starts
-  // fresh instead of inheriting a stale `failed` flag.
-  const [coverFailed, setCoverFailed] = useState(false);
+  // Build the candidate chain. `coverUrlFallbacks` (when present) is
+  // already deduped + ordered. Splice in the legacy `coverUrl` first
+  // for old records that don't carry the fallbacks array. Empty
+  // strings are dropped so the chain length only counts real URLs.
+  const candidates: string[] = [];
+  if (coverUrl) candidates.push(coverUrl);
+  if (coverUrlFallbacks) {
+    for (const u of coverUrlFallbacks) {
+      if (u && !candidates.includes(u)) candidates.push(u);
+    }
+  }
+
+  // Index into the candidate chain. Advances on each onError until we
+  // run out, at which point the spine fallback kicks in.
+  const [coverIdx, setCoverIdx] = useState(0);
   const [spineFailed, setSpineFailed] = useState(false);
   useEffect(() => {
-    setCoverFailed(false);
-  }, [coverUrl]);
+    setCoverIdx(0);
+  }, [coverUrl, coverUrlFallbacks?.join('|')]);
   useEffect(() => {
     setSpineFailed(false);
   }, [spineThumbnail]);
 
-  const showCover = !!coverUrl && !coverFailed;
+  const activeCover = coverIdx < candidates.length ? candidates[coverIdx] : '';
+  const showCover = !!activeCover;
   const showSpine = !showCover && !!spineThumbnail && !spineFailed;
 
   if (showCover) {
@@ -53,10 +74,10 @@ export function Cover({
       <div className={className}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={coverUrl}
+          src={activeCover}
           alt={`Cover of ${alt}`}
           loading="lazy"
-          onError={() => setCoverFailed(true)}
+          onError={() => setCoverIdx((i) => i + 1)}
           className={imgClassName}
         />
       </div>

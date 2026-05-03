@@ -6,6 +6,34 @@ import type {
   SpineBbox,
 } from './types';
 import { toAuthorLastFirst, toTitleCase } from './csv-export';
+import { stringSimilarity } from './lookup-utils';
+
+/**
+ * When true, prefer canonical title / author from the lookup chain
+ * (OL/ISBNdb/MARC) over the spine OCR text on the displayed
+ * BookRecord. The spine read is preserved on `spineRead.rawText`
+ * either way. Flip to false to instantly revert to spine-OCR titles
+ * if anything looks wrong — no other code change needed.
+ */
+const USE_CANONICAL_TITLES = true;
+
+/**
+ * Format a single "First Last" or already-flipped name into "Last,
+ * First" form. Used by the multi-author authorLF builder when the
+ * lookup chain returned a full author list. Mirrors the conservative
+ * single-author flip in csv-export's toAuthorLastFirst — single-token
+ * names ("Madonna") and already-comma'd inputs pass through.
+ */
+function flipNameLastFirst(name: string): string {
+  const trimmed = name.trim().replace(/,$/, '');
+  if (!trimmed) return '';
+  if (trimmed.includes(',')) return trimmed;
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  const last = parts[parts.length - 1];
+  const first = parts.slice(0, -1).join(' ');
+  return `${last}, ${first}`;
+}
 
 /**
  * Per-spine model selection. The big OCR cost driver is Pass B; Opus is
@@ -140,6 +168,45 @@ export async function lookupBookClient(
   return (await res.json()) as BookLookupResult;
 }
 
+export interface IdentifyBookResponse {
+  title: string;
+  author: string;
+  isbn: string;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  reasoning: string;
+}
+
+/**
+ * Last-resort identifier. Calls /api/identify-book to ask Claude
+ * Sonnet to recognize a book from raw spine fragments. Used by
+ * buildBookFromCrop when the title-search lookup chain produces
+ * `source: 'none'` despite the spine read having captured something.
+ */
+export async function identifyBookClient(args: {
+  rawText: string;
+  partialTitle?: string;
+  partialAuthor?: string;
+}): Promise<IdentifyBookResponse> {
+  const empty: IdentifyBookResponse = {
+    title: '',
+    author: '',
+    isbn: '',
+    confidence: 'LOW',
+    reasoning: '',
+  };
+  try {
+    const res = await fetch('/api/identify-book', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(args),
+    });
+    if (!res.ok) return empty;
+    return (await res.json()) as IdentifyBookResponse;
+  } catch {
+    return empty;
+  }
+}
+
 export interface InferLccResponse {
   lcc: string;
   confidence: 'HIGH' | 'MEDIUM' | 'LOW';
@@ -169,6 +236,12 @@ export async function inferTagsClient(args: {
   publicationYear?: number;
   lcc?: string;
   subjectHeadings?: string[];
+  // Phase-3 enrichment fields. All optional — old callers continue to
+  // build the same prompt as before because the route only adds lines
+  // when these are populated.
+  ddc?: string;
+  lcshSubjects?: string[];
+  synopsis?: string;
 }): Promise<InferTagsResult> {
   // Pull the user's most recent tag corrections from localStorage and
   // forward them so the inference route can append them to the system
@@ -546,6 +619,50 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
     }
   }
 
+  // Last-resort identifier. The standard lookup chain is title-driven;
+  // if the spine OCR produced a fragment too garbled to match
+  // ("STRANG" / "CAMUS" / "VINTAGE", a half-cropped subtitle, an
+  // author-only spine), every title-search tier returns nothing and
+  // the book lands on Review with empty metadata. Ask Claude Sonnet
+  // to identify the book from whatever raw text the spine read
+  // captured, then re-run the lookup chain with the corrected
+  // title/author. ISBN-direct on the new title's resolved ISBN
+  // re-enters Phase B so the re-run returns a complete record.
+  let identifyWarning = '';
+  if (lookup.source === 'none') {
+    const rawText = (spineRead.rawText || `${read.title ?? ''} ${read.author ?? ''}`).trim();
+    if (rawText.length >= 3) {
+      try {
+        const guess = await identifyBookClient({
+          rawText,
+          partialTitle: read.title,
+          partialAuthor: read.author,
+        });
+        if (guess.title && guess.confidence !== 'LOW') {
+          // Re-run the lookup with the corrected guess. If we got an
+          // ISBN from Sonnet, fold it in via matchEdition so the
+          // server hits ol-by-isbn → isbndb-direct directly.
+          const reRun = guess.isbn
+            ? await lookupBookClient(guess.title, guess.author, {
+                matchEdition: true,
+                hints: { isbn: guess.isbn },
+              })
+            : await lookupBookClient(guess.title, guess.author);
+          if (reRun.source !== 'none') {
+            lookup = { ...reRun, publisher: reRun.publisher || read.publisher || '' };
+            // Adopt the corrected title/author for the rest of the
+            // pipeline so tag inference sees the right metadata.
+            read.title = guess.title;
+            if (guess.author) read.author = guess.author;
+            identifyWarning = `Identified by AI from partial spine read: ${guess.reasoning || guess.title}`;
+          }
+        }
+      } catch {
+        // ignore — identifier is best-effort
+      }
+    }
+  }
+
   const grounded = groundSpineRead(
     {
       title: read.title,
@@ -556,6 +673,11 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
     lookup,
     lookupMatchedTitle
   );
+
+  // Surface the identify-book guess (when it fired and the re-run
+  // succeeded) on the BookCard so the reviewer knows the metadata
+  // came from an AI guess, not a direct OCR → search match.
+  if (identifyWarning) grounded.warnings.push(identifyWarning);
 
   // Spine-printed LCC wins over the lookup-derived one — it's the LoC's
   // own classification for the exact physical edition the user owns.
@@ -614,6 +736,9 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
         publicationYear: lookup.publicationYear,
         lcc: finalLcc,
         subjectHeadings: lookup.subjects,
+        ddc: lookup.ddc,
+        lcshSubjects: lookup.lcshSubjects,
+        synopsis: lookup.synopsis,
       });
     } catch {
       grounded.warnings.push('Tag inference failed.');
@@ -627,12 +752,52 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
 
   const titleCased = toTitleCase(read.title);
 
+  // Canonical title / author override. When the lookup matched (any
+  // tier), the spine OCR can be replaced by the database's authoritative
+  // record. Spine OCR survives on spineRead.rawText / spineRead.title
+  // for diagnostic display. Flag-gated so the change is one-line
+  // revertible if a regression surfaces.
+  //
+  // Shorter-of-two rule: when both the spine read and the canonical
+  // title clearly refer to the same book (Levenshtein similarity
+  // > 0.6 between lowercased forms), prefer the SHORTER of the two
+  // for display. This stops "The Hobbit, Or, There and Back Again"
+  // from replacing "The Hobbit" while still letting clearly-better
+  // canonical titles (e.g. when the OCR caught a fragment) win when
+  // similarity is low — that's a different-titles signal that means
+  // the spine read was probably wrong.
+  const useCanonical = USE_CANONICAL_TITLES && lookup.source !== 'none';
+  const canonicalTitleCased =
+    useCanonical && lookup.canonicalTitle && lookup.canonicalTitle.trim()
+      ? toTitleCase(lookup.canonicalTitle)
+      : '';
+  let displayTitle = canonicalTitleCased || titleCased;
+  if (canonicalTitleCased && titleCased) {
+    const sim = stringSimilarity(canonicalTitleCased.toLowerCase(), titleCased.toLowerCase());
+    if (sim >= 0.6) {
+      displayTitle =
+        titleCased.length < canonicalTitleCased.length ? titleCased : canonicalTitleCased;
+    }
+  }
+  const displayAuthor =
+    useCanonical && lookup.canonicalAuthor && lookup.canonicalAuthor.trim()
+      ? lookup.canonicalAuthor
+      : read.author;
+  // Multi-author authorLF builder: when allAuthors is set, format every
+  // author as Last, First and join with "; " (LibraryThing's canonical
+  // multi-author delimiter). Single-author cases fall back to the
+  // existing toAuthorLastFirst path.
+  const authorLF =
+    useCanonical && lookup.allAuthors && lookup.allAuthors.length > 1
+      ? lookup.allAuthors.map(flipNameLastFirst).filter(Boolean).join('; ')
+      : toAuthorLastFirst(displayAuthor);
+
   const book: BookRecord = {
     id: makeId(),
     spineRead,
-    title: titleCased,
-    author: read.author,
-    authorLF: toAuthorLastFirst(read.author),
+    title: displayTitle,
+    author: displayAuthor,
+    authorLF,
     isbn: lookup.isbn,
     publisher: lookup.publisher,
     publicationYear: lookup.publicationYear,
@@ -654,9 +819,26 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
     coverUrl: lookup.coverUrl,
     ocrImage: ocrCrop,
     ocrModel,
+    // Phase-3 enrichment passthrough. Each field is optional + lookup
+    // may not have set it; conditionals stop us from sticking
+    // `undefined` onto the record key explicitly.
+    canonicalTitle: lookup.canonicalTitle,
+    subtitle: lookup.subtitle,
+    allAuthors: lookup.allAuthors,
+    synopsis: lookup.synopsis,
+    pageCount: lookup.pageCount,
+    edition: lookup.edition,
+    binding: lookup.binding,
+    language: lookup.language,
+    series: lookup.series,
+    lcshSubjects: lookup.lcshSubjects,
+    coverUrlFallbacks: lookup.coverUrlFallbacks,
     original: {
-      title: titleCased,
-      author: read.author,
+      // Snapshot the displayed (canonical when available) values so
+      // the BookCard's "edited" pip compares user edits against the
+      // version they actually saw, not the spine OCR text.
+      title: displayTitle,
+      author: displayAuthor,
       isbn: lookup.isbn,
       publisher: lookup.publisher,
       publicationYear: lookup.publicationYear,
@@ -694,8 +876,13 @@ export async function retagBook(book: BookRecord): Promise<{
       publisher: book.publisher,
       publicationYear: book.publicationYear,
       lcc: book.lcc,
-      // Subject headings aren't stored on the BookRecord; let the model work
-      // from title/author/LCC + its general knowledge.
+      // Bulk re-tag now also forwards stored enrichment fields when
+      // they exist on the BookRecord (LCSH, DDC, synopsis). Old
+      // records without enrichment hit the model with the same
+      // payload as before.
+      ddc: book.ddc,
+      lcshSubjects: book.lcshSubjects,
+      synopsis: book.synopsis,
     });
   } catch (err: any) {
     return { ok: false, error: err?.message ?? 'Tag inference failed.' };
@@ -813,6 +1000,9 @@ export async function addManualBook(opts: AddManualBookOptions): Promise<BookRec
       publicationYear: lookup.publicationYear,
       lcc: lookup.lcc,
       subjectHeadings: lookup.subjects,
+      ddc: lookup.ddc,
+      lcshSubjects: lookup.lcshSubjects,
+      synopsis: lookup.synopsis,
     });
   } catch {
     // ignore
@@ -873,6 +1063,19 @@ export async function addManualBook(opts: AddManualBookOptions): Promise<BookRec
     ddc: lookup.ddc,
     lccSource,
     manuallyAdded: true,
+    // Phase-3 enrichment passthrough — see addManualBook's sibling
+    // construction site in buildBookFromCrop for the same pattern.
+    canonicalTitle: lookup.canonicalTitle,
+    subtitle: lookup.subtitle,
+    allAuthors: lookup.allAuthors,
+    synopsis: lookup.synopsis,
+    pageCount: lookup.pageCount,
+    edition: lookup.edition,
+    binding: lookup.binding,
+    language: lookup.language,
+    series: lookup.series,
+    lcshSubjects: lookup.lcshSubjects,
+    coverUrlFallbacks: lookup.coverUrlFallbacks,
     original: {
       title: titleCased,
       author,
@@ -1084,6 +1287,9 @@ export async function rereadBook(
         publicationYear: lookup.publicationYear,
         lcc: finalLcc,
         subjectHeadings: lookup.subjects,
+        ddc: lookup.ddc,
+        lcshSubjects: lookup.lcshSubjects,
+        synopsis: lookup.synopsis,
       });
     } catch {
       grounded.warnings.push('Tag inference failed.');
@@ -1122,6 +1328,19 @@ export async function rereadBook(
     ddc: lookup.ddc,
     lccSource,
     coverUrl: lookup.coverUrl,
+    // Phase-3 enrichment passthrough — surgical, only sets what the
+    // lookup returned. undefined values won't overwrite existing data.
+    canonicalTitle: lookup.canonicalTitle,
+    subtitle: lookup.subtitle,
+    allAuthors: lookup.allAuthors,
+    synopsis: lookup.synopsis,
+    pageCount: lookup.pageCount,
+    edition: lookup.edition,
+    binding: lookup.binding,
+    language: lookup.language,
+    series: lookup.series,
+    lcshSubjects: lookup.lcshSubjects,
+    coverUrlFallbacks: lookup.coverUrlFallbacks,
   };
   if (tags) {
     patch.genreTags = tags.genreTags;

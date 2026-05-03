@@ -28,7 +28,7 @@ import {
   syncLedgerFromRepo,
   type LedgerEntry,
 } from '@/lib/export-ledger';
-import { CSV_HEADERS, exportFilename } from '@/lib/csv-export';
+import { CSV_HEADERS, exportFilename, toAuthorLastFirst } from '@/lib/csv-export';
 import { ImportLibraryThingDialog } from '@/components/ImportLibraryThingDialog';
 
 /** Same escape rules as the canonical CSV writer in lib/csv-export.ts —
@@ -88,7 +88,11 @@ function ledgerEntryToCsvRow(e: LedgerEntry): string[] {
   const tags = e.tags && e.tags.length > 0 ? e.tags.join(', ') : '';
   const title = e.title ?? e.titleNorm ?? '';
   const author = e.author ?? e.authorNorm ?? '';
-  const authorLF = e.authorLF ?? author;
+  // Always recompute from the raw author string. Old ledger entries
+  // carry a malformed authorLF for multi-author books cataloged before
+  // the multi-author splitter shipped — recomputing fixes them at
+  // re-download time.
+  const authorLF = toAuthorLastFirst(author);
   const isbn = e.isbn ?? '';
   const publisher = e.publisher ?? '';
   const year = e.publicationYear ? String(e.publicationYear) : '';

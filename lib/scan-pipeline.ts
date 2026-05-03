@@ -158,16 +158,92 @@ async function lookupGoogleBooks(isbn: string): Promise<IsbnLookupResult | null>
 }
 
 /**
+ * Per-ISBN diagnostic logger for the browser console. Mirrors the
+ * server-side lookup logger in book-lookup.ts so a barcode scan emits
+ * a grep-able tier trace in the user's devtools. Default on; set
+ * NEXT_PUBLIC_VERBOSE_LOOKUP=0 to silence.
+ */
+function dlog(isbn: string, stage: string, msg: string): void {
+  if (typeof window === 'undefined') return;
+  if (process.env.NEXT_PUBLIC_VERBOSE_LOOKUP === '0') return;
+  // eslint-disable-next-line no-console
+  console.log(`[lookup-isbn ${isbn}]   ${stage.padEnd(16)} ${msg}`);
+}
+
+/**
+ * Final-tier fallback for ISBN scans: hit /api/lookup-book with
+ * matchEdition:true so the request runs through lookupSpecificEdition
+ * server-side, which falls through to ISBNdb-direct (/book/{isbn})
+ * when OL misses. Without this tier the barcode pipeline silently
+ * skipped ISBNdb — the very source most likely to have edition-level
+ * data for a recent printing — leaving the user with a half-empty
+ * record despite a perfectly valid ISBN.
+ */
+async function lookupViaServer(isbn: string): Promise<IsbnLookupResult | null> {
+  try {
+    const res = await fetch('/api/lookup-book', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: '',
+        author: '',
+        matchEdition: true,
+        hints: { isbn },
+      }),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      isbn?: string;
+      publisher?: string;
+      publicationYear?: number;
+      lcc?: string;
+      subjects?: string[];
+      coverUrl?: string;
+      source?: 'openlibrary' | 'googlebooks' | 'isbndb' | 'none';
+    };
+    if (!data || data.source === 'none' || !(data.isbn || data.publisher || data.publicationYear)) {
+      return null;
+    }
+    // The IsbnLookupResult union doesn't include 'isbndb' — collapse it
+    // to 'openlibrary' as the closest representative of "the server
+    // lookup chain found something" so existing UI labeling still works.
+    const narrowedSource: 'openlibrary' | 'googlebooks' | 'none' =
+      data.source === 'isbndb' || data.source === 'openlibrary'
+        ? 'openlibrary'
+        : data.source === 'googlebooks'
+          ? 'googlebooks'
+          : 'none';
+    return {
+      // /api/lookup-book doesn't return a title field today; the ISBNdb
+      // direct path on the server has it but the BookLookupResult type
+      // omits it. Pre-fill empty for now — the caller fills the title
+      // from a separate ISBNdb call when needed, or the user types it.
+      title: '',
+      author: '',
+      publisher: data.publisher ?? '',
+      publicationYear: data.publicationYear ?? 0,
+      lcc: data.lcc ?? '',
+      subjects: data.subjects ?? [],
+      coverUrl: data.coverUrl ?? `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`,
+      source: narrowedSource,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Public entry point: ISBN → metadata. Tries Open Library first,
- * falls back to Google Books. LoC SRU then fills in LCC if both
- * tiers came back without one (mirrors the photo pipeline). Returns
- * `source: 'none'` when nothing matched at all — the caller still
- * builds a BookRecord (with the ISBN pre-filled) so the user can
- * complete it on Review.
+ * falls back to Google Books, then to the server-side lookup chain
+ * (which adds ISBNdb-direct via lookupSpecificEdition). LoC SRU then
+ * fills in LCC if no tier produced one. Returns `source: 'none'` when
+ * nothing matched at all — the caller still builds a BookRecord (with
+ * the ISBN pre-filled) so the user can complete it on Review.
  */
 export async function lookupBookByIsbn(isbn: string): Promise<IsbnLookupResult> {
   const cleaned = isbn.replace(/[^\dxX]/g, '').toUpperCase();
   if (cleaned.length !== 10 && cleaned.length !== 13) {
+    dlog(isbn, 'input', `invalid length ${cleaned.length} — skipping`);
     return {
       title: '',
       author: '',
@@ -179,9 +255,30 @@ export async function lookupBookByIsbn(isbn: string): Promise<IsbnLookupResult> 
       source: 'none',
     };
   }
+  dlog(cleaned, 'start', `lookupBookByIsbn`);
   let hit = await lookupOpenLibrary(cleaned);
-  if (!hit) hit = await lookupGoogleBooks(cleaned);
+  if (hit) {
+    dlog(cleaned, 'ol-by-isbn', `matched title=${JSON.stringify(hit.title)} author=${JSON.stringify(hit.author)} pub=${JSON.stringify(hit.publisher)} year=${hit.publicationYear || '-'}`);
+  } else {
+    dlog(cleaned, 'ol-by-isbn', 'miss — trying Google Books');
+    hit = await lookupGoogleBooks(cleaned);
+    if (hit) {
+      dlog(cleaned, 'gb-by-isbn', `matched title=${JSON.stringify(hit.title)} author=${JSON.stringify(hit.author)}`);
+    } else {
+      dlog(cleaned, 'gb-by-isbn', 'miss — trying server lookup chain (ISBNdb-direct)');
+      // Server-side fallback unlocks ISBNdb-direct, which is the gap
+      // the previous client-only flow left wide open.
+      const server = await lookupViaServer(cleaned);
+      if (server) {
+        dlog(cleaned, 'server', `matched (source=${server.source}) pub=${JSON.stringify(server.publisher)} year=${server.publicationYear || '-'}`);
+        hit = server;
+      } else {
+        dlog(cleaned, 'server', 'miss — all tiers exhausted');
+      }
+    }
+  }
   if (!hit) {
+    dlog(cleaned, 'result', 'source=none (no metadata anywhere)');
     return {
       title: '',
       author: '',
@@ -195,11 +292,19 @@ export async function lookupBookByIsbn(isbn: string): Promise<IsbnLookupResult> 
   }
   if (!hit.lcc) {
     try {
-      hit.lcc = normalizeLcc(await lookupLccByIsbn(cleaned)) || '';
+      const lcc = normalizeLcc(await lookupLccByIsbn(cleaned)) || '';
+      hit.lcc = lcc;
+      if (lcc) dlog(cleaned, 'loc-sru', `lcc=${JSON.stringify(lcc)}`);
+      else dlog(cleaned, 'loc-sru', 'no LCC');
     } catch {
       // ignore — LCC stays empty
     }
   }
+  dlog(
+    cleaned,
+    'result',
+    `source=${hit.source} title=${JSON.stringify(hit.title)} pub=${JSON.stringify(hit.publisher)} year=${hit.publicationYear || '-'} lcc=${JSON.stringify(hit.lcc || '')}`
+  );
   return hit;
 }
 

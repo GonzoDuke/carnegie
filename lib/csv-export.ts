@@ -6,14 +6,50 @@ function escape(field: string): string {
   return needsQuoting ? `"${escaped}"` : `"${escaped}"`;
 }
 
-export function toAuthorLastFirst(author: string): string {
-  if (!author) return '';
-  if (author.includes(',')) return author;
-  const parts = author.trim().split(/\s+/);
+/**
+ * Multi-author separators we recognize from spine reads + lookup APIs.
+ * Splits on ampersand, the word "and" (word-bounded so "Anand" doesn't
+ * match), and semicolon. We deliberately don't split on bare commas —
+ * those are already used to mean "Last, First" form, and splitting them
+ * would mangle every single-author entry that's already correct.
+ */
+const MULTI_AUTHOR_SPLIT_RE = /\s*(?:&|;|\band\b)\s*/i;
+
+function flipSingleAuthor(author: string): string {
+  const trimmed = author.trim().replace(/,$/, '');
+  if (!trimmed) return '';
+  // Already in "Last, First" form — leave it alone.
+  if (trimmed.includes(',')) return trimmed;
+  const parts = trimmed.split(/\s+/);
   if (parts.length === 1) return parts[0];
   const last = parts[parts.length - 1];
   const first = parts.slice(0, -1).join(' ');
   return `${last}, ${first}`;
+}
+
+/**
+ * Format an author string for the LibraryThing CSV `AUTHOR (last, first)`
+ * column. Single authors come back as "Last, First". Multi-author inputs
+ * — "Mike Caulfield & Sam Wineburg", "A and B", "A; B" — are split on
+ * recognized separators, each side flipped, and rejoined with `"; "`,
+ * which is LibraryThing's canonical multi-author delimiter.
+ *
+ * Examples:
+ *   "Mike Caulfield & Sam Wineburg" → "Caulfield, Mike; Wineburg, Sam"
+ *   "Mike Caulfield and Sam Wineburg" → "Caulfield, Mike; Wineburg, Sam"
+ *   "Caulfield, Mike; Wineburg, Sam" → unchanged
+ *   "Mike Caulfield" → "Caulfield, Mike"
+ *   "Caulfield, Mike" → unchanged
+ *   "Madonna" → "Madonna"
+ */
+export function toAuthorLastFirst(author: string): string {
+  if (!author) return '';
+  const pieces = author.split(MULTI_AUTHOR_SPLIT_RE)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (pieces.length === 0) return '';
+  if (pieces.length === 1) return flipSingleAuthor(pieces[0]);
+  return pieces.map(flipSingleAuthor).filter(Boolean).join('; ');
 }
 
 const TITLE_CASE_STOPWORDS = new Set([
@@ -145,7 +181,18 @@ export function bookToCsvRow(b: BookRecord, options: CsvOptions = {}): string[] 
   const comments = commentParts.join(' · ');
   return [
     b.title,
-    b.authorLF || toAuthorLastFirst(b.author),
+    // CSV author column: trust `authorLF` only when it carries a
+    // multi-author "Last, First; Last, First" value (which the
+    // canonical-title commit writes for books whose lookup returned a
+    // full author list). For single-author cases we recompute from
+    // `author` — that protects against stale localStorage records
+    // where `authorLF` was cached in the malformed
+    // "Wineburg, Mike Caulfield & Sam" form before the multi-author
+    // splitter shipped. Two regimes, one rule: if it has a semicolon,
+    // it's the new canonical form; otherwise recompute.
+    b.authorLF && b.authorLF.includes(';')
+      ? b.authorLF
+      : toAuthorLastFirst(b.author),
     b.isbn,
     b.publisher,
     b.publicationYear ? String(b.publicationYear) : '',
