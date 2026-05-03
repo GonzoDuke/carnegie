@@ -9,6 +9,7 @@ import { TagPicker } from './TagPicker';
 import { Cover } from './Cover';
 import { Editable, ReadOnlyField } from './Editable';
 import { fireUndo } from './UndoToast';
+import { logCorrection } from '@/lib/corrections-log';
 
 /**
  * Defensive stringifier for a warning entry. Any non-primitive that
@@ -40,7 +41,7 @@ function stringifyWarning(w: unknown): string {
  * version are gone.
  */
 export function BookTableRow({ book }: { book: BookRecord }) {
-  const { updateBook, rereadBook } = useStore();
+  const { updateBook, rereadBook, addCopy } = useStore();
   const [open, setOpen] = useState(false);
   const [picker, setPicker] = useState<'genre' | 'form' | null>(null);
   const [rereading, setRereading] = useState(false);
@@ -63,6 +64,18 @@ export function BookTableRow({ book }: { book: BookRecord }) {
   const tagsCondensed = safeGenre.slice(0, 2);
   const tagsExtra = safeGenre.length + safeForm.length - tagsCondensed.length;
 
+  // System-inferred tag set for this book — used to decide whether a
+  // tag mutation is a correction worth logging vs the user editing
+  // their own additions.
+  const originalGenre = Array.isArray(book.original?.genreTags)
+    ? book.original.genreTags
+    : [];
+  const originalForm = Array.isArray(book.original?.formTags)
+    ? book.original.formTags
+    : [];
+  const systemSuggestedSet = new Set<string>([...originalGenre, ...originalForm]);
+  const systemSuggestedTags = [...originalGenre, ...originalForm];
+
   function setStatus(next: 'approved' | 'rejected') {
     const prior = book.status;
     const target = prior === next ? 'pending' : next;
@@ -82,12 +95,34 @@ export function BookTableRow({ book }: { book: BookRecord }) {
     } else {
       updateBook(book.id, { formTags: [...safeForm, tag] });
     }
+    // Only log when the system didn't suggest this tag — that's a
+    // real miss for the inference pass to learn from.
+    if (!systemSuggestedSet.has(tag)) {
+      logCorrection({
+        title: book.title,
+        author: book.author,
+        lcc: book.lcc,
+        systemSuggestedTags,
+        addedTag: tag,
+      });
+    }
   }
   function removeTag(variant: 'genre' | 'form', tag: string) {
     if (variant === 'genre') {
       updateBook(book.id, { genreTags: safeGenre.filter((t) => t !== tag) });
     } else {
       updateBook(book.id, { formTags: safeForm.filter((t) => t !== tag) });
+    }
+    // Only log when the user removes a tag the system suggested —
+    // removing a tag they themselves added is just an undo.
+    if (systemSuggestedSet.has(tag)) {
+      logCorrection({
+        title: book.title,
+        author: book.author,
+        lcc: book.lcc,
+        systemSuggestedTags,
+        removedTag: tag,
+      });
     }
   }
 
@@ -430,6 +465,15 @@ export function BookTableRow({ book }: { book: BookRecord }) {
                 : book.ocrImage
                   ? '↻ Reread'
                   : '↻ Refresh metadata'}
+            </button>
+            <button
+              type="button"
+              onClick={() => addCopy(book.id)}
+              disabled={rereading}
+              title="Clone this record as an independent second copy. Use when you own multiple physical copies of the same title."
+              className="text-xs px-3 py-1.5 rounded border border-line text-text-secondary hover:border-navy hover:text-navy hover:bg-navy-soft transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              + Add copy
             </button>
             {rereadErr && (
               <span className="text-[11px] text-carnegie-red">{rereadErr}</span>
