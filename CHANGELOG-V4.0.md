@@ -1,7 +1,7 @@
 # Carnegie — retrospective changelog (v4.0)
 
 **Window:** 2026-04-30 (initial commit) → 2026-05-03
-**Total commits:** 182
+**Total commits:** 184 (182 source/data + v4 bump + merge commit)
 **Generated from:** `git log --pretty=format:'%h %ad %s' --date=short --reverse`
 
 This is the development arc of Carnegie, organized into chronological phases and grouped by feature area within each phase. Where the path took a detour or a previously-shipped approach was reversed, those moments are called out explicitly. Auto-generated cross-device sync commits (`Pending batch unlabeled/removed: …`) are present in the history as background noise — they document the phone-capture sync working but don't represent feature changes, so they're aggregated rather than listed individually.
@@ -380,6 +380,25 @@ After a barcode lock-on, the scanner now pauses, fires `/api/preview-isbn` (ISBN
 
 ---
 
+## Phase 6 — v4.0 lands on production (2026-05-03, end of day)
+
+The bookend of v4. Two commits and a merge.
+
+- `a55be78` v4.0: handoff docs + bump
+- (merge commit) `Merge next-16-upgrade: v4.0 lookup pipeline + Next 16 / React 19 + barcode preview`
+
+`a55be78` bumped package.json to `4.0.0` and added two handoff docs (`STATUS-V4_0.md`, `CHANGELOG-V4_0.md`) to give the next AI picking up the project a clean entry point. The footer on the About page reads from package.json so it auto-updated to `ver. 4.0`.
+
+The merge to `main` was the moment v4 actually became Carnegie. Until that point, every v4 commit had been sitting on `next-16-upgrade` for the entire day's work — the new Phase 1/Phase 2 lookup, the enrichment series, Next 16 / React 19, the barcode preview, all of it. The user's phone, hitting `carnegielib.vercel.app`, had been running v3.5 the whole time. The branch preview URL (where v4 actually lived) was never opened.
+
+This was discovered by checking the About page footer on the phone: it read `ver. 3.5` instead of the expected `ver. 4.0`. The realization that weeks of perceived stagnation were actually a deployment-target mismatch — the work had been improving the app, just not the URL the user was looking at — reframed a month of frustration in a single moment.
+
+The merge itself was a one-commit `--no-ff` because `main` had drifted ~25 commits from cross-device sync churn (auto-committed `data/pending-batches/*.json` adds/removes and ledger appends from the running app on the phone). Those commits touch only data files, not source, so the divergence was benign — but it blocked a fast-forward. The non-fast-forward merge created a single bubble in the history cleanly marking "v4.0 lands on main" without rewriting any SHAs on `next-16-upgrade` (preserved for reference, since this CHANGELOG cites commits from it).
+
+Vercel auto-deployed `main` to production. `carnegielib.vercel.app` finally caught up to v4. The phone, refreshed, read `ver. 4.0`.
+
+---
+
 ## Notable patterns across the arc
 
 ### Reversals that stuck
@@ -414,6 +433,6 @@ After a barcode lock-on, the scanner now pauses, fires `/api/preview-isbn` (ISBN
 | v2.0 | `38fcd60` | 2026-05-01 | Polish series + cropping + cover art |
 | v3.0 | `5f257dd` | 2026-05-02 | Sidebar redesign + phone capture + cross-device sync |
 | v3.5 | `733d969` | 2026-05-02 | Drop silent dedup + Add copy + corrections feedback loop |
-| v4.0 | (current) | 2026-05-03 | Phase 1 / Phase 2 lookup + Next 16 / React 19 + barcode preview |
+| v4.0 | `a55be78` | 2026-05-03 | Phase 1 / Phase 2 lookup + Next 16 / React 19 + barcode preview. Branch `next-16-upgrade` merged to `main` later same day via `--no-ff` merge commit. package.json bumped to 4.0.0. |
 
-The package.json version is currently `3.5.0`. A `v4.0.0` bump is implied by the work after `733d969` (substantial enough to merit it) but hasn't been tagged in the package metadata yet.
+The package.json version is `4.0.0`. v4 is live in production at carnegielib.vercel.app.

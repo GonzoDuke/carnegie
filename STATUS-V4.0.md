@@ -1,8 +1,8 @@
 # Carnegie — Status v4.0
 
-**Date of writing:** 2026-05-03
-**Active branch:** `next-16-upgrade` (pre-merge to `main`)
-**Latest commit:** `9370c47` — Barcode scanner: book preview on the frozen-frame confirm card
+**Date of writing:** 2026-05-03 (updated later same day)
+**Active branch:** `main`
+**Latest commit:** merge commit — "Merge next-16-upgrade: v4.0 lookup pipeline + Next 16 / React 19 + barcode preview". `next-16-upgrade` retained for reference.
 
 This is a handoff document. If you are picking this project up cold, read it linearly. Every fact below was verified against the working tree at the date above.
 
@@ -16,8 +16,8 @@ This is a handoff document. If you are picking this project up cold, read it lin
 | **Purpose** | Personal-use web app that catalogs a home library from shelf photos. Reads book spines via Claude Vision, identifies books via a multi-source lookup pipeline, infers genre + form tags from a controlled vocabulary, and exports LibraryThing-compatible CSV files. |
 | **Hard rule** | No book ever leaves Carnegie without explicit human approval on the Review screen. The pipeline has a stop here by design. |
 | **Repo URL** | https://github.com/GonzoDuke/carnegie |
-| **Live URL** | Hosted on Vercel. The production domain isn't in the codebase — check the Vercel project dashboard or `vercel inspect` for the latest deployment URL. |
-| **Version (package.json)** | `3.5.0`. Footer on the About page reads `ver. 3.5` and is wired to read from package.json (see `app/about/page.tsx`). When you bump, the footer updates automatically. |
+| **Live URL** | https://carnegielib.vercel.app — production. Vercel auto-deploys from `main`. |
+| **Version (package.json)** | `4.0.0`. Footer on the About page reads `ver. 4.0` and is wired to read from package.json (see `app/about/page.tsx`). When you bump, the footer updates automatically. |
 | **Deployment platform** | Vercel. CI is the default Vercel GitHub integration — push to `main` deploys production; PRs and other branches get preview URLs. |
 | **License** | None declared (private). |
 
@@ -512,7 +512,6 @@ The two PUTs are sequential — if the second fails, the vocabulary is updated b
 | `GOOGLE_VISION_API_KEY` in `.env.local` | informational | Unused. Safe to delete. |
 | `lib/archive/` retains 13 historical docs | informational | Not loaded by the app. Kept for context. |
 | MARC enrichment "no record" common | informational | LoC SRU coverage is patchy for trade-edition ISBNs. The MARC parse works correctly when a record exists; this is upstream coverage, not a bug. |
-| Vercel deploys on `next-16-upgrade` branch | open | The Next 16 upgrade is on a feature branch. Production `main` is still Next 14.2.35. Merge `next-16-upgrade` → `main` to ship the upgrade + everything that landed on top. |
 
 ---
 
@@ -532,6 +531,7 @@ From the backend audit (CHANGELOG entries, commits `5aa8878` through `1bdb7bd`).
 - Hydration mismatch in StoreProvider (React 19 strict-mode) — moved localStorage read out of `useReducer` lazy-init into a HYDRATE useEffect.
 - pending-batches 409-retry shim.
 - `@zxing/library` peer-dep mismatch — pinned to ^0.22.0 to satisfy `@zxing/browser`'s peer constraint (Vercel's strict installer).
+- `next-16-upgrade` merged to `main` — v4 is now live on production at carnegielib.vercel.app. The branch sat unmerged longer than intended; production was running v3.5 the whole time the v4 work appeared on the branch preview URL. Merge was `--no-ff` to preserve both histories cleanly. Branch retained for SHA reference (CHANGELOG-V4_0 cites commits from it).
 
 ### Open
 - Spine-printed ISBN extraction (capability, not a regression).
@@ -874,4 +874,4 @@ Things discussed in planning docs and conversations but not yet built. Not a com
 
 ---
 
-End of status doc. If you hit something that surprises you, it's probably in the CHANGELOG (read newest first) or the per-commit messages on `next-16-upgrade`. The lookup pipeline restructure (commit `a028295`) and the React 19 / Next 16 upgrade (commit `857939f`) are the two biggest recent shifts — start there if behavior diverges from your expectations.
+End of status doc. If you hit something that surprises you, it's probably in the CHANGELOG (read newest first) or the per-commit messages on `main` (or on `next-16-upgrade`, which is preserved for reference). The lookup pipeline restructure (commit `a028295`) and the React 19 / Next 16 upgrade (commit `857939f`) are the two biggest recent shifts — start there if behavior diverges from your expectations.
