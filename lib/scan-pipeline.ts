@@ -15,7 +15,7 @@
  */
 
 import type { BookRecord, Confidence, InferTagsResult } from './types';
-import { lookupLccByIsbn, normalizeLcc } from './book-lookup';
+import { lookupLccByIsbn, normalizeLcc } from './lookup-utils';
 import { inferTagsClient, makeId } from './pipeline';
 import { toAuthorLastFirst, toTitleCase } from './csv-export';
 
