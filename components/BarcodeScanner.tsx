@@ -52,6 +52,24 @@ type Stage =
   | { kind: 'between' }
   | { kind: 'error'; message: string };
 
+type PreviewState =
+  | { kind: 'loading' }
+  | {
+      kind: 'loaded';
+      title: string;
+      author: string;
+      coverUrl: string;
+      source: 'isbndb' | 'openlibrary';
+    }
+  // Both APIs returned no match (or one of: invalid ISBN, network
+  // error). Confirm card shows the ISBN with a "no match" note —
+  // the user can still commit and have the book added with ISBN
+  // only for manual lookup later.
+  | { kind: 'no-match' }
+  // 3s client-side budget exceeded. Confirm card falls back to
+  // the original ISBN-only display so the flow doesn't stall.
+  | { kind: 'timeout' };
+
 export function BarcodeScanner({ onScan, isIsbnInBatch, onClose }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -64,6 +82,11 @@ export function BarcodeScanner({ onScan, isIsbnInBatch, onClose }: BarcodeScanne
   const [scanCount, setScanCount] = useState(0);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isExiting, setIsExiting] = useState(false);
+  const [preview, setPreview] = useState<PreviewState | null>(null);
+  // Cover image error state — flips when the <img> onError fires so the
+  // card can swap to a neutral placeholder without leaving a broken
+  // image icon behind.
+  const [coverFailed, setCoverFailed] = useState(false);
 
   const stopStream = useCallback(() => {
     if (streamRef.current) {
@@ -234,6 +257,71 @@ export function BarcodeScanner({ onScan, isIsbnInBatch, onClose }: BarcodeScanne
     };
   }, [stopStream]);
 
+  // Preview lookup. Fires only when the scanner enters the `confirm`
+  // stage (a fresh ISBN was just detected and the camera frame is
+  // frozen). Calls /api/preview-isbn — server-side ISBNdb-first +
+  // Open Library fallback — with a HARD 3-second client timeout so a
+  // slow upstream can't stall the user. On timeout we transition the
+  // preview to {kind: 'timeout'} which renders the original
+  // ISBN-only card and lets the user proceed.
+  useEffect(() => {
+    if (stage.kind !== 'confirm') {
+      setPreview(null);
+      setCoverFailed(false);
+      return;
+    }
+    const isbn = stage.isbn;
+    setPreview({ kind: 'loading' });
+    setCoverFailed(false);
+    let cancelled = false;
+    const ctrl = new AbortController();
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      cancelled = true;
+      ctrl.abort();
+      setPreview({ kind: 'timeout' });
+    }, 3000);
+    fetch(`/api/preview-isbn?isbn=${encodeURIComponent(isbn)}`, {
+      signal: ctrl.signal,
+      cache: 'no-store',
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { title?: string; author?: string; coverUrl?: string; source?: string } | null) => {
+        if (cancelled) return;
+        cancelled = true;
+        window.clearTimeout(timer);
+        if (
+          !data ||
+          data.source === 'none' ||
+          !data.title ||
+          (data.source !== 'isbndb' && data.source !== 'openlibrary')
+        ) {
+          setPreview({ kind: 'no-match' });
+          return;
+        }
+        setPreview({
+          kind: 'loaded',
+          title: data.title,
+          author: data.author ?? '',
+          coverUrl: data.coverUrl ?? '',
+          source: data.source,
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        cancelled = true;
+        window.clearTimeout(timer);
+        // AbortError from our own timeout is already handled above;
+        // any other error just falls through to no-match.
+        setPreview((prev) => (prev?.kind === 'timeout' ? prev : { kind: 'no-match' }));
+      });
+    return () => {
+      cancelled = true;
+      ctrl.abort();
+      window.clearTimeout(timer);
+    };
+  }, [stage]);
+
   // Allow Escape to close.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -332,16 +420,82 @@ export function BarcodeScanner({ onScan, isIsbnInBatch, onClose }: BarcodeScanne
 
         {/* Confirm overlay — shown when a barcode has been detected.
             Frozen camera frame underneath; centered card on top with
-            the ISBN, Use this ISBN, and Rescan. */}
+            the preview (cover + title + author + ISBN) when the
+            quick lookup succeeded, or the original ISBN-only fallback
+            on timeout / no-match / loading. The Use-this-ISBN and
+            Rescan buttons stay below in every variant. */}
         {stage.kind === 'confirm' && (
           <div className="absolute inset-0 flex items-center justify-center p-6 bg-black/55">
             <div className="w-full max-w-sm bg-cream-50 dark:bg-ink text-ink dark:text-cream-50 rounded-xl p-5 shadow-2xl space-y-3">
-              <div className="text-[11px] uppercase tracking-wider text-text-tertiary">
-                Detected ISBN
-              </div>
-              <div className="text-[22px] font-mono font-semibold tracking-tight">
-                {stage.isbn}
-              </div>
+              {preview?.kind === 'loaded' ? (
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    {preview.coverUrl && !coverFailed ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={preview.coverUrl}
+                        alt=""
+                        loading="lazy"
+                        onError={() => setCoverFailed(true)}
+                        className="w-[60px] h-[90px] object-cover rounded ring-1 ring-line bg-cream-100 dark:bg-ink-soft flex-shrink-0"
+                      />
+                    ) : (
+                      <div
+                        className="w-[60px] h-[90px] rounded ring-1 ring-line bg-cream-100 dark:bg-ink-soft flex-shrink-0 flex items-center justify-center text-text-quaternary text-[10px]"
+                        aria-hidden
+                      >
+                        📖
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[15px] font-semibold leading-snug break-words">
+                        {preview.title}
+                      </div>
+                      {preview.author && (
+                        <div className="text-[13px] text-text-secondary mt-1 break-words">
+                          {preview.author}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-[12px] font-mono text-text-tertiary tracking-tight">
+                    {stage.isbn}
+                  </div>
+                </div>
+              ) : preview?.kind === 'no-match' ? (
+                <div className="space-y-2">
+                  <div className="text-[11px] uppercase tracking-wider text-text-tertiary">
+                    Detected ISBN
+                  </div>
+                  <div className="text-[22px] font-mono font-semibold tracking-tight">
+                    {stage.isbn}
+                  </div>
+                  <div className="text-[12px] text-text-tertiary leading-relaxed">
+                    No match found — book will be added with ISBN only for manual lookup.
+                  </div>
+                </div>
+              ) : preview?.kind === 'loading' ? (
+                <div className="space-y-2">
+                  <div className="text-[11px] uppercase tracking-wider text-text-tertiary">
+                    ⟳ Looking up…
+                  </div>
+                  <div className="text-[22px] font-mono font-semibold tracking-tight">
+                    {stage.isbn}
+                  </div>
+                </div>
+              ) : (
+                // timeout — or null/initial — fall back to the original
+                // ISBN-only display so the flow doesn't stall on a slow
+                // upstream.
+                <div className="space-y-2">
+                  <div className="text-[11px] uppercase tracking-wider text-text-tertiary">
+                    Detected ISBN
+                  </div>
+                  <div className="text-[22px] font-mono font-semibold tracking-tight">
+                    {stage.isbn}
+                  </div>
+                </div>
+              )}
               <div className="flex items-center gap-2 pt-1">
                 <button
                   type="button"
