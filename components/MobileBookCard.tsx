@@ -153,6 +153,7 @@ export function MobileBookCard({ book }: { book: BookRecord }) {
         <div className="relative flex-shrink-0">
           <Cover
             coverUrl={book.coverUrl}
+            coverUrlFallbacks={book.coverUrlFallbacks}
             spineThumbnail={book.spineThumbnail}
             alt={book.title || 'unknown book'}
             className="w-16 h-24 rounded bg-surface-page border border-line-light overflow-hidden"

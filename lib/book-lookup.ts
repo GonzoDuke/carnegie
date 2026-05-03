@@ -1586,21 +1586,34 @@ export async function lookupBook(
   }
 
   // -------------------------------------------------------------------------
-  // Cover art. Per spec: Open Library Covers API (keyed by ISBN) is primary;
-  // Google Books and ISBNdb are fallbacks for when no ISBN is available.
-  // The `default=false` query param tells OL to 404 instead of returning a
-  // grey placeholder when the cover is missing, so the BookCard <img>
-  // onError handler can fall through to the spine crop.
+  // Cover art. Build a fallback chain so the <img> onError handler in the
+  // detail-panel can step through alternative sources when one 404s. The
+  // primary `coverUrl` keeps its existing meaning (first available URL,
+  // OL-by-ISBN preferred) for back-compat; `coverUrlFallbacks` carries
+  // every non-empty URL we collected, deduped, in priority order.
   // -------------------------------------------------------------------------
+  const coverChain: string[] = [];
   if (result.isbn) {
     const cleaned = result.isbn.replace(/[^\dxX]/g, '');
     if (cleaned) {
-      result.coverUrl = `https://covers.openlibrary.org/b/isbn/${cleaned}-M.jpg?default=false`;
+      coverChain.push(`https://covers.openlibrary.org/b/isbn/${cleaned}-M.jpg?default=false`);
     }
-  } else if (gbCoverUrl) {
-    result.coverUrl = gbCoverUrl;
-  } else if (isbndbCoverUrl) {
-    result.coverUrl = isbndbCoverUrl;
+  }
+  if (gbCoverUrl) coverChain.push(gbCoverUrl);
+  if (isbndbCoverUrl) coverChain.push(isbndbCoverUrl);
+  // Existing coverUrlFallbacks may already contain entries (ISBNdb merge
+  // block in commit-4 seeded one). Merge them in, preserving order +
+  // dedup.
+  if (Array.isArray(result.coverUrlFallbacks)) {
+    for (const u of result.coverUrlFallbacks) coverChain.push(u);
+  }
+  const dedupedChain = Array.from(new Set(coverChain.filter(Boolean)));
+  if (dedupedChain.length > 0) {
+    result.coverUrlFallbacks = dedupedChain;
+    // Keep coverUrl pointing at the first candidate so old image-render
+    // paths that don't know about coverUrlFallbacks behave exactly as
+    // before. New paths swap to `coverUrlFallbacks[idx]` on <img> error.
+    result.coverUrl = dedupedChain[0];
   }
 
   const final = Object.assign(result, { tier: tier || 'none', lccSource });

@@ -191,6 +191,7 @@ export function BookTableRow({ book }: { book: BookRecord }) {
         <div className="relative">
           <Cover
             coverUrl={book.coverUrl}
+            coverUrlFallbacks={book.coverUrlFallbacks}
             spineThumbnail={book.spineThumbnail}
             alt={book.title || 'unknown book'}
             className="w-14 h-20 rounded bg-surface-page border border-line-light overflow-hidden"
