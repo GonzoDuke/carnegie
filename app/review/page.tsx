@@ -194,9 +194,12 @@ export default function ReviewPage() {
     router.push('/export?auto=1');
   }
 
-  if (state.allBooks.length === 0) {
-    return <EmptyState />;
-  }
+  // Render the header (with the Refresh button) ALWAYS, then
+  // conditionally render either the EmptyState content or the
+  // populated body underneath. This is what makes "↻ Refresh from
+  // cloud" visible on tablet / desktop before any books have synced
+  // — which is the very moment the user wants to click it.
+  const isEmpty = state.allBooks.length === 0;
 
   return (
     <DebugErrorBoundary>
@@ -205,9 +208,11 @@ export default function ReviewPage() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-baseline gap-4 flex-wrap">
             <h1 className="typo-page-title">Review &amp; approve</h1>
-            <span className="text-base text-ink/50 dark:text-cream-300/50 font-mono">
-              {counts.total} {counts.total === 1 ? 'book' : 'books'}
-            </span>
+            {!isEmpty && (
+              <span className="text-base text-ink/50 dark:text-cream-300/50 font-mono">
+                {counts.total} {counts.total === 1 ? 'book' : 'books'}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -219,28 +224,30 @@ export default function ReviewPage() {
             >
               {refreshState === 'pending' ? '⟳ Refreshing…' : '↻ Refresh from cloud'}
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (!confirmDiscardSession(state.allBooks)) return;
-                const snapshot = state.batches;
-                const batchCount = snapshot.length;
-                clear();
-                if (batchCount > 0) {
-                  fireUndo(
-                    `Cleared session (${batchCount} ${batchCount === 1 ? 'batch' : 'batches'}).`,
-                    () => {
-                      for (const b of snapshot) addBatch(b);
-                    }
-                  );
-                }
-              }}
-              disabled={state.allBooks.length === 0 && state.batches.length === 0}
-              className="text-[12px] font-medium px-3 py-1.5 rounded-md border border-line text-text-secondary hover:border-carnegie-red hover:text-carnegie-red hover:bg-carnegie-red-soft transition disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Discard the current batch and start fresh — exported books stay in the ledger."
-            >
-              Clear batch
-            </button>
+            {!isEmpty && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!confirmDiscardSession(state.allBooks)) return;
+                  const snapshot = state.batches;
+                  const batchCount = snapshot.length;
+                  clear();
+                  if (batchCount > 0) {
+                    fireUndo(
+                      `Cleared session (${batchCount} ${batchCount === 1 ? 'batch' : 'batches'}).`,
+                      () => {
+                        for (const b of snapshot) addBatch(b);
+                      }
+                    );
+                  }
+                }}
+                disabled={state.allBooks.length === 0 && state.batches.length === 0}
+                className="text-[12px] font-medium px-3 py-1.5 rounded-md border border-line text-text-secondary hover:border-carnegie-red hover:text-carnegie-red hover:bg-carnegie-red-soft transition disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Discard the current batch and start fresh — exported books stay in the ledger."
+              >
+                Clear batch
+              </button>
+            )}
           </div>
         </div>
         {refreshMessage && refreshState !== 'pending' && (
@@ -252,12 +259,34 @@ export default function ReviewPage() {
             {refreshMessage}
           </div>
         )}
-        <p className="typo-page-desc max-w-3xl">
-          Verify each book&apos;s metadata and tags. Edit fields by clicking them. Only
-          approved books make it into the export.
-        </p>
+        {!isEmpty && (
+          <p className="typo-page-desc max-w-3xl">
+            Verify each book&apos;s metadata and tags. Edit fields by clicking them. Only
+            approved books make it into the export.
+          </p>
+        )}
       </div>
 
+      {isEmpty && (
+        // EmptyState body inlined here so the page header (with the
+        // Refresh button) stays visible above it. The Refresh button
+        // is exactly what the user wants to click in this state — to
+        // pull batches another device just processed.
+        <div className="text-center py-12">
+          <p className="text-sm text-ink/60 dark:text-cream-300/60 mb-6">
+            Nothing to review yet. Upload a shelf photo, or click <span className="font-mono">↻ Refresh from cloud</span> above to pull batches processed on another device.
+          </p>
+          <Link
+            href="/"
+            className="inline-block px-5 py-2.5 rounded-md bg-accent text-cream-50 hover:bg-accent-deep transition"
+          >
+            Go to upload
+          </Link>
+        </div>
+      )}
+
+      {!isEmpty && (
+      <>
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-8">
         <Stat label="Total" value={counts.total} active={filter === 'all'} />
@@ -511,6 +540,8 @@ export default function ReviewPage() {
           onAdd={(book) => addBook(addingFor.id, flagIfPreviouslyExported(book))}
           onClose={() => setAddingFor(null)}
         />
+      )}
+      </>
       )}
     </div>
     </DebugErrorBoundary>
