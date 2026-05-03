@@ -1,1 +1,87 @@
-[]
+[
+  {
+    "isbn": "9780802015198",
+    "titleNorm": "crown jewels of iran",
+    "authorNorm": "meen tushingham",
+    "date": "2026-05-03",
+    "tags": [
+      "Visual culture",
+      "Art history"
+    ],
+    "title": "Crown Jewels of Iran",
+    "author": "Meen & Tushingham",
+    "authorLF": "Tushingham, Meen &",
+    "publisher": "Bānk-i Markazī-i Īran",
+    "publicationYear": 1968
+  },
+  {
+    "isbn": "9781558680913",
+    "titleNorm": "among the cypress",
+    "authorNorm": "geiger long",
+    "date": "2026-05-03",
+    "tags": [
+      "Visual culture",
+      "Nature writing",
+      "Reference"
+    ],
+    "title": "Among the Cypress",
+    "author": "Geiger/Long",
+    "authorLF": "Geiger/Long",
+    "publisher": "Graphic Arts Center Pub. Co.",
+    "publicationYear": 1992
+  },
+  {
+    "isbn": "9781931169004",
+    "titleNorm": "canoe brook country club 1901 2001",
+    "authorNorm": "",
+    "date": "2026-05-03",
+    "tags": [
+      "Sports",
+      "American history"
+    ],
+    "title": "Canoe Brook Country Club 1901-2001",
+    "publisher": "Q Pub",
+    "publicationYear": 2001
+  },
+  {
+    "isbn": "9780709119890",
+    "titleNorm": "bermuda in full color",
+    "authorNorm": "hannau",
+    "date": "2026-05-03",
+    "tags": [
+      "Travel"
+    ],
+    "title": "Bermuda in Full Color",
+    "author": "Hannau",
+    "authorLF": "Hannau",
+    "publisher": "The Crowood Press",
+    "publicationYear": 1970
+  },
+  {
+    "isbn": "",
+    "titleNorm": "harding township library historical perspectives",
+    "authorNorm": "josephson",
+    "date": "2026-05-03",
+    "tags": [
+      "Library science",
+      "American history"
+    ],
+    "title": "Harding Township Library: Historical Perspectives",
+    "author": "Josephson",
+    "authorLF": "Josephson"
+  },
+  {
+    "isbn": "9781791826963",
+    "titleNorm": "let me get this off my chest",
+    "authorNorm": "margaret lesh",
+    "date": "2026-05-03",
+    "tags": [
+      "Personal memoir"
+    ],
+    "title": "Let Me Get This Off My Chest...",
+    "author": "Margaret Lesh",
+    "authorLF": "Lesh, Margaret",
+    "publisher": "Independently Published",
+    "publicationYear": 2019
+  }
+]
