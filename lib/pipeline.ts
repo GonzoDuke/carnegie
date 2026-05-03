@@ -6,6 +6,7 @@ import type {
   SpineBbox,
 } from './types';
 import { toAuthorLastFirst, toTitleCase } from './csv-export';
+import { stringSimilarity } from './lookup-utils';
 
 /**
  * When true, prefer canonical title / author from the lookup chain
@@ -756,11 +757,28 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
   // record. Spine OCR survives on spineRead.rawText / spineRead.title
   // for diagnostic display. Flag-gated so the change is one-line
   // revertible if a regression surfaces.
+  //
+  // Shorter-of-two rule: when both the spine read and the canonical
+  // title clearly refer to the same book (Levenshtein similarity
+  // > 0.6 between lowercased forms), prefer the SHORTER of the two
+  // for display. This stops "The Hobbit, Or, There and Back Again"
+  // from replacing "The Hobbit" while still letting clearly-better
+  // canonical titles (e.g. when the OCR caught a fragment) win when
+  // similarity is low — that's a different-titles signal that means
+  // the spine read was probably wrong.
   const useCanonical = USE_CANONICAL_TITLES && lookup.source !== 'none';
-  const displayTitle =
+  const canonicalTitleCased =
     useCanonical && lookup.canonicalTitle && lookup.canonicalTitle.trim()
       ? toTitleCase(lookup.canonicalTitle)
-      : titleCased;
+      : '';
+  let displayTitle = canonicalTitleCased || titleCased;
+  if (canonicalTitleCased && titleCased) {
+    const sim = stringSimilarity(canonicalTitleCased.toLowerCase(), titleCased.toLowerCase());
+    if (sim >= 0.6) {
+      displayTitle =
+        titleCased.length < canonicalTitleCased.length ? titleCased : canonicalTitleCased;
+    }
+  }
   const displayAuthor =
     useCanonical && lookup.canonicalAuthor && lookup.canonicalAuthor.trim()
       ? lookup.canonicalAuthor

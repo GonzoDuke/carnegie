@@ -18,6 +18,53 @@ const LOC_HEADERS: Record<string, string> = {
 };
 
 /**
+ * Damerau-flavored Levenshtein distance via the standard rolling-row
+ * matrix. Quadratic in min(len(a), len(b)) — fine for book titles
+ * (typically <100 chars). Returns the number of single-character
+ * insertions, deletions, or substitutions to turn `a` into `b`.
+ */
+export function levenshteinDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  // Always iterate over the shorter string for the inner loop.
+  let s = a.length < b.length ? a : b;
+  let t = a.length < b.length ? b : a;
+  const m = s.length;
+  const n = t.length;
+  let prev = new Array(m + 1);
+  let curr = new Array(m + 1);
+  for (let i = 0; i <= m; i++) prev[i] = i;
+  for (let j = 1; j <= n; j++) {
+    curr[0] = j;
+    const tj = t.charCodeAt(j - 1);
+    for (let i = 1; i <= m; i++) {
+      const cost = s.charCodeAt(i - 1) === tj ? 0 : 1;
+      const del = curr[i - 1] + 1;
+      const ins = prev[i] + 1;
+      const sub = prev[i - 1] + cost;
+      curr[i] = del < ins ? (del < sub ? del : sub) : ins < sub ? ins : sub;
+    }
+    const tmp = prev;
+    prev = curr;
+    curr = tmp;
+  }
+  return prev[m];
+}
+
+/**
+ * Normalized 0..1 string similarity. 1 = identical, 0 = completely
+ * different. Calculated as `1 - distance / max(len)`. Caller should
+ * lowercase / strip punctuation before comparing if loose-match
+ * semantics are wanted.
+ */
+export function stringSimilarity(a: string, b: string): number {
+  const max = Math.max(a.length, b.length);
+  if (max === 0) return 1;
+  return 1 - levenshteinDistance(a, b) / max;
+}
+
+/**
  * Strip characters that mangle external API queries — wildcards (*),
  * mentions (@), hashes (#), shell-y money signs ($), exclamation
  * marks (!) — and collapse runs of whitespace. Used by lookupBook
