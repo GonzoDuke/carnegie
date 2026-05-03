@@ -39,6 +39,26 @@ export interface BookLookupResult {
    * <img> error or when this field is empty.
    */
   coverUrl?: string;
+
+  // -------------------------------------------------------------------------
+  // Optional enrichment fields (Phase 1 of the enrichment plan). All
+  // optional + default-undefined so old localStorage / GitHub records
+  // without these keep deserializing without a hitch. Nothing reads any
+  // of these yet — Phase 2 commits populate them; Phase 3 commits use
+  // them downstream.
+  // -------------------------------------------------------------------------
+  canonicalTitle?: string;
+  canonicalAuthor?: string;
+  allAuthors?: string[];
+  subtitle?: string;
+  synopsis?: string;
+  pageCount?: number;
+  edition?: string;
+  binding?: string;
+  language?: string;
+  series?: string;
+  lcshSubjects?: string[];
+  coverUrlFallbacks?: string[];
 }
 
 export interface BookRecord {
@@ -132,6 +152,23 @@ export interface BookRecord {
    * that have never been merged.
    */
   mergedFrom?: BookRecord[];
+  // -------------------------------------------------------------------------
+  // Optional enrichment fields (Phase 1). All optional + default-undefined
+  // so older serialized records load fine. Phase 3 commits surface these
+  // in the UI / tag inference.
+  // -------------------------------------------------------------------------
+  canonicalTitle?: string;
+  subtitle?: string;
+  allAuthors?: string[];
+  synopsis?: string;
+  pageCount?: number;
+  edition?: string;
+  binding?: string;
+  language?: string;
+  series?: string;
+  lcshSubjects?: string[];
+  coverUrlFallbacks?: string[];
+
   /** Snapshot of metadata as it came from spine read + lookup, before any user edits. */
   original: {
     title: string;
