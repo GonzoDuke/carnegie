@@ -8,6 +8,33 @@ import type {
 import { toAuthorLastFirst, toTitleCase } from './csv-export';
 
 /**
+ * When true, prefer canonical title / author from the lookup chain
+ * (OL/ISBNdb/MARC) over the spine OCR text on the displayed
+ * BookRecord. The spine read is preserved on `spineRead.rawText`
+ * either way. Flip to false to instantly revert to spine-OCR titles
+ * if anything looks wrong — no other code change needed.
+ */
+const USE_CANONICAL_TITLES = true;
+
+/**
+ * Format a single "First Last" or already-flipped name into "Last,
+ * First" form. Used by the multi-author authorLF builder when the
+ * lookup chain returned a full author list. Mirrors the conservative
+ * single-author flip in csv-export's toAuthorLastFirst — single-token
+ * names ("Madonna") and already-comma'd inputs pass through.
+ */
+function flipNameLastFirst(name: string): string {
+  const trimmed = name.trim().replace(/,$/, '');
+  if (!trimmed) return '';
+  if (trimmed.includes(',')) return trimmed;
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  const last = parts[parts.length - 1];
+  const first = parts.slice(0, -1).join(' ');
+  return `${last}, ${first}`;
+}
+
+/**
  * Per-spine model selection. The big OCR cost driver is Pass B; Opus is
  * ~5× the per-token cost of Sonnet. Wide horizontal spines with large
  * type read fine on Sonnet; narrow vertical spines need Opus to avoid
@@ -724,12 +751,35 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
 
   const titleCased = toTitleCase(read.title);
 
+  // Canonical title / author override. When the lookup matched (any
+  // tier), the spine OCR can be replaced by the database's authoritative
+  // record. Spine OCR survives on spineRead.rawText / spineRead.title
+  // for diagnostic display. Flag-gated so the change is one-line
+  // revertible if a regression surfaces.
+  const useCanonical = USE_CANONICAL_TITLES && lookup.source !== 'none';
+  const displayTitle =
+    useCanonical && lookup.canonicalTitle && lookup.canonicalTitle.trim()
+      ? toTitleCase(lookup.canonicalTitle)
+      : titleCased;
+  const displayAuthor =
+    useCanonical && lookup.canonicalAuthor && lookup.canonicalAuthor.trim()
+      ? lookup.canonicalAuthor
+      : read.author;
+  // Multi-author authorLF builder: when allAuthors is set, format every
+  // author as Last, First and join with "; " (LibraryThing's canonical
+  // multi-author delimiter). Single-author cases fall back to the
+  // existing toAuthorLastFirst path.
+  const authorLF =
+    useCanonical && lookup.allAuthors && lookup.allAuthors.length > 1
+      ? lookup.allAuthors.map(flipNameLastFirst).filter(Boolean).join('; ')
+      : toAuthorLastFirst(displayAuthor);
+
   const book: BookRecord = {
     id: makeId(),
     spineRead,
-    title: titleCased,
-    author: read.author,
-    authorLF: toAuthorLastFirst(read.author),
+    title: displayTitle,
+    author: displayAuthor,
+    authorLF,
     isbn: lookup.isbn,
     publisher: lookup.publisher,
     publicationYear: lookup.publicationYear,
@@ -766,8 +816,11 @@ export async function buildBookFromCrop(opts: BuildBookOptions): Promise<BuiltBo
     lcshSubjects: lookup.lcshSubjects,
     coverUrlFallbacks: lookup.coverUrlFallbacks,
     original: {
-      title: titleCased,
-      author: read.author,
+      // Snapshot the displayed (canonical when available) values so
+      // the BookCard's "edited" pip compares user edits against the
+      // version they actually saw, not the spine OCR text.
+      title: displayTitle,
+      author: displayAuthor,
       isbn: lookup.isbn,
       publisher: lookup.publisher,
       publicationYear: lookup.publicationYear,
