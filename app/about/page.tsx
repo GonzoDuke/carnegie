@@ -11,7 +11,9 @@
  *     constant to forget about).
  */
 
-import { version as PKG_VERSION } from '../../package.json';
+import pkg from '../../package.json';
+
+const PKG_VERSION = pkg.version;
 
 const NAVY = '#1B3A5C';
 
