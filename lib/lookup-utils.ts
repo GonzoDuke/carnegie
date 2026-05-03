@@ -18,6 +18,22 @@ const LOC_HEADERS: Record<string, string> = {
 };
 
 /**
+ * Strip characters that mangle external API queries — wildcards (*),
+ * mentions (@), hashes (#), shell-y money signs ($), exclamation
+ * marks (!) — and collapse runs of whitespace. Used by lookupBook
+ * to clean spine-read titles like "Holy Sh*t" before they hit OL,
+ * Google Books, ISBNdb, or Wikidata, where a literal `*` becomes a
+ * wildcard or breaks the SPARQL CONTAINS filter.
+ */
+export function sanitizeForSearch(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/[\*@#\$!]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+/**
  * Open Library returns LCC in a padded internal form like
  *   "BL-0053.00000000.J36 2012"
  *   "Q--0335.00000000.M6 2024"

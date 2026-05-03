@@ -3,6 +3,7 @@ import {
   normalizeLcc,
   lookupLccByIsbn,
   lookupLccByTitleAuthor,
+  sanitizeForSearch,
 } from './lookup-utils';
 
 // Re-export the env-free helpers so existing callers of this module
@@ -1055,9 +1056,16 @@ export async function lookupBook(
     return empty;
   }
 
-  const cleanedAuthor = cleanAuthorForQuery(author);
-  const shortTitle = stripSubtitle(title);
-  const hadSubtitle = shortTitle !== title.trim();
+  // Sanitized search-only copies. The original `title` and `author`
+  // params still flow downstream unchanged — only the strings we
+  // hand to external APIs get the special-character scrub. "Holy
+  // Sh*t" → "Holy Sht" for the query; the BookRecord still shows
+  // the spine read.
+  const searchTitle = sanitizeForSearch(title);
+  const searchAuthor = sanitizeForSearch(author);
+  const cleanedAuthor = cleanAuthorForQuery(searchAuthor);
+  const shortTitle = stripSubtitle(searchTitle);
+  const hadSubtitle = shortTitle !== searchTitle.trim();
 
   let result: BookLookupResult = {
     isbn: '',
@@ -1073,12 +1081,14 @@ export async function lookupBook(
   let gbCoverUrl = '';
   let isbndbCoverUrl = '';
 
-  // Tier 1: full title + cleaned author
+  // Tier 1: full title + cleaned author. Sanitized strings only —
+  // `title` and `author` from the args still flow downstream for
+  // display / grounding.
   {
     const p = new URLSearchParams();
-    p.set('title', title);
+    p.set('title', searchTitle);
     if (cleanedAuthor) p.set('author', cleanedAuthor);
-    const r = await tryOpenLibrary(p, title, cleanedAuthor, log, 'ol-t1');
+    const r = await tryOpenLibrary(p, searchTitle, cleanedAuthor, log, 'ol-t1');
     if (r) {
       result = r;
       tier = 'ol-t1';
@@ -1306,9 +1316,8 @@ export async function lookupBook(
   }
 
   // LoC SRU by title + author. Catches books with no ISBN.
-  if (!result.lcc && title && author) {
-    const cleanedAuthor = cleanAuthorForQuery(author);
-    const sruLcc = await lookupLccByTitleAuthor(title, cleanedAuthor);
+  if (!result.lcc && searchTitle && searchAuthor) {
+    const sruLcc = await lookupLccByTitleAuthor(searchTitle, cleanedAuthor);
     if (sruLcc) {
       result.lcc = normalizeLcc(sruLcc);
       lccSource = 'loc';
@@ -1330,7 +1339,7 @@ export async function lookupBook(
   // when ISBNDB_API_KEY isn't configured.
   // -------------------------------------------------------------------------
   {
-    const isbndbHit = await lookupIsbndb(title, author, result.isbn || undefined, log);
+    const isbndbHit = await lookupIsbndb(searchTitle, searchAuthor, result.isbn || undefined, log);
     if (isbndbHit) {
       let usedIsbndb = false;
       if (!result.isbn && isbndbHit.isbn) {
@@ -1376,7 +1385,7 @@ export async function lookupBook(
   if (result.lcc) {
     log.tier('wikidata', `skipped — LCC already set (${lccSource})`);
   } else {
-    const wd = await lookupWikidata(title, author, log);
+    const wd = await lookupWikidata(searchTitle, searchAuthor, log);
     if (wd) {
       if (wd.lcc) {
         result.lcc = normalizeLcc(wd.lcc);
