@@ -25,8 +25,13 @@ export async function POST(req: NextRequest) {
 
   const title = (body.title ?? '').trim();
   const author = (body.author ?? '').trim();
+  const isbnHint = (body.hints?.isbn ?? '').trim();
 
-  if (!title) {
+  // matchEdition + an ISBN hint is enough on its own — barcode-scan
+  // callers go this route with no title/author. The non-edition path
+  // still requires a title because the title-driven cascade has
+  // nothing to query without one.
+  if (!title && !(body.matchEdition && isbnHint)) {
     return NextResponse.json({ error: 'title is required' }, { status: 400 });
   }
 
