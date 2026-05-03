@@ -778,6 +778,10 @@ interface IsbndbBook {
   language?: string;
   /** Cover image URL (used as a tertiary fallback in BookLookupResult.coverUrl). */
   image?: string;
+  /** Edition statement, e.g. "1st", "Reprint", "Revised". */
+  edition?: string;
+  /** ISBNdb's per-book synopsis when available. */
+  synopsis?: string;
 }
 
 // Module-level rate-limit gate. ISBNdb basic plan = 1 req/sec. Concurrent
@@ -835,19 +839,43 @@ interface IsbndbHit {
   subjects: string[];
   /** Cover image URL, when ISBNdb returned one. Used as a fallback in coverUrl. */
   coverUrl: string;
+  // Phase-2 enrichment fields. Optional so existing call sites that
+  // only read isbn/publisher/etc still compile. Populated by the
+  // mapper from the wider IsbndbBook surface area.
+  title?: string;
+  titleLong?: string;
+  allAuthors?: string[];
+  pages?: number;
+  binding?: string;
+  language?: string;
+  edition?: string;
+  synopsis?: string;
 }
 
 function isbndbBookToHit(b: IsbndbBook): IsbndbHit {
   const isbn = (b.isbn13 || b.isbn || '').replace(/[^\dxX]/g, '');
   const ddcRaw = Array.isArray(b.dewey_decimal) ? b.dewey_decimal[0] : b.dewey_decimal;
+  const allAuthors = Array.isArray(b.authors)
+    ? b.authors.map((a) => String(a).trim()).filter(Boolean)
+    : [];
   return {
     isbn,
     publisher: (b.publisher ?? '').trim(),
     publicationYear: parseIsbndbYear(b.date_published),
-    author: (b.authors && b.authors[0]) ? String(b.authors[0]).trim() : '',
+    author: allAuthors[0] ?? '',
     ddc: (ddcRaw ?? '').toString().trim(),
     subjects: Array.isArray(b.subjects) ? b.subjects.map((s) => String(s).trim()).filter(Boolean) : [],
     coverUrl: (b.image ?? '').trim(),
+    // Phase-2 enrichment fields — undefined when ISBNdb didn't supply
+    // them, so optional-chaining at the merge site stays clean.
+    title: b.title ? String(b.title).trim() : undefined,
+    titleLong: b.title_long ? String(b.title_long).trim() : undefined,
+    allAuthors: allAuthors.length > 0 ? allAuthors : undefined,
+    pages: typeof b.pages === 'number' && b.pages > 0 ? b.pages : undefined,
+    binding: b.binding ? String(b.binding).trim() : undefined,
+    language: b.language ? String(b.language).trim() : undefined,
+    edition: b.edition ? String(b.edition).trim() : undefined,
+    synopsis: b.synopsis ? String(b.synopsis).trim() : undefined,
   };
 }
 
@@ -1404,6 +1432,32 @@ export async function lookupBook(
         result.subjects = merged.slice(0, 15);
       }
       if (isbndbHit.coverUrl) isbndbCoverUrl = isbndbHit.coverUrl;
+
+      // Phase-2 enrichment merges. Each field gap-fills only — a
+      // higher-priority tier (OL) is never overwritten. The collected
+      // ISBNdb cover URL is also added to the fallback chain so
+      // commit-10 can swap to it when the OL covers URL 404s.
+      if (!result.canonicalTitle) {
+        result.canonicalTitle = isbndbHit.title || isbndbHit.titleLong || undefined;
+      }
+      if (!result.canonicalAuthor && isbndbHit.allAuthors?.[0]) {
+        result.canonicalAuthor = isbndbHit.allAuthors[0];
+      }
+      if (!result.allAuthors && isbndbHit.allAuthors?.length) {
+        result.allAuthors = [...isbndbHit.allAuthors];
+      }
+      if (!result.synopsis && isbndbHit.synopsis) result.synopsis = isbndbHit.synopsis;
+      if (!result.pageCount && isbndbHit.pages) result.pageCount = isbndbHit.pages;
+      if (!result.edition && isbndbHit.edition) result.edition = isbndbHit.edition;
+      if (!result.binding && isbndbHit.binding) result.binding = isbndbHit.binding;
+      if (!result.language && isbndbHit.language) result.language = isbndbHit.language;
+      if (isbndbHit.coverUrl) {
+        result.coverUrlFallbacks = result.coverUrlFallbacks ?? [];
+        if (!result.coverUrlFallbacks.includes(isbndbHit.coverUrl)) {
+          result.coverUrlFallbacks.push(isbndbHit.coverUrl);
+        }
+      }
+
       // Only flip the metadata source label when the prior chain truly
       // returned nothing (`source: 'none'`). When OL/Google already
       // matched, ISBNdb is a gap-filler — keep their flag for diagnostics.
