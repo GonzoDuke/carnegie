@@ -1,0 +1,236 @@
+{
+  "id": "96745148-9e45-498c-b7fb-75ed3314db14",
+  "filename": "4a997493-7bcd-4a9a-a7c4-0794b593fd7d-1_all_5565.cropped.jpg",
+  "fileSize": 765345,
+  "thumbnail": "",
+  "status": "done",
+  "spinesDetected": 6,
+  "booksIdentified": 4,
+  "books": [
+    {
+      "id": "c0959f2b-e802-48c9-aeb9-e224b93f7317",
+      "spineRead": {
+        "position": 3,
+        "rawText": "KILLING YOURSELF TO LIVE — CHUCK KLOSTERMAN",
+        "title": "KILLING YOURSELF TO LIVE",
+        "author": "CHUCK KLOSTERMAN",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 0,
+          "y": 32,
+          "width": 100,
+          "height": 16
+        }
+      },
+      "title": "Killing Yourself to Live",
+      "author": "CHUCK KLOSTERMAN",
+      "authorLF": "KLOSTERMAN, CHUCK",
+      "isbn": "9780743264464",
+      "publisher": "Scribner",
+      "publicationYear": 2005,
+      "lcc": "ML394 .K567 2005",
+      "genreTags": [
+        "Music",
+        "Travel",
+        "Personal memoir"
+      ],
+      "formTags": [],
+      "confidence": "HIGH",
+      "reasoning": "LCC ML394 → Music. Subject headings confirm rock music focus plus travel narrative. Klosterman's journey to death sites of rock musicians → Travel + Personal memoir. Clear cross-domain tagging.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "4a997493-7bcd-4a9a-a7c4-0794b593fd7d-1_all_5565.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780743264464-M.jpg?default=false",
+      "ocrModel": "s",
+      "original": {
+        "title": "Killing Yourself to Live",
+        "author": "CHUCK KLOSTERMAN",
+        "isbn": "9780743264464",
+        "publisher": "Scribner",
+        "publicationYear": 2005,
+        "lcc": "ML394 .K567 2005",
+        "genreTags": [
+          "Music",
+          "Travel",
+          "Personal memoir"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "9e5cdc8b-2558-4f96-9c35-cd83568200bd",
+      "spineRead": {
+        "position": 4,
+        "rawText": "Sex, Drugs, and Cocoa Puffs — Chuck Klosterman",
+        "title": "Sex, Drugs, and Cocoa Puffs",
+        "author": "Chuck Klosterman",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 0,
+          "y": 48,
+          "width": 100,
+          "height": 16
+        }
+      },
+      "title": "Sex, Drugs, and Cocoa Puffs",
+      "author": "Chuck Klosterman",
+      "authorLF": "Klosterman, Chuck",
+      "isbn": "9780743236003",
+      "publisher": "Simon & Schuster Audio",
+      "publicationYear": 2003,
+      "lcc": "E169.12 .K56 2003",
+      "genreTags": [
+        "Cultural history",
+        "Social criticism",
+        "Essays"
+      ],
+      "formTags": [],
+      "confidence": "HIGH",
+      "reasoning": "LCC E169.12 → American civilization/culture. Subject headings confirm popular culture focus. Klosterman writes cultural criticism in essay form about American society.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "4a997493-7bcd-4a9a-a7c4-0794b593fd7d-1_all_5565.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780743236003-M.jpg?default=false",
+      "ocrModel": "s",
+      "original": {
+        "title": "Sex, Drugs, and Cocoa Puffs",
+        "author": "Chuck Klosterman",
+        "isbn": "9780743236003",
+        "publisher": "Simon & Schuster Audio",
+        "publicationYear": 2003,
+        "lcc": "E169.12 .K56 2003",
+        "genreTags": [
+          "Cultural history",
+          "Social criticism",
+          "Essays"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "9e11c390-61e6-4ff2-9e57-fa6939d3d10e",
+      "spineRead": {
+        "position": 5,
+        "rawText": "I WEAR THE BLACK HAT — CHUCK KLOSTERMAN",
+        "title": "I WEAR THE BLACK HAT",
+        "author": "CHUCK KLOSTERMAN",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 0,
+          "y": 64,
+          "width": 100,
+          "height": 16
+        }
+      },
+      "title": "I Wear the Black Hat",
+      "author": "CHUCK KLOSTERMAN",
+      "authorLF": "KLOSTERMAN, CHUCK",
+      "isbn": "9781439184493",
+      "publisher": "Simon & Schuster",
+      "publicationYear": 2013,
+      "lcc": "P96 .V48 K58 2013",
+      "genreTags": [
+        "Media literacy",
+        "Ethics",
+        "Social criticism"
+      ],
+      "formTags": [],
+      "confidence": "HIGH",
+      "reasoning": "LCC P96 → Mass media/communication. Subject headings confirm villains in mass media/popular culture analysis. Ethics subject + Klosterman's critical analysis style → Media literacy + Ethics + Social criticism.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "4a997493-7bcd-4a9a-a7c4-0794b593fd7d-1_all_5565.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9781439184493-M.jpg?default=false",
+      "ocrModel": "s",
+      "original": {
+        "title": "I Wear the Black Hat",
+        "author": "CHUCK KLOSTERMAN",
+        "isbn": "9781439184493",
+        "publisher": "Simon & Schuster",
+        "publicationYear": 2013,
+        "lcc": "P96 .V48 K58 2013",
+        "genreTags": [
+          "Media literacy",
+          "Ethics",
+          "Social criticism"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "638ccea3-bd60-491e-b474-f23f2baf2ec1",
+      "spineRead": {
+        "position": 6,
+        "rawText": "EATING THE DINOSAUR — CHUCK KLOSTERMAN",
+        "title": "EATING THE DINOSAUR",
+        "author": "CHUCK KLOSTERMAN",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 0,
+          "y": 80,
+          "width": 100,
+          "height": 20
+        }
+      },
+      "title": "Eating the Dinosaur",
+      "author": "CHUCK KLOSTERMAN",
+      "authorLF": "KLOSTERMAN, CHUCK",
+      "isbn": "9781439168486",
+      "publisher": "Scribner",
+      "publicationYear": 2009,
+      "lcc": "E169.12 .K555 2009",
+      "genreTags": [
+        "Social criticism",
+        "Sports",
+        "Comedy & humor"
+      ],
+      "formTags": [],
+      "confidence": "HIGH",
+      "reasoning": "LCC E169 → American civilization/social commentary. Subject headings confirm popular culture + sports coverage. Klosterman is known for humorous cultural criticism → Social criticism + Comedy & humor + Sports.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "4a997493-7bcd-4a9a-a7c4-0794b593fd7d-1_all_5565.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9781439168486-M.jpg?default=false",
+      "ocrModel": "s",
+      "original": {
+        "title": "Eating the Dinosaur",
+        "author": "CHUCK KLOSTERMAN",
+        "isbn": "9781439168486",
+        "publisher": "Scribner",
+        "publicationYear": 2009,
+        "lcc": "E169.12 .K555 2009",
+        "genreTags": [
+          "Social criticism",
+          "Sports",
+          "Comedy & humor"
+        ],
+        "formTags": []
+      }
+    }
+  ],
+  "croppedFrom": "4a997493-7bcd-4a9a-a7c4-0794b593fd7d-1_all_5565.jpg",
+  "sourceDimensions": {
+    "width": 2870,
+    "height": 1768
+  }
+}
