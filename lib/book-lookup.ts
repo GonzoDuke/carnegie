@@ -1434,6 +1434,9 @@ export async function lookupBook(
   // when ISBNDB_API_KEY isn't configured.
   // -------------------------------------------------------------------------
   {
+    // Capture pre-ISBNdb state so the post-merge re-query block knows
+    // whether ISBNdb was the first tier to surface an ISBN.
+    const preIsbndbIsbn = result.isbn;
     const isbndbHit = await lookupIsbndb(searchTitle, searchAuthor, result.isbn || undefined, log);
     if (isbndbHit) {
       let usedIsbndb = false;
@@ -1495,6 +1498,78 @@ export async function lookupBook(
         result.source = 'isbndb';
         if (!tier || tier === 'none') tier = 'isbndb';
       }
+    }
+
+    // -----------------------------------------------------------------------
+    // Cross-tier ISBN re-queries. When ISBNdb was the first tier to
+    // surface an ISBN (OL/GB missed earlier), go back and run OL-by-isbn
+    // and the full MARC parse with that ISBN — they often have LCC,
+    // LCSH, year, page count we couldn't get from the title-only
+    // search. Wrapped in try/catch + per-promise .catch so any single
+    // failure leaves the existing record untouched.
+    // -----------------------------------------------------------------------
+    if (!preIsbndbIsbn && result.isbn) {
+      const newIsbn = result.isbn;
+      log.tier('cross-isbn', `isbn=${newIsbn} surfaced by ISBNdb — running OL-by-isbn + MARC re-query`);
+      try {
+        const [olEnrich, marcEnrich] = await Promise.all([
+          enrichFromIsbn(newIsbn).catch(() => ({ firstPublishYear: 0, lcc: '' })),
+          lookupFullMarcByIsbn(newIsbn).catch(() => null),
+        ]);
+        if (olEnrich) {
+          if (!result.lcc && olEnrich.lcc) {
+            result.lcc = normalizeLcc(olEnrich.lcc);
+            lccSource = 'ol';
+            log.tier('cross-isbn', `  ol-by-isbn filled lcc=${JSON.stringify(result.lcc)}`);
+          }
+          if (!result.publicationYear && olEnrich.firstPublishYear) {
+            result.publicationYear = olEnrich.firstPublishYear;
+            log.tier('cross-isbn', `  ol-by-isbn filled year=${olEnrich.firstPublishYear}`);
+          }
+        }
+        if (marcEnrich) {
+          if (
+            marcEnrich.lcshSubjects.length > 0 &&
+            !(result.lcshSubjects && result.lcshSubjects.length > 0)
+          ) {
+            result.lcshSubjects = marcEnrich.lcshSubjects;
+            log.tier('cross-isbn', `  marc filled lcsh=${marcEnrich.lcshSubjects.length}`);
+          }
+          if (!result.ddc && marcEnrich.ddc) {
+            result.ddc = marcEnrich.ddc;
+            log.tier('cross-isbn', `  marc filled ddc=${marcEnrich.ddc}`);
+          }
+          if (!result.pageCount && marcEnrich.pageCount) {
+            result.pageCount = marcEnrich.pageCount;
+          }
+          if (!result.edition && marcEnrich.edition) {
+            result.edition = marcEnrich.edition;
+          }
+          if (!result.canonicalTitle && marcEnrich.title) {
+            result.canonicalTitle = marcEnrich.title;
+          }
+          if (!result.canonicalAuthor && marcEnrich.author) {
+            result.canonicalAuthor = marcEnrich.author;
+          }
+          if (marcEnrich.coAuthors.length > 0) {
+            const merged = new Set<string>(result.allAuthors ?? []);
+            if (marcEnrich.author) merged.add(marcEnrich.author);
+            for (const a of marcEnrich.coAuthors) merged.add(a);
+            if (merged.size > (result.allAuthors?.length ?? 0)) {
+              result.allAuthors = Array.from(merged);
+            }
+          }
+        }
+        // If we just promoted result.lcc, the standalone Wikidata gate
+        // below uses it correctly. No additional plumbing needed.
+      } catch (err) {
+        log.tier(
+          'cross-isbn',
+          `error ${err instanceof Error ? err.message : String(err)} (skipping)`
+        );
+      }
+    } else if (preIsbndbIsbn) {
+      log.tier('cross-isbn', 'skipped — ISBN was already known before ISBNdb');
     }
   }
 
