@@ -1,0 +1,550 @@
+{
+  "id": "2ada5b3b-7b80-4bf9-9a8d-c19dbbac8bb0",
+  "filename": "shelf-capture-001.cropped.jpg",
+  "fileSize": 1039195,
+  "thumbnail": "",
+  "status": "done",
+  "spinesDetected": 9,
+  "booksIdentified": 8,
+  "books": [
+    {
+      "id": "682fc1c3-7f8a-4cc8-a9d0-f3cfb0b3995c",
+      "spineRead": {
+        "position": 2,
+        "rawText": "THE ANNOTATED SHERLOCK HOLMES — William S. Baring-Gould",
+        "title": "THE ANNOTATED SHERLOCK HOLMES",
+        "author": "William S. Baring-Gould",
+        "publisher": "Clarkson Potter",
+        "lcc": "",
+        "confidence": "HIGH",
+        "note": "Volume I; ISBN partially visible (0-517-50...) at foot, not an LCC",
+        "bbox": {
+          "x": 15,
+          "y": 5,
+          "width": 12,
+          "height": 90
+        }
+      },
+      "title": "The Annotated Sherlock Holmes",
+      "author": "Arthur Conan Doyle",
+      "authorLF": "Doyle, Arthur Conan; Baring-Gould, William S.",
+      "isbn": "9780517502914",
+      "publisher": "Clarkson N. Potter",
+      "publicationYear": 1967,
+      "lcc": "PR4620 .A5 B3 1967",
+      "genreTags": [
+        "Fiction",
+        "Literary criticism",
+        "British literature"
+      ],
+      "formTags": [
+        "Reference"
+      ],
+      "confidence": "HIGH",
+      "reasoning": "LCC PR4620 → Doyle/Holmes literature. Annotated edition by Baring-Gould (noted Holmes scholar) → Literary criticism + Reference. Holmes stories are Fiction + British literature.",
+      "status": "pending",
+      "warnings": [
+        "Possible duplicate — same title found at spine #2 and #4. Merge or keep both?"
+      ],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780517502914-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "The Annotated Sherlock Holmes [2/2]",
+      "allAuthors": [
+        "Arthur Conan Doyle",
+        "William S. Baring-Gould"
+      ],
+      "pageCount": 824,
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780517502914-M.jpg?default=false"
+      ],
+      "original": {
+        "title": "The Annotated Sherlock Holmes",
+        "author": "Arthur Conan Doyle",
+        "isbn": "9780517502914",
+        "publisher": "Clarkson N. Potter",
+        "publicationYear": 1967,
+        "lcc": "PR4620 .A5 B3 1967",
+        "genreTags": [
+          "Fiction",
+          "Literary criticism",
+          "British literature"
+        ],
+        "formTags": [
+          "Reference"
+        ]
+      },
+      "duplicateGroup": "dup-8k8y481j",
+      "duplicateOf": [
+        4
+      ]
+    },
+    {
+      "id": "b9da5dc8-b82a-4730-bf4b-aaa7591ebb63",
+      "spineRead": {
+        "position": 3,
+        "rawText": "The Annotated Sherlock Holmes",
+        "title": "The Annotated Sherlock Holmes",
+        "author": "",
+        "publisher": "Clarkson N. Potter",
+        "lcc": "",
+        "confidence": "MEDIUM",
+        "note": "Spine clearly shows 'THE ANNOTATED SHERLOCK HOLMES' with volume 'I' and Clarkson N. Potter publisher mark at foot. Author/editor name not visible on this spine (the adjacent book spine shows 'William S. Baring-Gould' but that is a different book per instructions to read a single spine).",
+        "bbox": {
+          "x": 27,
+          "y": 5,
+          "width": 8,
+          "height": 90
+        }
+      },
+      "title": "The Annotated Sherlock Holmes",
+      "author": "Arthur Conan Doyle",
+      "authorLF": "Doyle, Arthur Conan",
+      "isbn": "9780517511138",
+      "publisher": "Clarkson N. Potter, Inc.",
+      "publicationYear": 1968,
+      "lcc": "PR4620 .A5 B3 1967",
+      "genreTags": [
+        "Fiction",
+        "British literature",
+        "Literary criticism"
+      ],
+      "formTags": [
+        "Reference"
+      ],
+      "confidence": "MEDIUM",
+      "reasoning": "LCC PR4620 → Arthur Conan Doyle/Holmes literature. 'Annotated' indicates scholarly commentary → Reference form tag + Literary criticism genre tag. Holmes stories are British fiction. Subject headings confirm detective fiction content.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780517511138-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "The Annotated Sherlock Holmes [1/2]",
+      "allAuthors": [
+        "Arthur Conan Doyle"
+      ],
+      "pageCount": 689,
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780517511138-M.jpg?default=false"
+      ],
+      "original": {
+        "title": "The Annotated Sherlock Holmes",
+        "author": "Arthur Conan Doyle",
+        "isbn": "9780517511138",
+        "publisher": "Clarkson N. Potter, Inc.",
+        "publicationYear": 1968,
+        "lcc": "PR4620 .A5 B3 1967",
+        "genreTags": [
+          "Fiction",
+          "British literature",
+          "Literary criticism"
+        ],
+        "formTags": [
+          "Reference"
+        ]
+      }
+    },
+    {
+      "id": "c9171d48-a18b-43ce-aebd-0e030410677b",
+      "spineRead": {
+        "position": 4,
+        "rawText": "The Annotated Sherlock Holmes — William S. Baring-Gould",
+        "title": "The Annotated Sherlock Holmes",
+        "author": "William S. Baring-Gould",
+        "publisher": "Clarkson N. Potter",
+        "lcc": "",
+        "confidence": "HIGH",
+        "note": "Volume II; ISBN 0-517-502917 visible on spine",
+        "bbox": {
+          "x": 35,
+          "y": 5,
+          "width": 12,
+          "height": 90
+        }
+      },
+      "title": "The Annotated Sherlock Holmes",
+      "author": "Arthur Conan Doyle",
+      "authorLF": "Doyle, Arthur Conan; Baring-Gould, William S.",
+      "isbn": "9780517502914",
+      "publisher": "Clarkson N. Potter, Inc.",
+      "publicationYear": 1967,
+      "lcc": "PR4620 .A5 B3 1967",
+      "genreTags": [
+        "Fiction",
+        "Literary criticism",
+        "Reference"
+      ],
+      "formTags": [],
+      "confidence": "HIGH",
+      "reasoning": "LCC PR4620 → Doyle/Holmes literature. Annotated edition combines Fiction (Holmes stories) + Literary criticism (scholarly annotations) + Reference (comprehensive annotation work). Subject headings confirm Holmes content.",
+      "status": "pending",
+      "warnings": [
+        "Possible duplicate — same title found at spine #2 and #4. Merge or keep both?"
+      ],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780517502914-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "The Annotated Sherlock Holmes [2/2]",
+      "allAuthors": [
+        "Arthur Conan Doyle",
+        "William S. Baring-Gould"
+      ],
+      "pageCount": 824,
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780517502914-M.jpg?default=false"
+      ],
+      "original": {
+        "title": "The Annotated Sherlock Holmes",
+        "author": "Arthur Conan Doyle",
+        "isbn": "9780517502914",
+        "publisher": "Clarkson N. Potter, Inc.",
+        "publicationYear": 1967,
+        "lcc": "PR4620 .A5 B3 1967",
+        "genreTags": [
+          "Fiction",
+          "Literary criticism",
+          "Reference"
+        ],
+        "formTags": []
+      },
+      "duplicateGroup": "dup-8k8y481j",
+      "duplicateOf": [
+        2
+      ]
+    },
+    {
+      "id": "3242fb36-884b-4bb9-aef7-34c344fc092c",
+      "spineRead": {
+        "position": 5,
+        "rawText": "The Book of Dust, Volume 1: La Belle Sauvage — Philip Pullman",
+        "title": "The Book of Dust, Volume 1: La Belle Sauvage",
+        "author": "Philip Pullman",
+        "publisher": "Knopf",
+        "lcc": "",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 47,
+          "y": 5,
+          "width": 10,
+          "height": 90
+        }
+      },
+      "title": "The Book of Dust: Volume 1: LA Belle Sauvage",
+      "author": "Philip Pullman",
+      "authorLF": "Pullman, Philip",
+      "isbn": "9781509460779",
+      "publisher": "Random House",
+      "publicationYear": 2017,
+      "lcc": "PZ7.P96 Boo 2017",
+      "genreTags": [
+        "Fiction",
+        "[Proposed] Young adult fiction",
+        "[Proposed] Fantasy fiction"
+      ],
+      "formTags": [],
+      "confidence": "HIGH",
+      "reasoning": "LCC PZ7 → juvenile/young adult literature. Subject headings confirm Teen & Young Adult + Fantasy + Fiction. Pullman is established fantasy author. Need YA and fantasy fiction tags for this domain.",
+      "status": "pending",
+      "warnings": [
+        "LCC code missing — tags inferred from title and author only."
+      ],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "isbndb",
+      "lccSource": "inferred",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9781509460779-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "The Book of Dust: Volume 1: La Belle Sauvage",
+      "allAuthors": [
+        "Philip Pullman"
+      ],
+      "edition": "Unabridged",
+      "binding": "Preloaded Digital Audio Player",
+      "language": "en",
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9781509460779-M.jpg?default=false",
+        "https://images.isbndb.com/covers/11630043482725.jpg"
+      ],
+      "original": {
+        "title": "The Book of Dust: Volume 1: LA Belle Sauvage",
+        "author": "Philip Pullman",
+        "isbn": "9781509460779",
+        "publisher": "Random House",
+        "publicationYear": 2017,
+        "lcc": "PZ7.P96 Boo 2017",
+        "genreTags": [
+          "Fiction",
+          "[Proposed] Young adult fiction",
+          "[Proposed] Fantasy fiction"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "f9406f7e-499c-493c-9295-6fa66e3ada9a",
+      "spineRead": {
+        "position": 6,
+        "rawText": "The Secret Commonwealth — Philip Pullman",
+        "title": "The Secret Commonwealth",
+        "author": "Philip Pullman",
+        "publisher": "Knopf",
+        "lcc": "",
+        "confidence": "HIGH",
+        "note": "Red spine; subtitle 'The Book of Dust Volume II' at foot",
+        "bbox": {
+          "x": 57,
+          "y": 5,
+          "width": 8,
+          "height": 90
+        }
+      },
+      "title": "The Secret Commonwealth",
+      "author": "Philip Pullman",
+      "authorLF": "Pullman, Philip",
+      "isbn": "9780241373330",
+      "publisher": "Penguin and David Fickling Books",
+      "publicationYear": 2019,
+      "lcc": "PZ7 .P968 Se 2019",
+      "genreTags": [
+        "Fiction"
+      ],
+      "formTags": [],
+      "confidence": "HIGH",
+      "reasoning": "LCC PZ7 → Children's/YA fiction. Subject headings confirm fiction with fantasy elements and Lyra Belacqua character (His Dark Materials series). Clean fiction classification.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780241373330-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "The Secret Commonwealth",
+      "allAuthors": [
+        "Philip Pullman"
+      ],
+      "pageCount": 696,
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780241373330-M.jpg?default=false"
+      ],
+      "original": {
+        "title": "The Secret Commonwealth",
+        "author": "Philip Pullman",
+        "isbn": "9780241373330",
+        "publisher": "Penguin and David Fickling Books",
+        "publicationYear": 2019,
+        "lcc": "PZ7 .P968 Se 2019",
+        "genreTags": [
+          "Fiction"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "e1efcc87-e02d-4a31-8dbb-fb236e92ca36",
+      "spineRead": {
+        "position": 7,
+        "rawText": "The Golden Compass — Philip Pullman",
+        "title": "The Golden Compass",
+        "author": "Philip Pullman",
+        "publisher": "Knopf",
+        "lcc": "",
+        "confidence": "HIGH",
+        "note": "His Dark Materials Book 1; brown spine with circular illustration",
+        "bbox": {
+          "x": 65,
+          "y": 5,
+          "width": 8,
+          "height": 90
+        }
+      },
+      "title": "The Golden Compass Graphic Novel, Volume 2",
+      "author": "Philip Pullman",
+      "authorLF": "Pullman, Philip; Melchior-Durand, Stéphane; Oubrerie, Clément",
+      "isbn": "9780553535136",
+      "publisher": "Random House Children's Books",
+      "publicationYear": 2016,
+      "lcc": "PZ7.7 .M455Go 2015",
+      "genreTags": [
+        "Fiction",
+        "[Proposed] Fantasy"
+      ],
+      "formTags": [],
+      "confidence": "HIGH",
+      "reasoning": "LCC PZ7.7 → Children's literature/Fiction. LCSH subjects confirm 'Fantasy' and 'FICTION'. Well-known fantasy novel requires Fantasy tag not in current vocabulary.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCADcABoDASIAAhEBAxEB/8QAHAAAAgIDAQEAAAAAAAAAAAAABgcCBQEDBAAI/8QAORAAAgECBAQDBQcCBwEAAAAAAQIDBBEABRIhBhMxQSJRYQdxgZGxFBUjMqHB8ELRFlJicoKSssL/xAAaAQADAQEBAQAAAAAAAAAAAAACBAUDBgAB/8QAKxEAAgIBAgQFAwUAAAAAAAAAAQIAAxEEIQUSQVETFDFhcSKhsTIzkdHw/9oADAMBAAIRAxEAPwBXHiEMvhj/AFGNYz0MLBW8vzA4CAwsLHGdQte++JR0ymXBqWhuueW6oSfO+Jffy/5TgH1hjudsZDbfm/XHvLie8yZXrP8ADEucfPbHEDtiYYn3YolBJoedfN2BPTpvj3NPmPljlBNrd8ev6/rgeQQubM0dcSBsNsR2OMgfPGsXBkgTa1sevbtjCixHc4mE2G4x8hjMkIhcA4lyRc7kDtfFkuT5kW8NBWHSLkiFv7Y2fc+ZEW+wVXYEctgd/S2BLwzWR6iVIh6DffGeR6n5YsqjLqumS9TSyxX6GRCv1xrFNIQCNFj/AKxj4W7QcR41uRCnjrDJVovImeBdSEa7AlTbsGA2O/Udt8DVTWzffJpIiWQxo7RqL3a72NvQavngylznLnV5BkcEMhKuq6hpDCRma4Ci4IbTa+wAHbAO9VDLxjWTxwlYGtFEOZpMYuSLkejb7W3OETggzstdZamnxYDkkdoY0cdQaJ/wZV27objpf9sD0mY1auw50wsSLcw/3wafblpsuaSCORWZLFkqyT0PW/Xp/LjC1qqlDUzFFcLrNhcbC/uwqqnciSLXO2Ze19Tz9btLPKZJZHV5l0uVLEjUBYA2I2At5bYG6OlrKrOqo0iayHuiBNbOdCgi3XzIPQHF3NPLOqSVJczFRqLuzMD6liT5dTigymvqP8RBMvmenljlZiV3MmlrWFwew+uKVH0EtjOP4j3GWPlqkPt+IwqefJdX2SvlmhqlS8lPKQilullPp78LHNc9pIc0rIlp9KpM6gazsAxwZccUNdPljZ/NHFDOJAwk0aXLatlAt12v88JytVqqsnqLH8aRpOvmb4Kiyu5OblGficxfzq+CTiN2FBKsZ5jMvLBLsN226+84DKVKeqzWGGSaSCbnnTImxAZtSsP+2DaMlZJE0LYL4rDbbsPTA7wfw9TZkIpppEjcKpPMk0knT2/nlgNPaKSWO4nUceoL1VKvrv8AbE9xgKumKUozWpqoTGJNE0lx373PvwGxQNyk3/pHbDI4zyCDJMrFdDULLIAbaZQ51ADrt06YHqPJ5ZKSBxFsyKenp78bvfS4BrH2/qct5a1Ww25hfmJWnjqpVuGKta/Y+nyxu4Jqc0JjosvvIIfyxxxBiLG9+lzucasyjjkgdZV1JJ4COvU2/fHX7NTAK9mqDDp5ZC8x9NmuOh0Nv8Pjic36PWdrx7a5EHoB+ZXe0nMZXyyohnWJwbDUsShr7AeIC9sdGWRaMtpFPVYkHU+QxR8ekTSxRvc65gCPPv8AtgriGmJFCbBQMLWuRWo9JDCDxWJlRnDFaFypHM8JHwYE/Q4vvZ3T0bUMzyU5nqFYLpcjQQey+NSX62Av09dh3O300sd7WdmG3f8ADc/UDBHwOs0GQ1dRFBUyJcgtF+VLKTqN1IBF+t1IubdTbdtxLHHDnV47AQI4pPOznL4wCbzbn4EYLlD6R4u3lgHzaRp+MsqjS6jUSVB62AP7YP1HhG/bzwrqSAq/7rJNP1M3zBriFSYYwdynj27bhT/6wR8N1cFPw5PDJNplcO0a8hTa4sbOdxfYbbfrYZ4g3ER3LWZQfK7A/wDzgmoXqqfhFlWOm5Em7MHHNIvtcBrhb+lr+tjhl9gJQ4uxbWv7Y/AgDETLx5T7HUkbNb4HDEWCQqDo7eWF5ko5nGtSx25cNut+tv7nDYgky4QRiR8wDhRqC6bXtvb0xhqAGYfAk2g4BPvFlX1fOqjESQbRsN9v6wfdg3rEWHhGmKxMGOkFir+TGxJYr3uLAd/iAxFJM0VXYotwGbqQP4cMLiuR4OHaKn8JhAvGRG6lgAPELsRY+m174Zt6cs0vsNl7sTuTF7wepfiHNJdrAqoP8/24+gKRcySlhRMrp2RUUBmVgSLdT4euEF7PUEk2Zyt0aoK7b3Avh2ikoXAYnSW3I+63Fvk9vljG0DxTknpFq/2xt3iIoiWzaoU22lAt/wAVwe+0CSNIYghpBZWJ5Juet/G1zqPr78BdKFn4pqYstDupqX5IkIV2AJC37XsB8emLHjrMq16IvmAZZ1iKqHTRYAbCwtbDDbtvNHOGY+5nL7LLxZYJ4zaQ1BZdr7i3zwx48wq0jVVml0gADxHAH7MKV5skgjV40azv420g7+Z2Hx92DxaKtIGmK69iGBBwlaGa1iD1hafl8NQe0TuTTquY1EklO8uqWRhIjkbE9PL+HHZxY4myd+RTzAhLF2a6jzA/TFdSZWR+JLGodjvcb47hlsIC3jT5YosRzZ7RTdlIPWXfCdekOSUVNJSwsERfGFIYk79fiR/BgiGa5ZbxZexPe02AaKAxXMTyIPRibfDpjYDN3mcnCxpZmJyJoGAAAhBLkpW2idTceWND5NJfaZLX9b/TF6VB7b40Hb5YVXVPnePHTp2lK+TzKt1mi27XN/piH3RKdy6YuDuQCTY4zb1PzwY1TjoJmaFn/9k=",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780553535136-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "The Golden Compass Graphic Novel, Volume 2",
+      "allAuthors": [
+        "Philip Pullman",
+        "Stéphane Melchior-Durand",
+        "Clément Oubrerie"
+      ],
+      "pageCount": 80,
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780553535136-M.jpg?default=false"
+      ],
+      "original": {
+        "title": "The Golden Compass Graphic Novel, Volume 2",
+        "author": "Philip Pullman",
+        "isbn": "9780553535136",
+        "publisher": "Random House Children's Books",
+        "publicationYear": 2016,
+        "lcc": "PZ7.7 .M455Go 2015",
+        "genreTags": [
+          "Fiction",
+          "[Proposed] Fantasy"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "75691fec-bd3f-46c6-a644-51b1038d6746",
+      "spineRead": {
+        "position": 8,
+        "rawText": "The Subtle Knife — Philip Pullman",
+        "title": "The Subtle Knife",
+        "author": "Philip Pullman",
+        "publisher": "Knopf",
+        "lcc": "",
+        "confidence": "HIGH",
+        "note": "His Dark Materials Book II",
+        "bbox": {
+          "x": 73,
+          "y": 5,
+          "width": 8,
+          "height": 90
+        }
+      },
+      "title": "The Subtle Knife",
+      "author": "Philip Pullman",
+      "authorLF": "Pullman, Philip",
+      "isbn": "9780345916419",
+      "publisher": "Audible Studios on Brilliance",
+      "publicationYear": 1997,
+      "lcc": "PZ7 .P968Su 1997",
+      "genreTags": [
+        "Fiction",
+        "[Proposed] Fantasy",
+        "[Proposed] Young adult fiction"
+      ],
+      "formTags": [],
+      "confidence": "HIGH",
+      "reasoning": "LCC PZ7 → Children's/YA literature. LCSH confirms Fantasy and Juvenile fiction. Second book in His Dark Materials trilogy - clearly fantasy fiction for young adults.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780345916419-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "The Subtle Knife",
+      "allAuthors": [
+        "Philip Pullman"
+      ],
+      "pageCount": 350,
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780345916419-M.jpg?default=false"
+      ],
+      "original": {
+        "title": "The Subtle Knife",
+        "author": "Philip Pullman",
+        "isbn": "9780345916419",
+        "publisher": "Audible Studios on Brilliance",
+        "publicationYear": 1997,
+        "lcc": "PZ7 .P968Su 1997",
+        "genreTags": [
+          "Fiction",
+          "[Proposed] Fantasy",
+          "[Proposed] Young adult fiction"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "63ca66db-0ddd-4ec7-9c84-700d20afabab",
+      "spineRead": {
+        "position": 9,
+        "rawText": "Fairy Tales from the Brothers Grimm: A New English Version — Philip Pullman",
+        "title": "Fairy Tales from the Brothers Grimm: A New English Version",
+        "author": "Philip Pullman",
+        "publisher": "Penguin",
+        "lcc": "",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 81,
+          "y": 5,
+          "width": 10,
+          "height": 90
+        }
+      },
+      "title": "Fairy Tales from the Brothers Grimm: A New English Version",
+      "author": "Jacob Grimm",
+      "authorLF": "Grimm, Jacob; Pullman, Philip",
+      "isbn": "9781491572856",
+      "publisher": "Viking",
+      "publicationYear": 2012,
+      "lcc": "GR166 .K5613 2013",
+      "genreTags": [
+        "Fiction",
+        "[Proposed] Fairy tales",
+        "Literary criticism"
+      ],
+      "formTags": [],
+      "confidence": "HIGH",
+      "reasoning": "LCC GR166 → folklore/fairy tales. Subject headings confirm fairy tales and fantasy fiction. Pullman's 'new English version' suggests adaptation/retelling work, warranting Literary criticism alongside Fiction. Fairy tales not in current vocabulary but clearly needed.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9781491572856-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "Fairy Tales from the Brothers Grimm: A New English Version (Penguin Classics Deluxe Edition)",
+      "allAuthors": [
+        "Jacob Grimm",
+        "Philip Pullman"
+      ],
+      "pageCount": 448,
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9781491572856-M.jpg?default=false"
+      ],
+      "original": {
+        "title": "Fairy Tales from the Brothers Grimm: A New English Version",
+        "author": "Jacob Grimm",
+        "isbn": "9781491572856",
+        "publisher": "Viking",
+        "publicationYear": 2012,
+        "lcc": "GR166 .K5613 2013",
+        "genreTags": [
+          "Fiction",
+          "[Proposed] Fairy tales",
+          "Literary criticism"
+        ],
+        "formTags": []
+      }
+    }
+  ],
+  "croppedFrom": "shelf-capture-001.jpg",
+  "sourceDimensions": {
+    "width": 2584,
+    "height": 1944
+  }
+}
