@@ -24,20 +24,21 @@ interface CommitBody {
   commitMessage?: string;
 }
 
-interface GhFile {
-  content?: string; // base64 (only when getting a file by path)
-  sha: string;
-  encoding?: string;
-}
+// ---------------------------------------------------------------------------
+// GitHub API plumbing
+//
+// This route writes BOTH lib/tag-vocabulary.json and lib/vocabulary-changelog.md
+// in a SINGLE Git commit via the low-level Trees API. The previous Contents-
+// API implementation did two sequential PUTs, which split atomicity — a
+// transient 500 on the second write left the vocabulary updated in production
+// but the changelog missing the matching entry. The Trees flow eliminates that
+// drift: blobs and trees are dangling-but-unreferenced until the final ref
+// PATCH lands, so any pre-PATCH failure is a no-op on the visible repo state.
+// ---------------------------------------------------------------------------
 
-interface GhCommitResponse {
-  content?: { path: string; sha: string };
-  commit?: { sha: string; html_url: string; message: string };
-}
-
-async function ghFetch(path: string, init?: RequestInit) {
+async function ghFetch(path: string, init?: RequestInit): Promise<Response> {
   const token = process.env.GITHUB_TOKEN!;
-  const res = await fetch(`https://api.github.com${path}`, {
+  return fetch(`https://api.github.com${path}`, {
     ...init,
     headers: {
       Authorization: `token ${token}`,
@@ -49,39 +50,150 @@ async function ghFetch(path: string, init?: RequestInit) {
     },
     cache: 'no-store',
   });
-  if (!res.ok) {
-    const text = await res.text();
+}
+
+async function ghFetchOrThrow(path: string, init?: RequestInit): Promise<Response> {
+  const r = await ghFetch(path, init);
+  if (!r.ok) {
+    const text = await r.text();
     throw new Error(
-      `GitHub ${init?.method ?? 'GET'} ${path}: ${res.status} ${text.slice(0, 300)}`
+      `GitHub ${init?.method ?? 'GET'} ${path}: ${r.status} ${text.slice(0, 300)}`
     );
   }
-  return res;
+  return r;
 }
 
-async function getFile(path: string): Promise<GhFile> {
-  const r = await ghFetch(
-    `/repos/${REPO}/contents/${path}?ref=${encodeURIComponent(BRANCH)}`
+interface RefResponse {
+  object: { sha: string; type: string };
+}
+interface CommitResponse {
+  sha: string;
+  tree: { sha: string };
+  html_url: string;
+}
+interface TreeResponse {
+  sha: string;
+  tree: { path: string; sha: string }[];
+}
+interface BlobResponse {
+  sha: string;
+}
+
+async function getRefSha(): Promise<string> {
+  const r = await ghFetchOrThrow(
+    `/repos/${REPO}/git/ref/heads/${encodeURIComponent(BRANCH)}`
   );
-  return (await r.json()) as GhFile;
+  const data = (await r.json()) as RefResponse;
+  return data.object.sha;
 }
 
-async function putFile(
-  path: string,
-  content: string,
-  sha: string,
-  message: string
-): Promise<GhCommitResponse> {
-  const body = {
-    message,
-    content: Buffer.from(content, 'utf8').toString('base64'),
-    sha,
-    branch: BRANCH,
-  };
-  const r = await ghFetch(`/repos/${REPO}/contents/${path}`, {
-    method: 'PUT',
-    body: JSON.stringify(body),
+async function getCommit(sha: string): Promise<CommitResponse> {
+  const r = await ghFetchOrThrow(`/repos/${REPO}/git/commits/${sha}`);
+  return (await r.json()) as CommitResponse;
+}
+
+async function getTree(sha: string): Promise<TreeResponse> {
+  const r = await ghFetchOrThrow(`/repos/${REPO}/git/trees/${sha}`);
+  return (await r.json()) as TreeResponse;
+}
+
+async function getBlobUtf8(sha: string): Promise<string> {
+  const r = await ghFetchOrThrow(`/repos/${REPO}/git/blobs/${sha}`);
+  const data = (await r.json()) as { content?: string; encoding?: string };
+  if (!data.content) return '';
+  // git/blobs always returns base64 in practice, but defend either way.
+  if (data.encoding === 'utf-8') return data.content;
+  return Buffer.from(data.content, 'base64').toString('utf8');
+}
+
+async function createBlob(content: string): Promise<string> {
+  const r = await ghFetchOrThrow(`/repos/${REPO}/git/blobs`, {
+    method: 'POST',
+    body: JSON.stringify({
+      content: Buffer.from(content, 'utf8').toString('base64'),
+      encoding: 'base64',
+    }),
   });
-  return (await r.json()) as GhCommitResponse;
+  const data = (await r.json()) as BlobResponse;
+  return data.sha;
+}
+
+async function createTree(
+  baseTreeSha: string,
+  entries: { path: string; blobSha: string }[]
+): Promise<string> {
+  const r = await ghFetchOrThrow(`/repos/${REPO}/git/trees`, {
+    method: 'POST',
+    body: JSON.stringify({
+      base_tree: baseTreeSha,
+      tree: entries.map((e) => ({
+        path: e.path,
+        mode: '100644',
+        type: 'blob',
+        sha: e.blobSha,
+      })),
+    }),
+  });
+  const data = (await r.json()) as { sha: string };
+  return data.sha;
+}
+
+async function createCommit(
+  message: string,
+  treeSha: string,
+  parentSha: string
+): Promise<{ sha: string; html_url: string }> {
+  const r = await ghFetchOrThrow(`/repos/${REPO}/git/commits`, {
+    method: 'POST',
+    body: JSON.stringify({
+      message,
+      tree: treeSha,
+      parents: [parentSha],
+    }),
+  });
+  const data = (await r.json()) as { sha: string; html_url: string };
+  return data;
+}
+
+interface UpdateRefOutcome {
+  ok: boolean;
+  status: number;
+  conflict: boolean; // 422 fast-forward conflict
+  errorBody?: string;
+}
+
+async function tryUpdateRef(commitSha: string): Promise<UpdateRefOutcome> {
+  const r = await ghFetch(
+    `/repos/${REPO}/git/refs/heads/${encodeURIComponent(BRANCH)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ sha: commitSha, force: false }),
+    }
+  );
+  if (r.ok) return { ok: true, status: r.status, conflict: false };
+  const text = await r.text();
+  // 422 with "not a fast forward" → concurrent writer landed between our
+  // ref-read and ref-update. Anything else (5xx, 403, 401, etc.) → return
+  // up the stack as a hard failure; we don't retry on those.
+  const conflict =
+    r.status === 422 &&
+    /not a fast forward|fast-forward|stale/i.test(text);
+  return { ok: false, status: r.status, conflict, errorBody: text.slice(0, 300) };
+}
+
+// ---------------------------------------------------------------------------
+// Changelog assembly — same logic as before. Splitting it out keeps the
+// commit orchestration readable.
+// ---------------------------------------------------------------------------
+function appendChangelog(current: string, newEntries: string): string {
+  const trimmed = newEntries.trim();
+  if (current.includes(TRAILING_COMMENT)) {
+    return current.replace(
+      TRAILING_COMMENT,
+      `${trimmed}\n\n${TRAILING_COMMENT}`
+    );
+  }
+  return current.trimEnd() + '\n\n' + trimmed + '\n';
 }
 
 // Lightweight availability probe so the client can render the right button.
@@ -125,61 +237,123 @@ export async function POST(req: NextRequest) {
 
   const dateStr = new Date().toISOString().slice(0, 10);
   const tagWord = body.newTagCount === 1 ? 'tag' : 'tags';
-  const baseMessage =
+  const message =
     typeof body.commitMessage === 'string' && body.commitMessage.trim()
       ? `${body.commitMessage.trim()} (${dateStr})`
       : `Vocabulary: promote ${body.newTagCount} new ${tagWord} (${dateStr})`;
 
   try {
-    // 1) Replace tag-vocabulary.json with the client-built version.
-    const vocabFile = await getFile(VOCAB_PATH);
-    const vocabResult = await putFile(
-      VOCAB_PATH,
-      body.vocabularyJson,
-      vocabFile.sha,
-      `${baseMessage} — vocabulary`
-    );
+    // 1) Build the two new blobs first. Blob create is content-addressed:
+    // posting the same bytes twice returns the same SHA, so we can compute
+    // these once even if a fast-forward conflict forces us to rebuild the
+    // tree on a new parent. That makes the retry path cheap.
+    const vocabBlobSha = await createBlob(body.vocabularyJson);
 
-    // 2) Append the changelog entries to the existing file. We slot them in
-    // above the trailing comment marker when present so the bot-appended
-    // note stays at the foot of the document.
-    const changelogFile = await getFile(CHANGELOG_PATH);
-    const currentChangelog = changelogFile.content
-      ? Buffer.from(changelogFile.content, 'base64').toString('utf8')
-      : '';
+    // The changelog needs the CURRENT remote content to compute its append.
+    // We'll re-read it inside buildAndPush so the retry path picks up any
+    // intervening changelog edits from another writer.
+    const buildAndPush = async (): Promise<{
+      commit: { sha: string; html_url: string };
+      attempted: 'first' | 'retry';
+    }> => {
+      // 2) Resolve current ref → commit → tree.
+      const parentSha = await getRefSha();
+      const parentCommit = await getCommit(parentSha);
+      const baseTreeSha = parentCommit.tree.sha;
 
-    const newEntries = body.changelogEntries.trim();
-    let updatedChangelog: string;
-    if (currentChangelog.includes(TRAILING_COMMENT)) {
-      updatedChangelog = currentChangelog.replace(
-        TRAILING_COMMENT,
-        `${newEntries}\n\n${TRAILING_COMMENT}`
+      // 3) Read the current changelog blob from this tree so the append is
+      // computed against the actual head, not whatever we last cached.
+      const baseTree = await getTree(baseTreeSha);
+      const changelogEntry = baseTree.tree.find((t) => t.path === 'lib');
+      let currentChangelog = '';
+      if (changelogEntry) {
+        // Walk down into lib/ to find vocabulary-changelog.md.
+        const libTree = await getTree(changelogEntry.sha);
+        const cl = libTree.tree.find(
+          (t) => t.path === 'vocabulary-changelog.md'
+        );
+        if (cl) currentChangelog = await getBlobUtf8(cl.sha);
+      }
+      const updatedChangelog = appendChangelog(
+        currentChangelog,
+        body.changelogEntries
       );
-    } else {
-      updatedChangelog = currentChangelog.trimEnd() + '\n\n' + newEntries + '\n';
-    }
+      const changelogBlobSha = await createBlob(updatedChangelog);
 
-    const changelogResult = await putFile(
-      CHANGELOG_PATH,
-      updatedChangelog,
-      changelogFile.sha,
-      `${baseMessage} — changelog`
-    );
+      // 4) Stage both files into a new tree on top of the parent tree.
+      const newTreeSha = await createTree(baseTreeSha, [
+        { path: VOCAB_PATH, blobSha: vocabBlobSha },
+        { path: CHANGELOG_PATH, blobSha: changelogBlobSha },
+      ]);
 
+      // 5) Create the commit.
+      const commit = await createCommit(message, newTreeSha, parentSha);
+
+      // 6) Fast-forward the branch ref onto the new commit. Single retry on
+      // 422 fast-forward conflict only — refetch ref, rebuild tree on the
+      // new parent, recreate commit, retry. Blob SHAs are content-addressed
+      // so they don't need rebuilding.
+      const first = await tryUpdateRef(commit.sha);
+      if (first.ok) return { commit, attempted: 'first' };
+      if (!first.conflict) {
+        throw new Error(
+          `GitHub PATCH ref: ${first.status} ${first.errorBody ?? ''}`
+        );
+      }
+      // Conflict path: rebuild on the new parent and try once more. This
+      // call recursively walks the same path with a fresh ref read.
+      const retry = await rebuildAndUpdate();
+      return { commit: retry, attempted: 'retry' };
+    };
+
+    // The retry helper. Identical shape to the inner block of buildAndPush
+    // sans the retry trigger — keeps recursion shallow (max depth 1).
+    const rebuildAndUpdate = async (): Promise<{
+      sha: string;
+      html_url: string;
+    }> => {
+      const parentSha = await getRefSha();
+      const parentCommit = await getCommit(parentSha);
+      const baseTreeSha = parentCommit.tree.sha;
+      const baseTree = await getTree(baseTreeSha);
+      const libEntry = baseTree.tree.find((t) => t.path === 'lib');
+      let currentChangelog = '';
+      if (libEntry) {
+        const libTree = await getTree(libEntry.sha);
+        const cl = libTree.tree.find(
+          (t) => t.path === 'vocabulary-changelog.md'
+        );
+        if (cl) currentChangelog = await getBlobUtf8(cl.sha);
+      }
+      const updatedChangelog = appendChangelog(
+        currentChangelog,
+        body.changelogEntries
+      );
+      const changelogBlobSha = await createBlob(updatedChangelog);
+      const newTreeSha = await createTree(baseTreeSha, [
+        { path: VOCAB_PATH, blobSha: vocabBlobSha },
+        { path: CHANGELOG_PATH, blobSha: changelogBlobSha },
+      ]);
+      const commit = await createCommit(message, newTreeSha, parentSha);
+      const second = await tryUpdateRef(commit.sha);
+      if (second.ok) return commit;
+      throw new Error(
+        `GitHub PATCH ref (after fast-forward retry): ${second.status} ${second.errorBody ?? ''}`
+      );
+    };
+
+    const { commit } = await buildAndPush();
+
+    // Single Git commit covers both paths now. We return the same shape as
+    // before — `commits: [{ path, url, sha }, ...]` — but both entries share
+    // the same commit URL/SHA. Existing client renderers (export page lists
+    // each path with its link) still work; both links point at the same diff.
     return NextResponse.json({
       ok: true,
       newTagCount: body.newTagCount,
       commits: [
-        {
-          path: VOCAB_PATH,
-          sha: vocabResult.commit?.sha,
-          url: vocabResult.commit?.html_url,
-        },
-        {
-          path: CHANGELOG_PATH,
-          sha: changelogResult.commit?.sha,
-          url: changelogResult.commit?.html_url,
-        },
+        { path: VOCAB_PATH, sha: commit.sha, url: commit.html_url },
+        { path: CHANGELOG_PATH, sha: commit.sha, url: commit.html_url },
       ],
     });
   } catch (err: unknown) {
