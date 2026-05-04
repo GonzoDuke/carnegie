@@ -1,0 +1,48 @@
+{
+  "id": "6cd8b0a0-59a8-419b-a2f1-150085366515",
+  "filename": "Manual entries · 5/4/2026, 10:37:08 AM",
+  "fileSize": 0,
+  "thumbnail": "",
+  "status": "done",
+  "spinesDetected": 0,
+  "booksIdentified": 1,
+  "books": [
+    {
+      "id": "20239536-cc66-464d-8a48-cc951cca97c2",
+      "spineRead": {
+        "position": 9999,
+        "rawText": "",
+        "title": "",
+        "author": "",
+        "confidence": "HIGH"
+      },
+      "title": "",
+      "author": "",
+      "authorLF": "",
+      "isbn": "9780593852958",
+      "publisher": "Penguin Publishing Group",
+      "publicationYear": 2025,
+      "lcc": "",
+      "genreTags": [],
+      "formTags": [],
+      "confidence": "LOW",
+      "reasoning": "",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "manual-entry",
+      "lookupSource": "openlibrary",
+      "lccSource": "none",
+      "manuallyAdded": true,
+      "original": {
+        "title": "",
+        "author": "",
+        "isbn": "9780593852958",
+        "publisher": "Penguin Publishing Group",
+        "publicationYear": 2025,
+        "lcc": "",
+        "genreTags": [],
+        "formTags": []
+      }
+    }
+  ]
+}
