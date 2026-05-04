@@ -118,7 +118,7 @@ export function ManualBookEntryModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-1">
-          <h2 className="typo-page-title text-[22px] md:text-[24px]">Add a book manually</h2>
+          <h2 className="typo-page-title text-[24px] md:text-[28px]">Add a book manually</h2>
           <button
             type="button"
             onClick={onClose}

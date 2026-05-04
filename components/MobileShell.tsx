@@ -140,10 +140,10 @@ export function MobileShell() {
               // tall on a real phone — comfortably above the 44px iOS
               // minimum. The Link itself fills its grid column so the
               // tap target spans the full quarter of the viewport.
-              className="flex flex-col items-center justify-center gap-0.5 py-2.5 min-h-[48px] text-[11px] transition-colors"
+              className="flex flex-col items-center justify-center gap-1 py-2.5 min-h-[48px] text-[12px] transition-colors"
               style={{
                 color: active ? NAVY : '#707070',
-                fontWeight: active ? 600 : 500,
+                fontWeight: 500,
                 background: active ? 'rgba(27,58,92,0.06)' : 'transparent',
               }}
             >

@@ -31,6 +31,9 @@
 
 html {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  /* Base 15px — body text inherits this. Outfit at 400 reads thin so the
+     typo utilities below bump non-body text to weight 500; we don't bump
+     the base because we want pure paragraph copy to stay 400 for legibility. */
   font-size: 15px;
 }
 
@@ -39,6 +42,7 @@ body {
   color: rgb(var(--color-text-primary));
   transition: background-color 200ms ease, color 200ms ease;
   line-height: 1.55;
+  font-weight: 400;
 }
 
 /* Subtle paper texture for the upload zone — Carnegie green + brass tint */
@@ -93,29 +97,43 @@ body {
 }
 .animate-toast { animation: toast 2s ease-out forwards; }
 
-/* Typography hierarchy — five levels (v3 redesign — all sans-serif).
-   Centralized so page headers and card titles stay consistent across the
-   app instead of drifting per-screen. Apply via class names on the element
-   you want to style.
+/* Typography hierarchy — Carnegie type scale.
+   Centralized so page headers, body, labels, and stats stay consistent
+   across surfaces instead of drifting per-screen. Apply via class names
+   on the element you want to style.
 
-   Level 1 — Page titles (Outfit 18px / 600, text-primary)
-   Level 2 — Page descriptions (Outfit 13px / 400, muted)
-   Level 3 — Card / book titles (Outfit 14px / 600, text-primary)
-   Level 4 — Card metadata (Outfit 11px / 400, muted)
-   Level 5 — Labels / helper (Outfit 10–11px, all-caps for labels) */
+   Scale (no weights below 400, no weights above 500):
+     body              15 / 400 / 1.55       — paragraphs, table rows, descriptions
+     page title        28 / 500 / 1.2        — H1 on every page
+     page desc         15 / 400 / 1.55       — line under page titles (text-secondary)
+     card title        17 / 500 / 1.3        — H2-equivalent on cards (and book titles)
+     card meta         13 / 400 / 1.4        — sub-info on cards
+     section-label     12 / 500 / 1px / upper — "BATCH LABEL", "TAG", "DOMAIN", etc.
+     stat-number       30 / 500 / 1          — big counts ("21 books cataloged")
+     stat-label        11 / 500 / 0.5px / upper — "TOTAL BOOKS" under stat numbers
+     helper            13 / 400              — hint copy (text-quaternary)
+*/
+.typo-body {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: rgb(var(--color-text-primary));
+}
+
 .typo-page-title {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 28px;
+  font-weight: 500;
   letter-spacing: 0;
-  line-height: 1.25;
+  line-height: 1.2;
   color: rgb(var(--color-text-primary));
   margin-bottom: 6px;
 }
 
 .typo-page-desc {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 400;
   line-height: 1.55;
   color: rgb(var(--color-text-secondary));
@@ -124,32 +142,97 @@ body {
 
 .typo-card-title {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 500;
   line-height: 1.3;
   color: rgb(var(--color-text-primary));
 }
 
 .typo-card-meta {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 400;
+  line-height: 1.4;
   color: rgb(var(--color-text-tertiary));
 }
 
+/* Functional small-caps label. The legacy `typo-label` name is kept so
+   every existing call site picks up the new size automatically — most
+   `<span className="typo-label">` markers across the app are this kind
+   of label and benefit from the bump. */
 .typo-label {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  line-height: 1.4;
   text-transform: uppercase;
   color: rgb(var(--color-text-tertiary));
 }
-.typo-helper {
+
+/* Alias — explicit name for new code. Same rules as typo-label. */
+.typo-section-label {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: rgb(var(--color-text-tertiary));
+}
+
+.typo-stat-number {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1;
+  color: rgb(var(--color-text-primary));
+}
+
+.typo-stat-label {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
   font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: rgb(var(--color-text-tertiary));
+}
+
+.typo-helper {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
   font-weight: 400;
+  line-height: 1.5;
   color: rgb(var(--color-text-quaternary));
+}
+
+/* Form inputs — global default so existing input/textarea/select elements
+   pick up the larger size without per-call overrides. Min-height 40px so
+   the larger text doesn't crowd; padding tuned to keep optical alignment
+   with adjacent buttons. Components that opt out can re-override locally. */
+input[type='text'],
+input[type='search'],
+input[type='email'],
+input[type='url'],
+input[type='tel'],
+input[type='number'],
+input[type='password'],
+textarea,
+select {
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+input[type='text'],
+input[type='search'],
+input[type='email'],
+input[type='url'],
+input[type='tel'],
+input[type='number'],
+input[type='password'],
+select {
+  min-height: 40px;
 }
 
 /* Approve-button micro-interaction — when a card transitions into the

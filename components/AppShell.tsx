@@ -140,8 +140,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           title="Discard the current batch and start fresh — exported books stay in the ledger."
           style={{
             margin: '0 12px 16px',
-            padding: '6px 10px',
-            fontSize: 12,
+            padding: '8px 12px',
+            fontSize: 13,
             fontWeight: 500,
             borderRadius: 6,
             border: `1px solid ${sessionEmpty ? '#2A2A2A' : '#2F2F2F'}`,
@@ -152,7 +152,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             textAlign: 'left',
             display: 'flex',
             alignItems: 'center',
-            gap: 7,
+            gap: 8,
           }}
           onMouseEnter={(e) => {
             if (sessionEmpty) return;
@@ -215,10 +215,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             {stats ? (
               <div className="animate-stats-fade">
-                <div style={{ fontSize: 11, color: SIDE_SECTION }}>
+                <div style={{ fontSize: 12, color: SIDE_SECTION, lineHeight: 1.5 }}>
                   {stats.books} {stats.books === 1 ? 'book' : 'books'} cataloged
                 </div>
-                <div style={{ fontSize: 11, color: SIDE_SECTION }}>
+                <div style={{ fontSize: 12, color: SIDE_SECTION, lineHeight: 1.5 }}>
                   {stats.batches} {stats.batches === 1 ? 'batch' : 'batches'} exported
                 </div>
               </div>
@@ -229,17 +229,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               // "loading" rather than "empty".
               <div aria-hidden className="space-y-1.5">
                 <div
-                  className="h-[11px] rounded animate-stats-shimmer"
+                  className="h-[12px] rounded animate-stats-shimmer"
                   style={{
-                    width: 110,
+                    width: 120,
                     background: 'linear-gradient(90deg, #1F1F1F 0%, #2A2A2A 50%, #1F1F1F 100%)',
                     backgroundSize: '200% 100%',
                   }}
                 />
                 <div
-                  className="h-[11px] rounded animate-stats-shimmer"
+                  className="h-[12px] rounded animate-stats-shimmer"
                   style={{
-                    width: 90,
+                    width: 96,
                     background: 'linear-gradient(90deg, #1F1F1F 0%, #2A2A2A 50%, #1F1F1F 100%)',
                     backgroundSize: '200% 100%',
                   }}
@@ -277,14 +277,14 @@ function SectionLabel({
   return (
     <div
       style={{
-        fontSize: 9,
-        fontWeight: 600,
+        fontSize: 11,
+        fontWeight: 500,
         letterSpacing: '1.5px',
         textTransform: 'uppercase',
         color: SIDE_SECTION,
         padding: '0 16px',
         marginTop: topGap ? 28 : 20,
-        marginBottom: 6,
+        marginBottom: 8,
       }}
     >
       {children}
@@ -296,14 +296,14 @@ function NavItem({ item, active }: { item: NavItemDef; active: boolean }) {
   return (
     <Link
       href={item.href}
-      className="flex items-center gap-[9px] transition-colors"
+      className="flex items-center gap-[10px] transition-colors"
       style={{
-        padding: '10px 16px',
+        padding: '11px 16px',
         color: active ? SIDE_TEXT_ACTIVE : SIDE_TEXT,
         background: active ? SIDE_ACTIVE : 'transparent',
         borderLeft: `2px solid ${active ? NAVY : 'transparent'}`,
         fontSize: 14,
-        fontWeight: active ? 500 : 400,
+        fontWeight: 500,
       }}
       onMouseEnter={(e) => {
         if (active) return;
@@ -318,9 +318,9 @@ function NavItem({ item, active }: { item: NavItemDef; active: boolean }) {
     >
       <span
         style={{
-          width: 15,
-          height: 15,
-          opacity: active ? 0.7 : 0.4,
+          width: 16,
+          height: 16,
+          opacity: active ? 0.75 : 0.45,
           flexShrink: 0,
           display: 'inline-flex',
         }}
@@ -331,11 +331,11 @@ function NavItem({ item, active }: { item: NavItemDef; active: boolean }) {
       {typeof item.badge === 'number' && item.badge > 0 && (
         <span
           style={{
-            fontSize: 10,
-            fontWeight: 600,
+            fontSize: 11,
+            fontWeight: 500,
             background: 'rgba(196,163,90,0.18)',
             color: GOLD,
-            padding: '1px 6px',
+            padding: '2px 7px',
             borderRadius: 6,
           }}
         >
