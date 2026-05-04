@@ -246,9 +246,7 @@
       "genreTags": [
         "Literary criticism"
       ],
-      "formTags": [
-        "First edition"
-      ],
+      "formTags": [],
       "confidence": "MEDIUM",
       "reasoning": "[language_literature] MARC genre/form 'Biographies' confirms biographical content, but LCC PS3552 places this in American literature criticism rather than biography proper. LCSH 'Beats (Persons)' and focus on Burroughs as literary figure supports literary criticism. Synopsis describes it as examination of 'myth behind the man' rather than straight biography. First Edition confirmed in metadata.",
       "status": "pending",
