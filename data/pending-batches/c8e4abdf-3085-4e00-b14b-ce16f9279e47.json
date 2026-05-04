@@ -1,0 +1,689 @@
+{
+  "id": "c8e4abdf-3085-4e00-b14b-ce16f9279e47",
+  "filename": "shelf-capture-001.cropped.jpg",
+  "fileSize": 1920646,
+  "thumbnail": "",
+  "status": "done",
+  "spinesDetected": 12,
+  "booksIdentified": 10,
+  "books": [
+    {
+      "id": "30f620d8-c532-44d5-b35f-9fca7be89762",
+      "spineRead": {
+        "position": 2,
+        "rawText": "A Single Tear — Wu Ningkun",
+        "title": "A Single Tear",
+        "author": "Wu Ningkun",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "HIGH",
+        "note": "Top book is the target spine; bottom shows part of another book (Bookseller of Kabul). Sticker on top spine partially visible with numbers ...828, ...78, ...993 but not a clear LCC.",
+        "bbox": {
+          "x": 0,
+          "y": 8,
+          "width": 100,
+          "height": 8
+        }
+      },
+      "title": "A Single Tear",
+      "author": "Wu, Ningkun.",
+      "authorLF": "Wu, Ningkun.; Wu, Ningkun; Li, Yikai; Ningkun, Wu; Yikai, Li",
+      "isbn": "9780340613276",
+      "publisher": "Back Bay Books",
+      "publicationYear": 1993,
+      "lcc": "DS778 .W76",
+      "genreTags": [
+        "Political memoir",
+        "Cultural history",
+        "[Proposed] Chinese history"
+      ],
+      "formTags": [],
+      "confidence": "MEDIUM",
+      "reasoning": "[biography] LCC DS778 (Chinese history) combined with subject headings including 'Politics and government', 'Biography & Autobiography', and '1949-' (People's Republic era) indicates this is a political memoir about experiences in Communist China. Author Wu Ningkun suggests Chinese perspective on political events. | [history] LCC DS778 places this in Chinese history. Subject headings indicate biography/autobiography of someone during China's political period from 1949 onward. The title 'A Single Tear' and author Wu Ningkun suggest a personal account of Chinese political/cultural upheaval, fitting Cultural history and Chinese history within the post-1949 period.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780340613276-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "A single tear",
+      "subtitle": "A Family's Persecution, Suffering, Love and Endurance in Communist China",
+      "allAuthors": [
+        "Wu, Ningkun.",
+        "Ningkun Wu",
+        "Yikai Li",
+        "Wu Ningkun",
+        "Li Yikai"
+      ],
+      "pageCount": 376,
+      "language": "en",
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780340613276-M.jpg?default=false"
+      ],
+      "original": {
+        "title": "A Single Tear",
+        "author": "Wu, Ningkun.",
+        "isbn": "9780340613276",
+        "publisher": "Back Bay Books",
+        "publicationYear": 1993,
+        "lcc": "DS778 .W76",
+        "genreTags": [
+          "Political memoir",
+          "Cultural history",
+          "[Proposed] Chinese history"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "97d55178-8d9b-4f5b-9f7b-d4796a1ffc70",
+      "spineRead": {
+        "position": 3,
+        "rawText": "My Traitor's Heart — Rian Malan",
+        "title": "My Traitor's Heart",
+        "author": "Rian Malan",
+        "publisher": "Atlantic Monthly Press",
+        "lcc": "CT1929.M35 A3 1990",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 0,
+          "y": 16,
+          "width": 100,
+          "height": 8
+        }
+      },
+      "title": "My Traitor's Heart",
+      "author": "Rian Malan",
+      "authorLF": "Malan, Rian",
+      "isbn": "9780871132291",
+      "publisher": "Vintage International",
+      "publicationYear": 1989,
+      "lcc": "CT1929.M35 A3 1990",
+      "genreTags": [
+        "Personal memoir",
+        "Political memoir",
+        "[Proposed] South African history"
+      ],
+      "formTags": [
+        "Vintage International"
+      ],
+      "confidence": "MEDIUM",
+      "reasoning": "[biography] LCC CT1929 confirms biographical domain. Author's personal account of leaving and returning to apartheid-era South Africa indicates both personal memoir and political memoir given the political context. Publisher series 'Vintage International' maps to form tag. | [history] LCC CT indicates biography, but the synopsis focuses on apartheid-era South Africa and political extremism rather than personal memoir. The book appears to be historical analysis through personal lens. Publisher series tag applied from spine information.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "spine",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780871132291-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "My traitor's heart",
+      "subtitle": "A South African Exile Returns to Face His Country, His Tribe, and His Conscience",
+      "allAuthors": [
+        "Rian Malan"
+      ],
+      "synopsis": "A relative of the architect of apartheid who left the country offers his observations on his return, discussing the extremists that continue to divide the country",
+      "pageCount": 397,
+      "language": "en",
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780871132291-M.jpg?default=false",
+        "https://books.google.com/books/content?id=1UmXdrEAUmoC&printsec=frontcover&img=1&zoom=1&source=gbs_api"
+      ],
+      "original": {
+        "title": "My Traitor's Heart",
+        "author": "Rian Malan",
+        "isbn": "9780871132291",
+        "publisher": "Vintage International",
+        "publicationYear": 1989,
+        "lcc": "CT1929.M35 A3 1990",
+        "genreTags": [
+          "Personal memoir",
+          "Political memoir",
+          "[Proposed] South African history"
+        ],
+        "formTags": [
+          "Vintage International"
+        ]
+      }
+    },
+    {
+      "id": "a5a04a13-4169-485e-aa42-3493f489237e",
+      "spineRead": {
+        "position": 4,
+        "rawText": "THE OBAMAS — PETER SLEVIN",
+        "title": "THE OBAMAS",
+        "author": "PETER SLEVIN",
+        "publisher": "FIRST BROOK",
+        "lcc": "",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 0,
+          "y": 24,
+          "width": 100,
+          "height": 8
+        }
+      },
+      "title": "The Obamas",
+      "author": "Peter Firstbrook",
+      "authorLF": "Firstbrook, Peter",
+      "isbn": "9780307591425",
+      "publisher": "Crown",
+      "publicationYear": 2011,
+      "lcc": "E909 .S54 2015",
+      "genreTags": [
+        "Political memoir",
+        "American history"
+      ],
+      "formTags": [],
+      "confidence": "HIGH",
+      "reasoning": "[biography] LCC E909 places this in American political biography. The title and synopsis focusing on Barack Obama's presidential heritage and family background clearly indicates a political biography/memoir about the Obama family. | [history] LCC E909 places this in American history (20th-21st century). The book covers Barack Obama's presidency and heritage, making it clearly American historical biography. The 2009-2015 timeframe and presidential focus confirms American history as the primary genre tag.",
+      "status": "pending",
+      "warnings": [
+        "LCC code missing — tags inferred from title and author only."
+      ],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "googlebooks",
+      "lccSource": "inferred",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780307591425-M.jpg?default=false",
+      "ocrModel": "s",
+      "canonicalTitle": "The Obamas",
+      "subtitle": "The Untold Story of an African Family",
+      "allAuthors": [
+        "Peter Firstbrook"
+      ],
+      "synopsis": "\"Fascinating...adds many interesting details to what we know of the President’s heritage.\" --David Remnick, TheNewYorker.com On January 20, 2009, a few hundred men, women, and children gathered under trees in the twilight at K’obama, a village on the shores of Lake Victoria in western Kenya. Barack Obama’s rise to the American presidency had captivated people around the world, but members of this gathering took a special pride in the swearing in of America’s first black president, for they were all Obamas, all the president’s direct African family. In the first in-depth history of the Obama family, Peter Firstbrook recounts a journey that starts in a mud hut by the White Nile and ends seven centuries later in the White House. Interweaving oral history and tribal lore, interviews with Obama family members and other Kenyans, the writings of Kenyan historians, and original genealogical research, Firstbrook sets the fascinating story of the president’s family against the background of Kenya’s rich culture and complex history. He tells the story of farmers and fishermen, of healers and hunters, of families lost and found, establishing for the first time the early ancestry of the Obamas. From the tribe’s cradleland in southern Sudan, he follows the family generation by generation, tracing the paths of the famous Luo warriors—Obama’s direct ancestors—and vividly illuminating Luo politics, society, and traditions. Firstbrook also brings to life the impact of English colonization in Africa through the eyes of President Obama’s grandfather Onyango. An ambitious and disciplined man who fought in two world wars, witnessed the bloody Mau Mau insurrection, and saw his country gain independence from white rule, Onyango was also hot-tempered and autocratic: family lore has it that President Obama’s grandmother abandoned the family after Onyango attempted to murder her. And Firstbrook delves into the troubled life of Obama’s father, a promising young man whose aspirations were stymied by post-independence tribal politics and a rash tendency toward self-destruction—two factors that his family believes contributed to his death in 1982. They say it was no accident, as described in the president’s memoirs, but rather a politically motivated hit job. More than a tale of love and war, hardship and hard-won success, The Obamas reveals a family history—epic in scope yet intimate in feel—that is truly without precedent.",
+      "pageCount": 362,
+      "language": "en",
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780307591425-M.jpg?default=false",
+        "https://books.google.com/books/content?id=3rEPkrtQlzoC&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+      ],
+      "original": {
+        "title": "The Obamas",
+        "author": "Peter Firstbrook",
+        "isbn": "9780307591425",
+        "publisher": "Crown",
+        "publicationYear": 2011,
+        "lcc": "E909 .S54 2015",
+        "genreTags": [
+          "Political memoir",
+          "American history"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "cce7810f-77e5-45ac-90f0-373b3788bb66",
+      "spineRead": {
+        "position": 5,
+        "rawText": "THE BOOK OF GUTSY WOMEN — Hillary Rodham Clinton and Chelsea Clinton",
+        "title": "THE BOOK OF GUTSY WOMEN",
+        "author": "Hillary Rodham Clinton and Chelsea Clinton",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 0,
+          "y": 32,
+          "width": 100,
+          "height": 8
+        }
+      },
+      "title": "The Book of Gutsy Women",
+      "author": "Hillary Rodham Clinton",
+      "authorLF": "Clinton, Hillary Rodham; Clinton, Chelsea",
+      "isbn": "9781501178436",
+      "publisher": "Simon & Schuster",
+      "publicationYear": 2019,
+      "lcc": "HQ1123 .C625 2019",
+      "genreTags": [
+        "[Proposed] Collective biography",
+        "[Proposed] Women's rights"
+      ],
+      "formTags": [],
+      "confidence": "MEDIUM",
+      "reasoning": "[biography] LCC HQ1123 (Women - Biography) and the synopsis clearly indicate this is a collection of biographies about women ('gutsy women'). The collaborative authorship by Hillary and Chelsea Clinton and the premise of highlighting multiple heroic women suggests collective biography rather than individual memoir or biography. | [social_political] LCC HQ1123 indicates women's studies/biography content. The book appears to be about inspiring women figures given the title and synopsis. While this touches on social/political themes through women's empowerment, the specific focus on 'gutsy women' suggests women's rights activism rather than broader social criticism.",
+      "status": "pending",
+      "warnings": [
+        "LCC code missing — tags inferred from title and author only."
+      ],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "isbndb",
+      "lccSource": "inferred",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9781501178436-M.jpg?default=false",
+      "ocrModel": "s",
+      "canonicalTitle": "The Book of Gutsy Women",
+      "subtitle": "Favorite Stories of Courage and Resilience",
+      "allAuthors": [
+        "Hillary Rodham Clinton",
+        "Chelsea Clinton"
+      ],
+      "synopsis": "She couldn’t have been more than seven or eight years old. “Go ahead, ask your question,” her father urged, nudging her forward. She smiled shyly and said, “You’re my hero. Who’s yours?” Many people—especially girls—have asked us that same question over the years. It’s one of our favorite topics. HILLARY: Growing up, I knew hardly any women who worked outside the home. So I looked to my mother, my teachers, and the pages of Life magazine for inspiration. After learning that Amelia Earhart kept a scrapbook with newspaper articles about successful women in male-dominated jobs, I started a scrapbook of my own. Long after I stopped clipping articles, I continued to seek out stories of women who seemed to be redefining what was possible. CHELSEA: This book is the continuation of a conversation the two of us have been having since I was little. For me, too, my mom was a hero; so were my grandmothers. My early teachers were also women. But I grew up in a world very different from theirs. My pediatrician was a woman, and so was the first mayor of Little Rock who I remember from my childhood. Most of my close friends’ moms worked outside the home as nurses, doctors, teachers, professors, and in business. And women were going into space and breaking records here on Earth. Ensuring the rights and opportunities of women and girls remains a big piece of the unfinished business of the twenty-first century. While there’s a lot of work to do, we know that throughout history and around the globe women have overcome the toughest resistance imaginable to win victories that have made progress possible for all of us. That is the achievement of each of the women in this book. So how did they do it? The answers are as unique as the women themselves. Civil rights activist Dorothy Height, LGBTQ trailblazer Edie Windsor, and swimmer Diana Nyad kept pushing forward, no matter what. Writers like Rachel Carson and Chimamanda Ngozi Adichie named something no one had dared talk about before. Historian Mary Beard used wit to open doors that were once closed, and Wangari Maathai, who sparked a movement to plant trees, understood the power of role modeling. Harriet Tubman and Malala Yousafzai looked fear in the face and persevered. Nearly every single one of these women was fiercely optimistic—they had faith that their actions could make a difference. And they were right. To us, they are all gutsy women—leaders with the courage to stand up to the status quo, ask hard questions, and get the job done. So in the moments when the long haul seems awfully long, we hope you will draw strength from these stories. We do. Because if history shows one thing, it’s that the world needs gutsy women.",
+      "pageCount": 464,
+      "edition": "3",
+      "binding": "Kindle Edition",
+      "language": "English",
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9781501178436-M.jpg?default=false",
+        "https://books.google.com/books/content?id=NL2eDwAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api",
+        "https://images.isbndb.com/covers/13063983482722.jpg"
+      ],
+      "original": {
+        "title": "The Book of Gutsy Women",
+        "author": "Hillary Rodham Clinton",
+        "isbn": "9781501178436",
+        "publisher": "Simon & Schuster",
+        "publicationYear": 2019,
+        "lcc": "HQ1123 .C625 2019",
+        "genreTags": [
+          "[Proposed] Collective biography",
+          "[Proposed] Women's rights"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "18d8ba37-df22-4198-8561-148519e8d4dd",
+      "spineRead": {
+        "position": 6,
+        "rawText": "THE WAY — KAREN CORES",
+        "title": "THE WAY",
+        "author": "KAREN CORES",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "MEDIUM",
+        "note": "Text appears rotated and partially visible. Can see 'THE WAY' as title and what appears to be 'KAREN CORES' as author, along with some additional text that's harder to read",
+        "bbox": {
+          "x": 0,
+          "y": 40,
+          "width": 100,
+          "height": 8
+        }
+      },
+      "title": "The Upskilling Imperative: 5 Ways to Make Learning Core to the Way We Work",
+      "author": "Shelley Osborne",
+      "authorLF": "Osborne, Shelley",
+      "isbn": "9781260466690",
+      "publisher": "McGraw Hill Professional",
+      "publicationYear": 2020,
+      "lcc": "",
+      "genreTags": [
+        "[Proposed] Corporate training"
+      ],
+      "formTags": [
+        "How-to / guide"
+      ],
+      "confidence": "LOW",
+      "reasoning": "[social_political] Business training book appears misclassified in Social & political domain. Content focuses on corporate learning methodology rather than social/political issues. Proposing Corporate training tag as best fit within constraints, though this likely belongs in Business domain.",
+      "status": "pending",
+      "warnings": [
+        "LCC code missing — tags inferred from title and author only."
+      ],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "isbndb",
+      "lccSource": "none",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9781260466690-M.jpg?default=false",
+      "ocrModel": "s",
+      "canonicalTitle": "The Upskilling Imperative: 5 Ways to Make Learning Core to the Way We Work",
+      "allAuthors": [
+        "Shelley Osborne"
+      ],
+      "synopsis": "<p>Make continuous learning part of your company’s DNA—and growth, profits, and sustainability will follow</p> <p>Keeping up with the pace of change may seem impossible, but it’s not. The secret is to make continuous learning a top value for every person on the team so when change happens, everyone is prepared.</p> <p>In <i>The Upskilling Imperative</i>, Shelley Osborne, Udemy’s Vice President of Learning, reveals the methods she uses to help many of today’s leading companies—from Adidas to PayPal to Barclays—build and sustain a culture of learning. With techniques supported by the latest learning science, she takes you through five steps for transforming your business into an industry powerhouse:</p> <ul><li>Create an environment of freedom, opportunity, and love of learning</li> <li>Use honest, forthright feedback to fuel your new learning culture</li> <li>Clearly communicate the rewards that come when we approach our job as a learning adventure</li> <li>Build learning into the everyday workflows and operations</li> <li>Manage your new learning culture in a sustainable way</li> </ul> <p>With this new, evolved mindset, you and your workforce will approach the next inevitable workplace upheaval or technology with skill and confidence—not confusion and dread.</p>",
+      "pageCount": 256,
+      "edition": "1",
+      "binding": "Kindle Edition",
+      "language": "en",
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9781260466690-M.jpg?default=false",
+        "https://books.google.com/books/content?id=I-7zDwAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+        "https://images.isbndb.com/covers/21324463482636.jpg"
+      ],
+      "original": {
+        "title": "The Upskilling Imperative: 5 Ways to Make Learning Core to the Way We Work",
+        "author": "Shelley Osborne",
+        "isbn": "9781260466690",
+        "publisher": "McGraw Hill Professional",
+        "publicationYear": 2020,
+        "lcc": "",
+        "genreTags": [
+          "[Proposed] Corporate training"
+        ],
+        "formTags": [
+          "How-to / guide"
+        ]
+      }
+    },
+    {
+      "id": "a4c1434f-cdcb-4f69-a83f-425faa773a30",
+      "spineRead": {
+        "position": 7,
+        "rawText": "WOMEN OF THE FRONTIER — Miller",
+        "title": "WOMEN OF THE FRONTIER",
+        "author": "Miller",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "MEDIUM",
+        "note": "Text is rotated and partially visible, can clearly read title but author appears to be just 'Miller' which may be incomplete",
+        "bbox": {
+          "x": 0,
+          "y": 48,
+          "width": 100,
+          "height": 8
+        }
+      },
+      "title": "Women of the Frontier 16 Tales of Trailblazing Homesteaders Entrepreneurs and Rabblerousers",
+      "author": "Brandon Marie Miller",
+      "authorLF": "Miller, Brandon Marie",
+      "isbn": "9781883052973",
+      "publisher": "Chicago Review Press",
+      "publicationYear": 2013,
+      "lcc": "CT3262 .W37M55 2013",
+      "genreTags": [
+        "[Proposed] Women's biography",
+        "[Proposed] Western frontier biography",
+        "American history"
+      ],
+      "formTags": [],
+      "confidence": "MEDIUM",
+      "reasoning": "[biography] LCC CT3262 confirms biographical domain. LCSH indicates women pioneers in the American West, requiring specialized biography tags not in current vocabulary. MARC confirms biographical form. Multiple 'Juvenile literature' references suggest young adult audience but no juvenile form tag exists in vocabulary. | [history] LCC CT3262 indicates collective biography, but the subject matter (women pioneers in the American West) clearly falls within American history. The DDC 978 confirms Western U.S. history. LCSH specifies 'West (U.S.) — History' which maps directly to American history within the History domain.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "ddc": "978/.033082",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9781883052973-M.jpg?default=false",
+      "ocrModel": "s",
+      "canonicalTitle": "Women Of The Frontier 16 Tales Of Trailblazing Homesteaders Entrepreneurs And Rabblerousers",
+      "allAuthors": [
+        "Brandon Marie Miller"
+      ],
+      "pageCount": 246,
+      "edition": "1st ed",
+      "lcshSubjects": [
+        "Women pioneers — West (U.S.) — History — Biography — Juvenile literature",
+        "West (U.S.) — History — Biography — Juvenile literature"
+      ],
+      "marcGenres": [
+        "Biographies",
+        "Literature"
+      ],
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9781883052973-M.jpg?default=false"
+      ],
+      "original": {
+        "title": "Women of the Frontier 16 Tales of Trailblazing Homesteaders Entrepreneurs and Rabblerousers",
+        "author": "Brandon Marie Miller",
+        "isbn": "9781883052973",
+        "publisher": "Chicago Review Press",
+        "publicationYear": 2013,
+        "lcc": "CT3262 .W37M55 2013",
+        "genreTags": [
+          "[Proposed] Women's biography",
+          "[Proposed] Western frontier biography",
+          "American history"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "b2768afe-f67b-46b3-bed5-a3138b4db025",
+      "spineRead": {
+        "position": 8,
+        "rawText": "INTO THE WILD — Jon Krakauer",
+        "title": "INTO THE WILD",
+        "author": "Jon Krakauer",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 0,
+          "y": 56,
+          "width": 100,
+          "height": 8
+        }
+      },
+      "title": "Into the Wild",
+      "author": "Jon Krakauer",
+      "authorLF": "Krakauer, Jon",
+      "isbn": "9788571647879",
+      "publisher": "G.K. Hall",
+      "publicationYear": 1996,
+      "lcc": "PS3561 .R238",
+      "genreTags": [
+        "[Proposed] Adventure biography",
+        "[Proposed] Creative nonfiction"
+      ],
+      "formTags": [],
+      "confidence": "MEDIUM",
+      "reasoning": "[biography] This is a biographical work about Christopher McCandless's journey into the Alaskan wilderness. The subject headings include 'Biography' and describe adventure/travel elements. While the existing Biography & memoir vocabulary doesn't have a perfect match for adventure-focused biography, this warrants a proposed tag combining the biographical nature with the adventure theme central to the story. | [literature] LCC PS3561 places this in American literature (PS), and the subject headings indicate nonfiction narrative about travel/adventure. While traditionally classified as nonfiction, Krakauer's literary approach to true stories fits creative nonfiction within the Literature domain. The biography and travel elements are secondary to the literary treatment.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9788571647879-M.jpg?default=false",
+      "ocrModel": "s",
+      "canonicalTitle": "Into the Wild",
+      "allAuthors": [
+        "Jon Krakauer"
+      ],
+      "synopsis": "Na natureza selvagem, de Jon Krakauer, autor do best-seller No ar rarefeito, traz uma história real. O corpo em decomposição de um jovem é encontrado no Alasca. A polícia descobre que se trata de um rapaz de família rica do Leste americano que largou tudo, se internou sozinho na aridez gelada e morreu de inanição. Quem era o garoto? Por que foi para o Alasca? Por que morreu? Para responder a essas e outras perguntas, Jon Krakauer refaz a trajetória de Chris McCandless, revelando a América dos que vivem à margem, pegando carona ou circulando em carros velhos, vivendo em acampamentos e cidades-fantasmas. Mergulha no mundo da cidadezinha rural, onde homens rudes bebem e conversam sobre o tempo e a colheita. Compara a história do jovem com a de outros aventureiros solitários que tiveram fim trágico. O resultado é uma narrativa envolvente, por vezes amarga, em que os sonhos da juventude se transformam em pesadelo.",
+      "pageCount": 284,
+      "language": "pt-BR",
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9788571647879-M.jpg?default=false"
+      ],
+      "original": {
+        "title": "Into the Wild",
+        "author": "Jon Krakauer",
+        "isbn": "9788571647879",
+        "publisher": "G.K. Hall",
+        "publicationYear": 1996,
+        "lcc": "PS3561 .R238",
+        "genreTags": [
+          "[Proposed] Adventure biography",
+          "[Proposed] Creative nonfiction"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "e7e44f1d-52ca-4798-9196-e4001155a424",
+      "spineRead": {
+        "position": 9,
+        "rawText": "The Alchemist — Paulo Coelho",
+        "title": "The Alchemist",
+        "author": "Paulo Coelho",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 0,
+          "y": 64,
+          "width": 100,
+          "height": 8
+        }
+      },
+      "title": "The Alchemist Graphic Novel",
+      "author": "Paulo Coelho",
+      "authorLF": "Coelho, Paulo",
+      "isbn": "9780062024329",
+      "publisher": "HarperOne",
+      "publicationYear": 2010,
+      "lcc": "PN6727 .R828 A65 2010",
+      "genreTags": [
+        "Fiction"
+      ],
+      "formTags": [],
+      "confidence": "HIGH",
+      "reasoning": "[literature] Subject headings explicitly list 'Fiction' and the synopsis describes a narrative story about Santiago's journey. The LCC classification PN6727 suggests graphic novels, but the subject headings and synopsis clearly indicate this is fiction literature.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780062024329-M.jpg?default=false",
+      "ocrModel": "s",
+      "canonicalTitle": "The Alchemist Graphic Novel",
+      "allAuthors": [
+        "Paulo Coelho"
+      ],
+      "synopsis": "Andalusian shepherd boy Santiago travels from his homeland in Spain to the Egyptian desert in search of a treasure buried in the Pyramids. Along the way he meets a Gypsy woman, a man who calls himself king, and an alchemist, all of whom point Santiago in the direction of his quest. No one knows what the treasure is, or if Santiago will be able to surmount the obstacles along the way. But what starts out as a journey to find worldly goods turns into a discovery of the treasure found within. Since its first printing The Alchemist has been translated into seventy-one languages and sold forty million copies worldwide, establishing itself as a modern classic that will enchant and inspire readers for generations to come. Beautifully rendered, The Alchemist: A Graphic Novel is a must have for any collector's library.",
+      "pageCount": 212,
+      "language": "en",
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780062024329-M.jpg?default=false",
+        "https://books.google.com/books/content?id=QTKD3-mMZFYC&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+      ],
+      "original": {
+        "title": "The Alchemist Graphic Novel",
+        "author": "Paulo Coelho",
+        "isbn": "9780062024329",
+        "publisher": "HarperOne",
+        "publicationYear": 2010,
+        "lcc": "PN6727 .R828 A65 2010",
+        "genreTags": [
+          "Fiction"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "1e6145e1-01d5-4665-9f6d-eae966d29582",
+      "spineRead": {
+        "position": 10,
+        "rawText": "The Anarchist — John Henry Mackay",
+        "title": "The Anarchist",
+        "author": "John Henry Mackay",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "MEDIUM",
+        "note": "Text appears to be printed vertically on dark spine, some characters are difficult to make out clearly",
+        "bbox": {
+          "x": 0,
+          "y": 72,
+          "width": 100,
+          "height": 9
+        }
+      },
+      "title": "Anarchists - a Picture of Civilization at the Close of the Century",
+      "author": "John Henry Mackay",
+      "authorLF": "Mackay, John Henry",
+      "isbn": "9781409780144",
+      "publisher": "Read Books",
+      "publicationYear": 2008,
+      "lcc": "PZ3.M1929 An8",
+      "genreTags": [
+        "Fiction"
+      ],
+      "formTags": [],
+      "confidence": "MEDIUM",
+      "reasoning": "[literature] LCC PZ3 indicates fiction literature. The synopsis describes a republished classic work from the early 1900s. While the title suggests anarchist themes, without more specific content details, the broad Fiction tag is most appropriate for this domain.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "loc",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9781409780144-M.jpg?default=false",
+      "ocrModel": "s",
+      "canonicalTitle": "Anarchists - a Picture of Civilization at the Close of the Century",
+      "allAuthors": [
+        "John Henry Mackay"
+      ],
+      "synopsis": "Many of the earliest books, particularly those dating back to the 1900s and before, are now extremely scarce and increasingly expensive. We are republishing these classic works in affordable, high quality, modern editions, using the original text and artwork.",
+      "pageCount": 316,
+      "language": "en",
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9781409780144-M.jpg?default=false",
+        "https://books.google.com/books/content?id=VpOqlfuxvxYC&printsec=frontcover&img=1&zoom=1&source=gbs_api"
+      ],
+      "original": {
+        "title": "Anarchists - a Picture of Civilization at the Close of the Century",
+        "author": "John Henry Mackay",
+        "isbn": "9781409780144",
+        "publisher": "Read Books",
+        "publicationYear": 2008,
+        "lcc": "PZ3.M1929 An8",
+        "genreTags": [
+          "Fiction"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "df487865-e251-44e1-85a9-bfc55b546dbb",
+      "spineRead": {
+        "position": 11,
+        "rawText": "The Macedonian",
+        "title": "The Macedonian",
+        "author": "",
+        "publisher": "BERKLEY",
+        "lcc": "",
+        "confidence": "MEDIUM",
+        "note": "Title is clearly visible, but author text is not legible in this cropped view",
+        "bbox": {
+          "x": 0,
+          "y": 81,
+          "width": 100,
+          "height": 9
+        }
+      },
+      "title": "The Macedonian",
+      "author": "Nicholas Guild",
+      "authorLF": "Guild, Nicholas",
+      "isbn": "9781465738820",
+      "publisher": "Smashwords",
+      "publicationYear": 2011,
+      "lcc": "PS3557 .U357M33 2017",
+      "genreTags": [
+        "Fiction"
+      ],
+      "formTags": [],
+      "confidence": "MEDIUM",
+      "reasoning": "[literature] LCC PS3557 confirms American literature fiction. Subject headings indicate biographical and historical fiction, but these are subgenres not in the Literature domain vocabulary. Tagged as Fiction only.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9781465738820-M.jpg?default=false",
+      "ocrModel": "s",
+      "canonicalTitle": "The Macedonian",
+      "allAuthors": [
+        "Nicholas Guild"
+      ],
+      "pageCount": 384,
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9781465738820-M.jpg?default=false"
+      ],
+      "original": {
+        "title": "The Macedonian",
+        "author": "Nicholas Guild",
+        "isbn": "9781465738820",
+        "publisher": "Smashwords",
+        "publicationYear": 2011,
+        "lcc": "PS3557 .U357M33 2017",
+        "genreTags": [
+          "Fiction"
+        ],
+        "formTags": []
+      }
+    }
+  ],
+  "croppedFrom": "shelf-capture-001.jpg",
+  "sourceDimensions": {
+    "width": 2112,
+    "height": 3670
+  }
+}
