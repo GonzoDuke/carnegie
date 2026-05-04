@@ -17,12 +17,16 @@
       "_unclassified": "→ general_works (A) at hydration"
     },
     "judgment_calls_to_review": [
-      "Counterculture: placed in american_history — historically tied to mid-20th-century US, but argument for world_history if user catalogs international counterculture works.",
-      "Music biography: kept in auxiliary_history (biography pool) because the biography genre is the dominant signal — but a music-biography heavy collection might prefer it in music.",
-      "Sports / Travel / Dance / Comedy & humor: routed to fine_arts per spec ('music-related to music, everything else to fine_arts'). LCC-strict would put Sports + Travel under geography_recreation (G) and leave Dance under fine_arts (N) — flag if user wants strict-LCC routing.",
+      "Counterculture: placed in social_sciences (H) — countercultures are predominantly a sociological phenomenon (subcultural movements, deviance studies), not a national-history narrative. Move to american_history if specifically cataloging Beat / hippie / 60s-US counterculture as a chapter of US history.",
+      "Music biography: placed in music (M) — LCC catalogs musician biographies under ML420 (M class), NOT under CT. The LCC class letter rule wins here over the 'biography is biography' instinct.",
+      "Sports → geography_recreation (G): LCC GV is the recreation/sports subclass within G. Strict-LCC routing.",
+      "Travel → geography_recreation (G): LCC G is geography. Strict-LCC routing.",
+      "Comedy & humor → language_literature (P): LCC PN6147–6231 is the wit / humor / satire subclass. Comedy AS a literary genre lives in P, not in N (fine arts).",
+      "Dance: placed in fine_arts (N) — LCC GV1580–1799 is dance within recreation; N is the broader performing-arts home. Move to geography_recreation if you want strict GV alignment.",
       "Visual culture: placed in fine_arts (N) — could arguably belong in technology (T) if focused on screens / surveillance.",
       "Civil liberties / Free speech / Protest & activism: placed in political_science (J) per 'explicitly political' rule.",
-      "Drugs / Identity & tribalism / Social criticism: placed in social_sciences (H) — judgment call, all could lean political."
+      "Social criticism: placed in political_science (J) — more political than sociological in practice (the books that get this tag are typically advocacy / commentary on systems of power).",
+      "Drugs / Identity & tribalism: placed in social_sciences (H) — judgment call, both could lean political."
     ]
   },
   "domains": {
@@ -61,11 +65,10 @@
     "auxiliary_history": {
       "label": "Auxiliary sciences of history",
       "lcc_letter": "C",
-      "description": "Auxiliary sciences of history — biography (CT), genealogy, archaeology, archives, chronology. Biography lives here as a subclass of C, NOT as a separate domain.",
+      "description": "Auxiliary sciences of history — biography (CT), genealogy, archaeology, archives, chronology. Biography lives here as a subclass of C, NOT as a separate domain. Note: LCC routes some specialized biographies to their subject's class (e.g., musician biographies to ML420 → music domain) — see Music biography under music.",
       "tags": [
         "Literary biography",
         "Beat biography",
-        "Music biography",
         "Political memoir",
         "Personal memoir",
         "Intellectual biography"
@@ -87,8 +90,7 @@
       "lcc_letter": "E",
       "description": "History of the Americas as a whole and the United States in particular. North America, Indigenous Americas, US national history.",
       "tags": [
-        "American history",
-        "Counterculture"
+        "American history"
       ]
     },
     "local_american_history": {
@@ -101,26 +103,30 @@
       "label": "Geography, anthropology, recreation",
       "lcc_letter": "G",
       "description": "Geography, anthropology, recreation, sports, dance, customs, manners. LCC G + GV.",
-      "tags": []
+      "tags": [
+        "Sports",
+        "Travel"
+      ]
     },
     "social_sciences": {
       "label": "Social sciences",
       "lcc_letter": "H",
-      "description": "Social sciences — sociology, economics, statistics, social pathology, demography, social criticism.",
+      "description": "Social sciences — sociology, economics, statistics, social pathology, demography, subcultures.",
       "tags": [
+        "Counterculture",
         "Drugs",
-        "Identity & tribalism",
-        "Social criticism"
+        "Identity & tribalism"
       ]
     },
     "political_science": {
       "label": "Political science",
       "lcc_letter": "J",
-      "description": "Political science — political theory, government, public administration, civil rights, international relations.",
+      "description": "Political science — political theory, government, public administration, civil rights, international relations, social criticism.",
       "tags": [
         "Civil liberties",
         "Free speech",
-        "Protest & activism"
+        "Protest & activism",
+        "Social criticism"
       ]
     },
     "law": {
@@ -152,27 +158,25 @@
     "music": {
       "label": "Music",
       "lcc_letter": "M",
-      "description": "Music — scores, performance, theory, history, criticism. LCC M (music itself) + ML (literature about music) + MT (instruction).",
+      "description": "Music — scores, performance, theory, history, criticism, musician biographies. LCC M (music itself) + ML (literature about music incl. ML420 musician biographies) + MT (instruction).",
       "tags": [
-        "Music"
+        "Music",
+        "Music biography"
       ]
     },
     "fine_arts": {
       "label": "Fine arts",
       "lcc_letter": "N",
-      "description": "Fine arts — visual arts, architecture, sculpture, drawing, painting, photography. Plus the legacy arts_culture catchalls (sports, dance, travel, humor) the user may want to relocate later.",
+      "description": "Fine arts — visual arts, architecture, sculpture, drawing, painting, photography. Performing arts when they don't fit elsewhere (Dance lives here pending strict-GV migration).",
       "tags": [
-        "Sports",
-        "Comedy & humor",
         "Dance",
-        "Visual culture",
-        "Travel"
+        "Visual culture"
       ]
     },
     "language_literature": {
       "label": "Language and literature",
       "lcc_letter": "P",
-      "description": "Language and literature — philology, linguistics, world literatures of all national traditions. LCC class P without splits. The call number identifies the language family (PA Greek/Latin, PE English, PQ Romance, PR English literature, PS American literature, PJ–PM Asian/African).",
+      "description": "Language and literature — philology, linguistics, world literatures of all national traditions, wit/humor/satire (PN6147–6231). LCC class P without splits. The call number identifies the language family (PA Greek/Latin, PE English, PQ Romance, PR English literature, PS American literature, PJ–PM Asian/African).",
       "tags": [
         "Poetry",
         "American poetry",
@@ -188,6 +192,7 @@
         "Anthology",
         "Harlem Renaissance",
         "French literature",
+        "Comedy & humor",
         "Linguistics",
         "Etymology",
         "History of language"
