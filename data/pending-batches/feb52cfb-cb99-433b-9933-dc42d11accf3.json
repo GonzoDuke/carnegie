@@ -303,7 +303,7 @@
       "formTags": [],
       "confidence": "MEDIUM",
       "reasoning": "[philosophy_psychology_religion] LCC BJ-1853 falls within ethics (BJ section). Subject headings 'Interpersonal relations' and 'Courtesy' suggest content about social behavior and moral conduct in relationships, fitting Ethics domain. The interpersonal relations aspect suggests social psychology elements not covered by existing tags.",
-      "status": "pending",
+      "status": "approved",
       "warnings": [],
       "sourcePhoto": "20260501_070036.jpg",
       "lookupSource": "openlibrary",
@@ -437,7 +437,7 @@
       "formTags": [],
       "confidence": "MEDIUM",
       "reasoning": "[world_history] LCC D862 places this in World history domain. Subject heading 'Modern Civilization' maps to proposed genre tag. Cultural history fits as secondary tag given the analysis of contemporary society implied by title and classification.",
-      "status": "pending",
+      "status": "approved",
       "warnings": [
         "Identified by AI from partial spine read: Distinctive profanity-laden title with clear author match makes this unambiguous despite asterisk censoring."
       ],
