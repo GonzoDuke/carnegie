@@ -1,0 +1,1019 @@
+{
+  "id": "2fec5ab2-9e93-47fc-93c6-902c281cf7b0",
+  "filename": "shelf-capture-001.cropped.jpg",
+  "fileSize": 992334,
+  "thumbnail": "",
+  "status": "done",
+  "spinesDetected": 13,
+  "booksIdentified": 13,
+  "books": [
+    {
+      "id": "eec78bdd-4d9e-414a-a842-64dc5dc289a0",
+      "spineRead": {
+        "position": 1,
+        "rawText": "Radical Religion from Shakespeare to Milton — Poole",
+        "title": "Radical Religion from Shakespeare to Milton",
+        "author": "Poole",
+        "publisher": "",
+        "lcc": "BX9334 .P66 2000",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 1,
+          "y": 15,
+          "width": 6,
+          "height": 80
+        },
+        "extractedCallNumber": "BX 9334 .P66 2000",
+        "extractedCallNumberSystem": "lcc"
+      },
+      "title": "Radical Religion from Shakespeare to Milton",
+      "author": "Kristen Poole",
+      "authorLF": "Poole, Kristen",
+      "isbn": "9780521025447",
+      "publisher": "Cambridge University Press",
+      "publicationYear": 2000,
+      "lcc": "BX 9334 .P66 2000",
+      "genreTags": [
+        "[Proposed] Christian history",
+        "[Proposed] Puritanism",
+        "British history",
+        "[Proposed] Religious history",
+        "Literary criticism",
+        "Shakespeare"
+      ],
+      "formTags": [],
+      "confidence": "MEDIUM",
+      "reasoning": "[religion] LCC BX 9334 places this in Christian denominational history, specifically Protestant nonconformist movements. Subject headings emphasize Puritans and religious dissenters in early modern England. The book analyzes religious figures and movements rather than being a primary religious text, requiring proposed tags for this specialized historical study of Christian dissenting traditions. | [history] LCC BX indicates religious studies focus, but the subtitle 'Figures of Nonconformity in Early Modern England' and subject headings clearly establish this as British history covering religious dissenters. The time period (Shakespeare to Milton, early modern England) and focus on English Puritans and religious nonconformists fits British history. Religious history proposed as secondary tag given the specific focus on religious movements and figures. | [literature] This is a scholarly study analyzing religious themes in early modern English literature, specifically from Shakespeare to Milton. The LCC classification BX (Christian denominations) confirms religious focus, but the literary scope (Shakespeare to Milton) and critical approach make this literary criticism. Shakespeare is explicitly mentioned in the title, warranting the specific tag.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "inferredDomains": [
+        "religion",
+        "history",
+        "literature"
+      ],
+      "domainConfidence": "high",
+      "lccSource": "spine",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780521025447-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "Radical Religion from Shakespeare to Milton",
+      "subtitle": "Figures of Nonconformity in Early Modern England",
+      "allAuthors": [
+        "Kristen Poole"
+      ],
+      "synopsis": "The figure of the puritan has long been conceived as dour and repressive in character, an image which has been central to ways of reading sixteenth- and seventeenth-century history and literature. Kristen Poole's original study challenges this perception arguing that, contrary to current critical understanding, radical reformers were most often portrayed in literature of the period as deviant, licentious and transgressive. Through extensive analysis of early modern pamphlets, sermons, poetry and plays, the fictional puritan emerges as a grotesque and carnivalesque figure; puritans are extensively depicted as gluttonous, sexually promiscuous, monstrously procreating, and even as worshipping naked. By recovering this lost alternative satirical image, Poole sheds new light on the role played by anti-puritan rhetoric. Her book contends that such representations served an important social role, providing an imaginative framework for discussing familial, communal and political transformations that resulted from the Reformation.",
+      "pageCount": 286,
+      "language": "en",
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780521025447-M.jpg?default=false",
+        "https://books.google.com/books/content?id=db-2geA6cjkC&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api"
+      ],
+      "original": {
+        "title": "Radical Religion from Shakespeare to Milton",
+        "author": "Kristen Poole",
+        "isbn": "9780521025447",
+        "publisher": "Cambridge University Press",
+        "publicationYear": 2000,
+        "lcc": "BX 9334 .P66 2000",
+        "genreTags": [
+          "[Proposed] Christian history",
+          "[Proposed] Puritanism",
+          "British history",
+          "[Proposed] Religious history",
+          "Literary criticism",
+          "Shakespeare"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "50f181bd-f84f-404c-be7e-94ccbdf86359",
+      "spineRead": {
+        "position": 2,
+        "rawText": "Puritanism",
+        "title": "Puritanism",
+        "author": "",
+        "publisher": "Cambridge",
+        "lcc": "",
+        "confidence": "MEDIUM",
+        "note": "Black spine with 'PURITANISM' in white. Cambridge logo visible at foot. Author not visible on this spine. Adjacent book has a sticker but it belongs to the next book.",
+        "bbox": {
+          "x": 7,
+          "y": 15,
+          "width": 8,
+          "height": 80
+        }
+      },
+      "title": "Puritanism and Revolution",
+      "author": "Christopher Hill",
+      "authorLF": "Hill, Christopher; NA, NA",
+      "isbn": "9780312174347",
+      "publisher": "Mercury Books",
+      "publicationYear": 1958,
+      "lcc": "DA-0375.00000000",
+      "genreTags": [
+        "British history",
+        "[Proposed] Puritanism"
+      ],
+      "formTags": [
+        "Anthology"
+      ],
+      "confidence": "MEDIUM",
+      "reasoning": "[history] LCC DA prefix indicates British history. Subject headings confirm focus on Puritans and English Revolution of 17th century. Synopsis describes it as 'collection of essays,' indicating anthology form. | [religion] Book focuses specifically on Puritanism and the English Revolution. The subject headings confirm 'Puritans' and 'Puritanisme' as key topics. The synopsis describes it as a 'collection of essays,' indicating anthology form. While historical in nature, the religious/spiritual dimension of Puritanism fits this domain.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "inferredDomains": [
+        "history",
+        "religion"
+      ],
+      "domainConfidence": "high",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780312174347-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "Puritanism and revolution",
+      "subtitle": "Studies in Interpretation of the English Revolution of the 17th Century",
+      "allAuthors": [
+        "Christopher Hill",
+        "NA NA"
+      ],
+      "synopsis": "This illuminating collection of essays assesses the 17th century, interpreting what used to be called \"The Puritan Revolution,\" the ideas which helped to produce it and resulted from it, and the relations between these ideas and the political events of the day.",
+      "pageCount": 402,
+      "language": "en",
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780312174347-M.jpg?default=false",
+        "https://books.google.com/books/content?id=yJPWwAEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api"
+      ],
+      "original": {
+        "title": "Puritanism and Revolution",
+        "author": "Christopher Hill",
+        "isbn": "9780312174347",
+        "publisher": "Mercury Books",
+        "publicationYear": 1958,
+        "lcc": "DA-0375.00000000",
+        "genreTags": [
+          "British history",
+          "[Proposed] Puritanism"
+        ],
+        "formTags": [
+          "Anthology"
+        ]
+      }
+    },
+    {
+      "id": "5b3fc513-7802-4660-ba83-64c6b6947b40",
+      "spineRead": {
+        "position": 3,
+        "rawText": "Shaker — June Sprigg, David Larkin",
+        "title": "Shaker",
+        "author": "June Sprigg, David Larkin",
+        "publisher": "",
+        "lcc": "BX9771 .S6 19??",
+        "confidence": "MEDIUM",
+        "note": "Sticker shows BX / 977 / S6 / 19.. but partially obscured",
+        "bbox": {
+          "x": 15,
+          "y": 15,
+          "width": 7,
+          "height": 80
+        },
+        "extractedCallNumber": "BX 977 S6 19",
+        "extractedCallNumberSystem": "lcc"
+      },
+      "title": "Shaker",
+      "author": "June Sprigg",
+      "authorLF": "Sprigg, June; Larkin, David",
+      "isbn": "9780810982147",
+      "publisher": "Harry N. Abrams",
+      "publicationYear": 2001,
+      "lcc": "BX 977 S6 19",
+      "genreTags": [
+        "[Proposed] Shakers",
+        "Visual culture"
+      ],
+      "formTags": [],
+      "confidence": "MEDIUM",
+      "reasoning": "[religion] Book focuses on the Shaker religious community's life, work, and art. LCC BX977 places it squarely in Christian denominations/sects. While Shakers aren't in the existing religion vocabulary, they're a well-documented American religious sect, warranting the proposed tag. | [arts_culture] Book focuses on Shaker design, architecture, furniture, and crafts - clearly visual/material culture. Subject headings confirm this covers Shaker art, architecture, and furniture. The visual emphasis and craft focus fits Visual culture within Arts & culture domain.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "inferredDomains": [
+        "religion",
+        "arts_culture"
+      ],
+      "domainConfidence": "high",
+      "lccSource": "spine",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780810982147-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "Shaker",
+      "subtitle": "Life, Work and Art",
+      "allAuthors": [
+        "June Sprigg",
+        "David Larkin"
+      ],
+      "synopsis": "The Shakers, for more than 200 years America's largest utopian society, are perhaps best known today for the excellence and simplicity of their furniture design. This beautiful book introduces readers to their architecture, furniture, crafts, inventions, and simple way of life.",
+      "pageCount": 272,
+      "language": "en",
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780810982147-M.jpg?default=false",
+        "https://books.google.com/books/content?id=suNmAAAACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api"
+      ],
+      "original": {
+        "title": "Shaker",
+        "author": "June Sprigg",
+        "isbn": "9780810982147",
+        "publisher": "Harry N. Abrams",
+        "publicationYear": 2001,
+        "lcc": "BX 977 S6 19",
+        "genreTags": [
+          "[Proposed] Shakers",
+          "Visual culture"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "d886c490-5dd3-4b34-804a-866f3560f34b",
+      "spineRead": {
+        "position": 4,
+        "rawText": "The Price of Redemption — Peterson",
+        "title": "The Price of Redemption",
+        "author": "Peterson",
+        "publisher": "Stanford",
+        "lcc": "BX9355.M4 P48 1997",
+        "confidence": "HIGH",
+        "note": "Subtitle: The Spiritual Economy of Puritan New England",
+        "bbox": {
+          "x": 22,
+          "y": 15,
+          "width": 8,
+          "height": 80
+        },
+        "extractedCallNumber": "BX 9355 M4 P48 1997",
+        "extractedCallNumberSystem": "lcc"
+      },
+      "title": "The Price of Redemption",
+      "author": "Peterson, Mark A.",
+      "authorLF": "Peterson, Mark A.",
+      "isbn": "9780804729123",
+      "publisher": "Stanford University Press",
+      "publicationYear": 1997,
+      "lcc": "BX 9355 M4 P48 1997",
+      "genreTags": [
+        "[Proposed] Church history",
+        "[Proposed] Puritans",
+        "American history",
+        "Cultural history"
+      ],
+      "formTags": [],
+      "confidence": "MEDIUM",
+      "reasoning": "[religion] LCC BX indicates Christianity, and subject headings clearly point to Puritan church history with focus on Great Awakening and specific churches. The religious aspects of economics theme fits within broader religious history context. | [history] LCC BX indicates religious history, but subject headings reference Great Awakening, Westfield Church, Third Church Boston, and Puritans - all American religious/cultural history topics. The economic and spiritual aspects suggest cultural rather than purely political history.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "inferredDomains": [
+        "religion",
+        "history"
+      ],
+      "domainConfidence": "high",
+      "lccSource": "spine",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780804729123-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "The price of redemption",
+      "allAuthors": [
+        "Peterson, Mark A."
+      ],
+      "pageCount": 325,
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780804729123-M.jpg?default=false"
+      ],
+      "original": {
+        "title": "The Price of Redemption",
+        "author": "Peterson, Mark A.",
+        "isbn": "9780804729123",
+        "publisher": "Stanford University Press",
+        "publicationYear": 1997,
+        "lcc": "BX 9355 M4 P48 1997",
+        "genreTags": [
+          "[Proposed] Church history",
+          "[Proposed] Puritans",
+          "American history",
+          "Cultural history"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "cef708eb-a2b2-46e0-8770-b9d473c7ffbe",
+      "spineRead": {
+        "position": 5,
+        "rawText": "THE PRICE OF REDEMPTION",
+        "title": "THE PRICE OF REDEMPTION",
+        "author": "",
+        "publisher": "STANFORD",
+        "lcc": "",
+        "confidence": "MEDIUM",
+        "note": "Dark blue spine; author partially visible at top ending in 'ON'; sticker partially legible with '55', '8', '97'",
+        "bbox": {
+          "x": 30,
+          "y": 15,
+          "width": 5,
+          "height": 80
+        },
+        "extractedCallNumber": "55 8 97",
+        "extractedCallNumberSystem": "unknown"
+      },
+      "title": "The Price of Redemption",
+      "author": "Gavin R. Dobson",
+      "authorLF": "Dobson, Gavin R.",
+      "isbn": "9781906775285",
+      "publisher": "Librario",
+      "publicationYear": 2011,
+      "lcc": "PR6104 .O376",
+      "genreTags": [
+        "Fiction"
+      ],
+      "formTags": [],
+      "confidence": "MEDIUM",
+      "reasoning": "[literature] LCC PR6104 places this in British literature fiction (21st century). Subject headings confirm 'Fiction' and indicate themes of capitalism, avarice, and commercial crimes - all typical fiction subjects rather than separate genre distinctions.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "inferredDomains": [
+        "literature"
+      ],
+      "domainConfidence": "high",
+      "lccSource": "ol",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9781906775285-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "The price of redemption",
+      "allAuthors": [
+        "Gavin R. Dobson"
+      ],
+      "pageCount": 258,
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9781906775285-M.jpg?default=false"
+      ],
+      "original": {
+        "title": "The Price of Redemption",
+        "author": "Gavin R. Dobson",
+        "isbn": "9781906775285",
+        "publisher": "Librario",
+        "publicationYear": 2011,
+        "lcc": "PR6104 .O376",
+        "genreTags": [
+          "Fiction"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "b3176b5d-9e11-49c1-9bc7-ee7c0d9b7655",
+      "spineRead": {
+        "position": 6,
+        "rawText": "Zion on the [Hill?] — Fabend",
+        "title": "Zion on the [Hill?]",
+        "author": "Fabend",
+        "publisher": "",
+        "lcc": "BX9498.D87 A4 2000",
+        "confidence": "MEDIUM",
+        "note": "Title partially obscured; appears to read 'Zion on the...'. Call number sticker visible.",
+        "bbox": {
+          "x": 35,
+          "y": 15,
+          "width": 5,
+          "height": 80
+        },
+        "extractedCallNumber": "BX 9498 D87 A4 2000",
+        "extractedCallNumberSystem": "lcc"
+      },
+      "title": "Zion on the Hudson Dutch New York and New Jersey in the Age of Revivals",
+      "author": "Firth Haring Fabend",
+      "authorLF": "Fabend, Firth Haring",
+      "isbn": "9780813527710",
+      "publisher": "Rutgers University Press",
+      "publicationYear": 2000,
+      "lcc": "BX 9498 D87 A4 2000",
+      "genreTags": [
+        "[Proposed] Protestant Christianity",
+        "[Proposed] Dutch Reformed tradition",
+        "American history",
+        "Cultural history"
+      ],
+      "formTags": [],
+      "confidence": "MEDIUM",
+      "reasoning": "[religion] LCC BX indicates Christianity, specifically Protestant denominations. LCSH terms point to Dutch Reformed Church history in 19th century America. The existing vocabulary lacks specific tags for Protestant denominations or Reformed traditions, requiring proposed tags. | [history] LCSH headings clearly indicate this is about Dutch Americans in New York and New Jersey during the 19th century, focusing on religious and cultural history. The Reformed Church history and Dutch American experience fits American history and cultural history within the History domain.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "isbndb",
+      "ddc": "285.7/747/0893931",
+      "inferredDomains": [
+        "religion",
+        "history"
+      ],
+      "domainConfidence": "high",
+      "lccSource": "spine",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780813527710-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "Zion on the Hudson Dutch New York and New Jersey in the Age of Revivals",
+      "allAuthors": [
+        "Firth Haring Fabend"
+      ],
+      "synopsis": "<p><b>Winner of the 2001 New Jersey Author's Award by the New Jersey Academic Alliance</b> <p> The Dutch came to the New World in the seventeenth century as explorers and traders, but religion soon followed, for it was accepted in the Netherlands that state and church were mutually benefited by advancing the \"true Christian religion.\" The influence of \"Dutchness\"--defined here as loyalty to what are presumed to be the distinctive qualities of Dutch national character and culture--persisted in New York and New Jersey for more than 200 years after Dutch emigration ended. Why?</p><p>Firth Haring Fabend finds the explanation in the devotion of the Reformed Dutch Church membership to the doctrines and traditions of their church. She looks at the individual and personal beliefs and behaviors of this often-neglected ethnic group. Thus, <i>Zion on the Hudson</i> presents both a broad and an intimate look at the way one mainstream Protestant denomination dealt with the transformative events of the evangelical era.</p><p>As Fabend describes the efforts of the Dutch to preserve the European standards and traditions of their church, while developing a taste for a new kind of theology and a preference for an American identity, she documents how Dutchness finally became a historical memory. The Americanization of the Reformed Dutch Church, Fabend writes, is a microcosm of the story of the Americanization of the United States itself.</p>",
+      "pageCount": 284,
+      "edition": "None",
+      "binding": "Hardcover",
+      "language": "en",
+      "lcshSubjects": [
+        "Dutch Americans — New York — Religion",
+        "Dutch Americans — New Jersey — Religion",
+        "Reformed Church — New York — History — 19th century",
+        "Reformed Church — New Jersey — History — 19th century",
+        "Dutch Americans — New York — History — 19th century",
+        "Dutch Americans — New Jersey — History — 19th century",
+        "New York — Church history — 19th century",
+        "New Jersey — Church history — 19th century"
+      ],
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780813527710-M.jpg?default=false",
+        "https://images.isbndb.com/covers/17575273482477.jpg"
+      ],
+      "original": {
+        "title": "Zion on the Hudson Dutch New York and New Jersey in the Age of Revivals",
+        "author": "Firth Haring Fabend",
+        "isbn": "9780813527710",
+        "publisher": "Rutgers University Press",
+        "publicationYear": 2000,
+        "lcc": "BX 9498 D87 A4 2000",
+        "genreTags": [
+          "[Proposed] Protestant Christianity",
+          "[Proposed] Dutch Reformed tradition",
+          "American history",
+          "Cultural history"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "ac3c3593-9061-4dc7-a7cb-20db3d810eee",
+      "spineRead": {
+        "position": 7,
+        "rawText": "\"The Most Effective Organization in the U.S.\" — R. Watson Brown",
+        "title": "\"The Most Effective Organization in the U.S.\"",
+        "author": "R. Watson Brown",
+        "publisher": "",
+        "lcc": "BX9726 .W38 2001",
+        "confidence": "HIGH",
+        "note": "Subtitle reference: The Salvation Army",
+        "bbox": {
+          "x": 40,
+          "y": 15,
+          "width": 8,
+          "height": 80
+        },
+        "extractedCallNumber": "BX 9726 W38 2001",
+        "extractedCallNumberSystem": "lcc"
+      },
+      "title": "Leadership Secrets of the Salvation Army - \"the Most Effective Organization in the U.s.\"",
+      "author": "Robert A. & Brown, Ben Watson",
+      "authorLF": "A., Robert; Brown, Ben Watson",
+      "isbn": "9780892161201",
+      "publisher": "The Salvation Army",
+      "publicationYear": 2006,
+      "lcc": "BX 9726 W38 2001",
+      "genreTags": [
+        "[Proposed] Christian denominations",
+        "[Proposed] Organizational studies"
+      ],
+      "formTags": [],
+      "confidence": "MEDIUM",
+      "reasoning": "[religion] LCC BX 9726 indicates Christian denominations/sects, specifically about the Salvation Army. The synopsis describes it as both a religious institution and business organization. No existing domain tags precisely fit this denominational focus, so proposing Christian denominations tag. | [social_political] Book analyzes the Salvation Army as a business/organizational model rather than a religious institution. The LCC BX classification indicates religion, but the synopsis focuses on organizational effectiveness and business structure. No existing Social & political tags directly fit this organizational analysis approach.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "isbndb",
+      "inferredDomains": [
+        "religion",
+        "social_political"
+      ],
+      "domainConfidence": "high",
+      "lccSource": "spine",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780892161201-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "Leadership Secrets of the Salvation Army - \"The Most Effective Organization in the U.S.\"",
+      "allAuthors": [
+        "Robert A. & Brown, Ben Watson"
+      ],
+      "synopsis": "Most of us know the Salvation Army from its fundraising efforts and philanthropic programs, but the $2 billion-a-year transcontinental institution, now serving more than 30 million people with a vastly underpaid and overworked staff, is also a model business structure. Under a title taken from the description applied to it by management guru Peter Drucker, The Most Effective Organization in the U.S. outlines the fundamental tenets that the group has prospered under since its founding in the mid- to late 1800s. Written by former National Commander Robert A. Watson and freelancer Ben Brown, the book details eight principles that allow the Army to do so much with so little: focus on \"a purpose that transcends quarterly earnings\"; make \"what you do serve human needs\"; stay publicly accountable to visible standards; encourage feedback and act upon it; \"invest real power and real responsibility\" in top personnel; \"accept the inevitability of change\"; take calculated risks; and motivate employees by ensuring their jobs are both valuable and enjoyable. Some readers may not be comfortable with the organization's overt ties to Christian teachings, but few can argue with the success it consistently enjoys. --Howard Rothman",
+      "binding": "Hardcover",
+      "language": "en",
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780892161201-M.jpg?default=false",
+        "https://images.isbndb.com/covers/17508063482505.jpg"
+      ],
+      "original": {
+        "title": "Leadership Secrets of the Salvation Army - \"the Most Effective Organization in the U.s.\"",
+        "author": "Robert A. & Brown, Ben Watson",
+        "isbn": "9780892161201",
+        "publisher": "The Salvation Army",
+        "publicationYear": 2006,
+        "lcc": "BX 9726 W38 2001",
+        "genreTags": [
+          "[Proposed] Christian denominations",
+          "[Proposed] Organizational studies"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "6064ab94-b397-4879-abbc-c1da342c0acf",
+      "spineRead": {
+        "position": 8,
+        "rawText": "The Making of a Moonie",
+        "title": "The Making of a Moonie",
+        "author": "",
+        "publisher": "Blackwell",
+        "lcc": "BX9750.S4 B37 1984",
+        "confidence": "MEDIUM",
+        "note": "Author not visible on spine in cropped image",
+        "bbox": {
+          "x": 48,
+          "y": 15,
+          "width": 6,
+          "height": 80
+        },
+        "extractedCallNumber": "BX 9750 S4 B37 1984",
+        "extractedCallNumberSystem": "lcc"
+      },
+      "title": "The Making of a Moonie",
+      "author": "Eileen Barker",
+      "authorLF": "Barker, Eileen",
+      "isbn": "9780751201369",
+      "publisher": "Gregg Revivals",
+      "publicationYear": 1984,
+      "lcc": "BX 9750 S4 B37 1984",
+      "genreTags": [
+        "[Proposed] New religious movements",
+        "[Proposed] Religious psychology",
+        "[Proposed] Cult studies"
+      ],
+      "formTags": [],
+      "confidence": "MEDIUM",
+      "reasoning": "[religion] LCC BX9750 places this in Christian denominations/sects section, specifically about the Unification Church. Subject headings confirm focus on Unification Church and religious psychology. No existing tags in the Religion & spirituality vocabulary directly cover new religious movements or the psychological aspects of religious conversion, so proposing relevant tags. | [psychology] LCC BX indicates religion but subject headings include 'Religion and Psychology' and 'Persuasive Communication' which align with psychological study of religious movements. The Unification Church (Moonies) is often studied from a psychological perspective regarding conversion processes and group dynamics. The psychology domain connection comes through the psychological analysis of religious persuasion and cult behavior.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "inferredDomains": [
+        "religion",
+        "psychology"
+      ],
+      "domainConfidence": "high",
+      "lccSource": "spine",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780751201369-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "The making of a Moonie",
+      "allAuthors": [
+        "Eileen Barker"
+      ],
+      "pageCount": 305,
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780751201369-M.jpg?default=false"
+      ],
+      "original": {
+        "title": "The Making of a Moonie",
+        "author": "Eileen Barker",
+        "isbn": "9780751201369",
+        "publisher": "Gregg Revivals",
+        "publicationYear": 1984,
+        "lcc": "BX 9750 S4 B37 1984",
+        "genreTags": [
+          "[Proposed] New religious movements",
+          "[Proposed] Religious psychology",
+          "[Proposed] Cult studies"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "9aa41a38-fb5e-4dc4-b935-611fe757131e",
+      "spineRead": {
+        "position": 9,
+        "rawText": "Scholarship and the Christian Church",
+        "title": "Scholarship and the Christian Church",
+        "author": "",
+        "publisher": "",
+        "lcc": "",
+        "confidence": "LOW",
+        "note": "Two book spines visible; focusing on right tan spine reading 'Scholarship and the Christian Church'. Left spine reads 'THE MAKING' (possibly 'The Making of the Moonie...'). Author not legible on either. Bottom sticker on right spine shows partial text 'B... 9... S...' but not clearly readable.",
+        "bbox": {
+          "x": 54,
+          "y": 15,
+          "width": 5,
+          "height": 80
+        }
+      },
+      "title": "Christians at the Heart of Islamic Rule - Church Life and Scholarship in 'Abbasid Iraq",
+      "author": "David Thomas",
+      "authorLF": "Thomas, David",
+      "isbn": "9789047401919",
+      "publisher": "BRILL",
+      "publicationYear": 2003,
+      "lcc": "",
+      "genreTags": [
+        "Christianity",
+        "Comparative religion",
+        "[Proposed] Medieval history",
+        "[Proposed] Islamic history",
+        "[Proposed] Christian history"
+      ],
+      "formTags": [
+        "Anthology"
+      ],
+      "confidence": "LOW",
+      "reasoning": "[religion] Academic study of Christian church life in Islamic 'Abbasid Iraq fits Christianity as primary focus, with Comparative religion for the interfaith/cross-cultural analysis. Subject headings directly support both tags. | [history] Book covers Christian life in 'Abbasid Iraq (medieval Islamic period). The mention of 'chapters from symposium' indicates anthology format. Proposes specific historical period/religious context tags as none exist in current vocabulary for this specialized intersection of medieval Islamic and Christian history.",
+      "status": "pending",
+      "warnings": [
+        "LCC code missing — tags inferred from title and author only."
+      ],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "isbndb",
+      "inferredDomains": [
+        "religion",
+        "history"
+      ],
+      "domainConfidence": "high",
+      "lccSource": "none",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9789047401919-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "Christians at the Heart of Islamic Rule - Church Life and Scholarship in 'Abbasid Iraq",
+      "subtitle": "Church Life and Scholarship in 'Abbasid Iraq",
+      "allAuthors": [
+        "David Thomas"
+      ],
+      "synopsis": "The chapters in this volume, which come from the Fourth Woodbrooke-Mingana Symposium, cover aspects of Christian life in and around Baghdad in the early centuries of 'Abbasid rule.<br>The authors explore both broad themes, such as the place of monasteries in Muslim cultural life, accusations of Islam as crypto-idolatry, and Muslim responses to Christian apologetic arguments, and also specific topics, such as a Nestorian's explanation of the Incarnation, a Jacobite's purpose in composing his guide to moral improvement, and the development of Christian legends about the caliph al-Ma'mun.<br>The volume illustrates the vigour of Iraqi Christian life in 'Abbasid times, and helps show that relations between Christians and Muslims, although strained at times, were often beneficial to followers of both faiths.",
+      "pageCount": 272,
+      "language": "en",
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9789047401919-M.jpg?default=false",
+        "https://books.google.com/books/content?id=g7BxEQAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api",
+        "https://images.isbndb.com/covers/8781083485409.jpg"
+      ],
+      "original": {
+        "title": "Christians at the Heart of Islamic Rule - Church Life and Scholarship in 'Abbasid Iraq",
+        "author": "David Thomas",
+        "isbn": "9789047401919",
+        "publisher": "BRILL",
+        "publicationYear": 2003,
+        "lcc": "",
+        "genreTags": [
+          "Christianity",
+          "Comparative religion",
+          "[Proposed] Medieval history",
+          "[Proposed] Islamic history",
+          "[Proposed] Christian history"
+        ],
+        "formTags": [
+          "Anthology"
+        ]
+      }
+    },
+    {
+      "id": "a2e998bd-7fca-4045-9dd4-5af5bd2db685",
+      "spineRead": {
+        "position": 10,
+        "rawText": "Science, Sin, and Scholarship: The Politics of Reverend Moon and the Unification Church",
+        "title": "Science, Sin, and Scholarship: The Politics of Reverend Moon and the Unification Church",
+        "author": "",
+        "publisher": "",
+        "lcc": "BX9750.S4 S35",
+        "confidence": "MEDIUM",
+        "note": "Author name partially visible but not clearly legible",
+        "bbox": {
+          "x": 59,
+          "y": 15,
+          "width": 8,
+          "height": 80
+        },
+        "extractedCallNumber": "BX 9750 S4 S35",
+        "extractedCallNumberSystem": "lcc"
+      },
+      "title": "Science, Sin, and Scholarship: The Politics of Reverend Moon and the Unification Church",
+      "author": "Irving Louis Horowitz",
+      "authorLF": "Horowitz, Irving Louis",
+      "isbn": "9780262081009",
+      "publisher": "MIT Press",
+      "publicationYear": 1978,
+      "lcc": "BX 9750 S4 S35",
+      "genreTags": [
+        "[Proposed] New religious movements",
+        "[Proposed] Religious movements",
+        "Identity & tribalism"
+      ],
+      "formTags": [
+        "First edition"
+      ],
+      "confidence": "MEDIUM",
+      "reasoning": "[religion] LCC BX9750 places this in Christian denominations/sects. The book examines the Unification Church (Moon's movement), which fits new religious movements. DDC 289 confirms new Christian sects. First edition stated in metadata. | [social_political] Book examines the political activities and influence of the Unification Church in America. The LCC classification BX (Christian denominations) places it in religious studies, but the subtitle 'The Politics of...' and synopsis describing infiltration of government and universities clearly indicates political analysis. The focus on a specific religious group's political influence fits 'Identity & tribalism'. Edition statement confirms first edition form tag.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "isbndb",
+      "ddc": "289/.9",
+      "inferredDomains": [
+        "religion",
+        "social_political"
+      ],
+      "domainConfidence": "high",
+      "lccSource": "spine",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780262081009-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "Science, Sin, and Scholarship: The Politics of Reverend Moon and the Unification Church",
+      "subtitle": "The Politics of Reverend Moon and the Unification Church",
+      "allAuthors": [
+        "Irving Louis Horowitz"
+      ],
+      "synopsis": "\"A collection of essays documenting the persistence with which Moon has infiltrated powerful groups in America, from the federal government to the universities. It is carefully edited by Irving L. Horowitz... and offers fine summations of the difficult constitutional issues raised by the current practice of kidnapping and deprogramming cult members... Excellent.\"â€” The New York Review of Books\"Some of the essays are highly critical of Moon, including charges about his alleged connection with the Korean CIA, the anti-Jewish thrust of some of his writings, his extensive financial resources, and his controversial tactics in recruiting new members. Other essaysâ€”especially the one by Frederick Sontagâ€”commmend Moon. Editor Irving Horowitz, a well-respected professional sociologist, seeks to put the Unification Church into the perspective of American social history and includes his own chapter, which questions the appropriateness of Moon's sponsorship of the 1976 International Converence on the Unity of Sciences. This book, the first of its kind on Moon, is a well-balanced, highly valuable, comprehensive survey of an unusually aggressive contemporary religious sect.\"â€” Choice\"A valuable work of interdisciplinary scholarship and a useful demonstration that journalism and serious social science may peacefully cohabit the pages of the same book.\"â€” Chronicle of Higher Education",
+      "pageCount": 290,
+      "edition": "First Edition",
+      "binding": "Hardcover",
+      "language": "en",
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780262081009-M.jpg?default=false",
+        "https://books.google.com/books/content?id=xY3ZAAAAMAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+        "https://images.isbndb.com/covers/7923103482281.jpg"
+      ],
+      "original": {
+        "title": "Science, Sin, and Scholarship: The Politics of Reverend Moon and the Unification Church",
+        "author": "Irving Louis Horowitz",
+        "isbn": "9780262081009",
+        "publisher": "MIT Press",
+        "publicationYear": 1978,
+        "lcc": "BX 9750 S4 S35",
+        "genreTags": [
+          "[Proposed] New religious movements",
+          "[Proposed] Religious movements",
+          "Identity & tribalism"
+        ],
+        "formTags": [
+          "First edition"
+        ]
+      }
+    },
+    {
+      "id": "da013973-759a-4b59-baab-5db4a36402c1",
+      "spineRead": {
+        "position": 11,
+        "rawText": "The Origins of History — Herbert Butterfield",
+        "title": "The Origins of History",
+        "author": "Herbert Butterfield",
+        "publisher": "Basic Books",
+        "lcc": "CB15 .B158",
+        "confidence": "MEDIUM",
+        "note": "Author appears truncated on spine as 'HERBERT BUTTER' but is Herbert Butterfield; sticker shows CB/15/B158",
+        "bbox": {
+          "x": 67,
+          "y": 15,
+          "width": 6,
+          "height": 80
+        },
+        "extractedCallNumber": "CB 15 B158",
+        "extractedCallNumberSystem": "lcc"
+      },
+      "title": "The Origins of History",
+      "author": "Sir Herbert Butterfield",
+      "authorLF": "Butterfield, Sir Herbert; Butterfield, Herbert; Watson, Adam; Butterfield, Herbert",
+      "isbn": "9780465053445",
+      "publisher": "Methuen",
+      "publicationYear": 1981,
+      "lcc": "CB 15 B158",
+      "genreTags": [
+        "[Proposed] Historiography"
+      ],
+      "formTags": [],
+      "confidence": "MEDIUM",
+      "reasoning": "[history] LCSH 'Historiography' and LCC CB (History of Civilization) clearly indicate this is about the study and writing of history itself. The synopsis confirms this traces the development of historical writing from ancient times. Historiography is not in the current History domain vocabulary but is a core historical subdiscipline. | [books_libraries] LCC CB 15 indicates history of civilization/historiography. LCSH 'Historiography' and synopsis about origins and development of historical writing clearly establish this as a study of historiography rather than general library science. No form tags applicable.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "ddc": "907/.2",
+      "inferredDomains": [
+        "history",
+        "books_libraries"
+      ],
+      "domainConfidence": "high",
+      "lccSource": "spine",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780465053445-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "The origins of history",
+      "allAuthors": [
+        "Sir Herbert Butterfield",
+        "Butterfield, Herbert",
+        "Watson, Adam",
+        "Herbert Butterfield"
+      ],
+      "synopsis": "Discusses the origins of history in ancient Mesopotamia, Egypt, and China, tracing its development from the Hebrew Scriptures, the concepts of the Greeks and early Christians, to the birth of modern historical criticism.--Amazon.com.",
+      "pageCount": 252,
+      "language": "en",
+      "lcshSubjects": [
+        "Historiography"
+      ],
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780465053445-M.jpg?default=false",
+        "https://books.google.com/books/content?id=1YMWAQAAIAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api"
+      ],
+      "original": {
+        "title": "The Origins of History",
+        "author": "Sir Herbert Butterfield",
+        "isbn": "9780465053445",
+        "publisher": "Methuen",
+        "publicationYear": 1981,
+        "lcc": "CB 15 B158",
+        "genreTags": [
+          "[Proposed] Historiography"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "bd14a89b-2019-4e81-b51c-dd3c64748826",
+      "spineRead": {
+        "position": 12,
+        "rawText": "Origin Story: A Big History of Everything — David Christian",
+        "title": "Origin Story: A Big History of Everything",
+        "author": "David Christian",
+        "publisher": "",
+        "lcc": "CB19 .C478 2018",
+        "confidence": "HIGH",
+        "bbox": {
+          "x": 73,
+          "y": 15,
+          "width": 8,
+          "height": 80
+        },
+        "extractedCallNumber": "CB 19 .C478 2018",
+        "extractedCallNumberSystem": "lcc"
+      },
+      "title": "Origin Story a Big History of Everything",
+      "author": "David Christian",
+      "authorLF": "Christian, David",
+      "isbn": "9780316392013",
+      "publisher": "Little, Brown",
+      "publicationYear": 2019,
+      "lcc": "CB 19 .C478 2018",
+      "genreTags": [
+        "World history",
+        "[Proposed] Big History",
+        "Complexity & systems"
+      ],
+      "formTags": [],
+      "confidence": "HIGH",
+      "reasoning": "[history] LCC CB (History of Civilization) with DDC 909 (World history) and subtitle 'A Big History of Everything' clearly indicates comprehensive world history scope. The synopsis confirms this covers universal history from Big Bang to modern globalization. | [science] LCC CB indicates world/civilization history but with science focus. 'Big History' is a specific interdisciplinary field combining cosmology, geology, biology, and human history into unified narrative from Big Bang to present. The subtitle and synopsis confirm this approach. Also fits Complexity & systems given the integrated systems perspective across scales from universe to civilization.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "isbndb",
+      "ddc": "909",
+      "inferredDomains": [
+        "history",
+        "science"
+      ],
+      "domainConfidence": "high",
+      "lccSource": "spine",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780316392013-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "Origin Story A Big History of Everything",
+      "subtitle": "A Big History of Everything",
+      "allAuthors": [
+        "David Christian"
+      ],
+      "synopsis": "<b>This <i>New York Times</i> bestseller \"elegantly weaves evidence and insights...into a single, accessible historical narrative\" (Bill Gates) and presents a captivating history of the universe -- from the Big Bang to dinosaurs to mass globalization and beyond.</b><br><br>Most historians study the smallest slivers of time, emphasizing specific dates, individuals, and documents. But what would it look like to study the whole of history, from the big bang through the present day -- and even into the remote future? How would looking at the full span of time change the way we perceive the universe, the earth, and our very existence?<br><br>These were the questions David Christian set out to answer when he created the field of \"Big History,\" the most exciting new approach to understanding where we have been, where we are, and where we are going. In <i>Origin Story</i>, Christian takes readers on a wild ride through the entire 13.8 billion years we've come to know as \"history.\" By focusing on defining events (thresholds), major trends, and profound questions about our origins, Christian exposes the hidden threads that tie everything together -- from the creation of the planet to the advent of agriculture, nuclear war, and beyond.<br><br>With stunning insights into the origin of the universe, the beginning of life, the emergence of humans, and what the future might bring, <i>Origin Story</i> boldly reframes our place in the cosmos.<br><br>",
+      "pageCount": 368,
+      "edition": "Reprint",
+      "binding": "Paperback",
+      "language": "en",
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780316392013-M.jpg?default=false",
+        "https://books.google.com/books/content?id=RlBkuwEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+        "https://images.isbndb.com/covers/17403133482300.jpg"
+      ],
+      "original": {
+        "title": "Origin Story a Big History of Everything",
+        "author": "David Christian",
+        "isbn": "9780316392013",
+        "publisher": "Little, Brown",
+        "publicationYear": 2019,
+        "lcc": "CB 19 .C478 2018",
+        "genreTags": [
+          "World history",
+          "[Proposed] Big History",
+          "Complexity & systems"
+        ],
+        "formTags": []
+      }
+    },
+    {
+      "id": "9c38dae6-10c8-411c-9acf-1d1e6b0a3358",
+      "spineRead": {
+        "position": 13,
+        "rawText": "A Study of History",
+        "title": "A Study of History",
+        "author": "",
+        "publisher": "",
+        "lcc": "CB63 .T6433 1979",
+        "confidence": "MEDIUM",
+        "note": "Spine shows 'A STUDY OF HISTORY' vertically; author portion not visible in this crop (likely Toynbee based on call number cutter)",
+        "bbox": {
+          "x": 81,
+          "y": 15,
+          "width": 10,
+          "height": 80
+        },
+        "extractedCallNumber": "CB 63 .T6433 1979",
+        "extractedCallNumberSystem": "lcc"
+      },
+      "title": "A Study of History",
+      "author": "Arnold J. Toynbee",
+      "authorLF": "Toynbee, Arnold J.; Somervell, D.C; Toynbee, Arnold; Somervell, D. C",
+      "isbn": "9780195001990",
+      "publisher": "Elsevier Sequoia",
+      "publicationYear": 1900,
+      "lcc": "CB 63 .T6433 1979",
+      "genreTags": [
+        "World history",
+        "Cultural history",
+        "[Proposed] Philosophy of history"
+      ],
+      "formTags": [],
+      "confidence": "MEDIUM",
+      "reasoning": "[history] Toynbee's 'A Study of History' is a seminal work analyzing civilizations across world history with philosophical approach to cultural patterns. LCC CB (Social Sciences: History of Civilization) and DDC 909 (World history) confirm world scope, while LCSH 'Civilization' and 'History — Philosophy' indicate cultural-historical analysis. | [philosophy] Clear LCSH 'History — Philosophy' indicates this fits philosophy of history. LCC CB supports civilization/cultural history focus. Toynbee's 'A Study of History' is a foundational work examining patterns and philosophies underlying historical civilizations.",
+      "status": "pending",
+      "warnings": [],
+      "sourcePhoto": "shelf-capture-001.cropped.jpg",
+      "lookupSource": "openlibrary",
+      "ddc": "909",
+      "inferredDomains": [
+        "history",
+        "philosophy"
+      ],
+      "domainConfidence": "high",
+      "lccSource": "spine",
+      "spineThumbnail": "data:image/jpeg;base64,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",
+      "coverUrl": "https://covers.openlibrary.org/b/isbn/9780195001990-M.jpg?default=false",
+      "ocrModel": "o",
+      "canonicalTitle": "A Study of History",
+      "allAuthors": [
+        "Arnold J. Toynbee",
+        "D.C Somervell",
+        "Toynbee, Arnold",
+        "Somervell, D. C"
+      ],
+      "pageCount": 576,
+      "lcshSubjects": [
+        "Civilization",
+        "History — Philosophy"
+      ],
+      "coverUrlFallbacks": [
+        "https://covers.openlibrary.org/b/isbn/9780195001990-M.jpg?default=false"
+      ],
+      "original": {
+        "title": "A Study of History",
+        "author": "Arnold J. Toynbee",
+        "isbn": "9780195001990",
+        "publisher": "Elsevier Sequoia",
+        "publicationYear": 1900,
+        "lcc": "CB 63 .T6433 1979",
+        "genreTags": [
+          "World history",
+          "Cultural history",
+          "[Proposed] Philosophy of history"
+        ],
+        "formTags": []
+      }
+    }
+  ],
+  "croppedFrom": "shelf-capture-001.jpg",
+  "sourceDimensions": {
+    "width": 2084,
+    "height": 2601
+  }
+}
