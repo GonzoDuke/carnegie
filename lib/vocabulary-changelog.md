@@ -27,4 +27,10 @@ Created baseline vocabulary from 186-book LibraryThing export + 22-book proof of
 
 - Removed `drugs` from **Literature**
 
+## 2026-05-04
+
+- Added `Social psychology` to **philosophy_psychology_religion**
+- Added `Modern civilization` to **auxiliary_history**
+- Added `Profanity studies` to **language_literature**
+
 <!-- New entries will be appended below automatically by the approve command -->
