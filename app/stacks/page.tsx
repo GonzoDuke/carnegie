@@ -26,6 +26,7 @@ import {
   loadLedger,
   syncLedgerFromRepo,
   detectDuplicates,
+  detectAuthorityIssues,
   type LedgerEntry,
 } from '@/lib/export-ledger';
 import {
@@ -479,61 +480,27 @@ function Stat({ label, value }: { label: string; value: number | string }) {
   );
 }
 
-// Author-similarity for the Authority-check count: cluster ledger
-// entries on lastname-only and flag clusters where ≥2 distinct
-// first-name spellings co-exist (e.g. "Solnit, R." vs "Solnit,
-// Rebecca"). Cheap heuristic that matches the spec's example exactly.
-function countAuthorityConflicts(entries: LedgerEntry[]): number {
-  const byLastname = new Map<string, Set<string>>();
-  for (const e of entries) {
-    const lf = e.authorLF ?? e.author ?? '';
-    const trimmed = lf.trim();
-    if (!trimmed) continue;
-    const [last, rest] = trimmed.includes(',')
-      ? trimmed.split(',', 2)
-      : [trimmed.split(' ').slice(-1)[0], trimmed.split(' ').slice(0, -1).join(' ')];
-    const lastKey = last.toLowerCase().replace(/[^a-z\s]/g, '').trim();
-    if (!lastKey) continue;
-    const firstKey = (rest ?? '').toLowerCase().replace(/[^a-z]/g, '');
-    if (!firstKey) continue;
-    if (!byLastname.has(lastKey)) byLastname.set(lastKey, new Set());
-    byLastname.get(lastKey)!.add(firstKey);
-  }
-  let conflicts = 0;
-  for (const firstNames of byLastname.values()) {
-    if (firstNames.size < 2) continue;
-    // Conflict only when two first-given names share a prefix — "R." vs
-    // "Rebecca" is a conflict; "John" vs "Jane" is two different
-    // people. Heuristic: any two entries where one is a prefix of the
-    // other counts as one conflict.
-    const arr = Array.from(firstNames);
-    for (let i = 0; i < arr.length; i++) {
-      for (let j = i + 1; j < arr.length; j++) {
-        if (arr[i].startsWith(arr[j]) || arr[j].startsWith(arr[i])) {
-          conflicts += 1;
-          break;
-        }
-      }
-    }
-  }
-  return conflicts;
-}
-
 function ToolsRow({ ledger }: { ledger: LedgerEntry[] }) {
-  const authorityCount = useMemo(() => countAuthorityConflicts(ledger), [ledger]);
-  const duplicateGroups = useMemo(() => detectDuplicates(ledger).groups.length, [ledger]);
+  const authorityGroups = useMemo(
+    () => detectAuthorityIssues(ledger).groups.length,
+    [ledger]
+  );
+  const duplicateGroups = useMemo(
+    () => detectDuplicates(ledger).groups.length,
+    [ledger]
+  );
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       <ToolCard
         href="/stacks/authority"
         title="Authority check"
         body='Inconsistent author names across your library. "Solnit, R." vs "Solnit, Rebecca" — merge or keep separate.'
         badge={
-          authorityCount === 0
+          authorityGroups === 0
             ? { text: 'All clear', tone: 'green' }
             : {
-                text: `${authorityCount} to review`,
+                text: `${authorityGroups} ${authorityGroups === 1 ? 'group' : 'groups'}`,
                 tone: 'amber',
               }
         }
@@ -550,12 +517,6 @@ function ToolsRow({ ledger }: { ledger: LedgerEntry[] }) {
                 tone: 'amber',
               }
         }
-      />
-      <ToolCard
-        href="/stacks/series"
-        title="Series tracking"
-        body="Gaps in series you collect."
-        badge={{ text: '—', tone: 'muted', tooltip: 'Coming soon' }}
       />
     </div>
   );

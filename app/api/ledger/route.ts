@@ -39,7 +39,17 @@ interface PostBody {
    */
   updateEntries?: {
     match: EntryHandle;
-    set: Partial<Pick<LedgerEntry, 'dedupe_dismissed' | 'work_group_id'>>;
+    set: Partial<
+      Pick<
+        LedgerEntry,
+        | 'dedupe_dismissed'
+        | 'work_group_id'
+        | 'authority_dismissed'
+        | 'author'
+        | 'authorLF'
+        | 'authorNorm'
+      >
+    >;
   }[];
   /** Per-entry deletions, identified by EntryHandle. Destructive. */
   removeEntries?: EntryHandle[];
@@ -282,6 +292,18 @@ export async function POST(req: NextRequest) {
         }
         if ('work_group_id' in update.set) {
           patch.work_group_id = update.set.work_group_id;
+        }
+        if ('authority_dismissed' in update.set) {
+          patch.authority_dismissed = update.set.authority_dismissed;
+        }
+        if ('author' in update.set && typeof update.set.author === 'string') {
+          patch.author = update.set.author;
+        }
+        if ('authorLF' in update.set && typeof update.set.authorLF === 'string') {
+          patch.authorLF = update.set.authorLF;
+        }
+        if ('authorNorm' in update.set && typeof update.set.authorNorm === 'string') {
+          patch.authorNorm = update.set.authorNorm;
         }
         return { ...e, ...patch };
       });

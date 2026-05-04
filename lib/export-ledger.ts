@@ -59,10 +59,20 @@ export interface LedgerEntry {
    * Cross-reference id linking ledger entries the user has confirmed
    * are the same underlying work (different editions, printings,
    * translations). Written by the "Confirm same work" action in the
-   * duplicates tool. Future series-tracking will read this so it can
-   * count "the same work" once instead of N times.
+   * duplicates tool.
    */
   work_group_id?: string;
+  /**
+   * Set when the user dismissed this entry from the Authority check
+   * tool. `canonical_form` is recorded when the user picked a canonical
+   * version (the merge action) so we can audit the standardization
+   * later. Without `canonical_form`, the dismissal means "tool was
+   * wrong, these are different people."
+   */
+  authority_dismissed?: {
+    dismissedAt: string;
+    canonical_form?: string;
+  };
 }
 
 export function normalizeIsbn(isbn: string | undefined | null): string {
@@ -238,7 +248,17 @@ export async function pushLedgerDelta(
      */
     updateEntries?: {
       match: EntryHandle;
-      set: Partial<Pick<LedgerEntry, 'dedupe_dismissed' | 'work_group_id'>>;
+      set: Partial<
+        Pick<
+          LedgerEntry,
+          | 'dedupe_dismissed'
+          | 'work_group_id'
+          | 'authority_dismissed'
+          | 'author'
+          | 'authorLF'
+          | 'authorNorm'
+        >
+      >;
     }[];
     /** Delete specific entries identified by EntryHandle. Destructive. */
     removeEntries?: EntryHandle[];
@@ -887,4 +907,364 @@ function generateWorkGroupId(): string {
     return crypto.randomUUID();
   }
   return `wg-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Authority check — used by the /stacks/authority tool.
+//
+// Detects entries whose author is likely the same person but stored in
+// inconsistent forms ("Solnit, Rebecca" vs "Solnit, R." vs "Solnit,
+// Rebecca J."). The detection groups by lastname + first-initial, then
+// reports any group with ≥2 distinct stored-name strings. The user
+// resolves each group by picking a canonical form (which rewrites the
+// author field on every matched entry) or dismissing the group as
+// "actually different people."
+// ---------------------------------------------------------------------------
+
+const AUTHORITY_SOFT_DISMISS_KEY = 'carnegie:authority-soft-dismissals:v1';
+
+export interface AuthorityVariant {
+  /** The author name as stored on the entry (e.g. "Solnit, Rebecca"). */
+  name: string;
+  /** How many ledger entries use this exact form. */
+  entryCount: number;
+  /** Handles for every ledger entry that has this variant. */
+  handles: EntryHandle[];
+}
+
+export interface AuthorityGroup {
+  /** Canonical match key, e.g. "solnit|r" (lastname + first initial). */
+  matchKey: string;
+  /** Display form of the match key for UI ("Solnit, R."). */
+  matchKeyDisplay: string;
+  /** Distinct stored variants of this author, sorted by entry count desc. */
+  variants: AuthorityVariant[];
+  /** Sum of entryCount across all variants. */
+  totalEntries: number;
+}
+
+/** Strip a single author string into a comparable last-name and a
+ *  first-initial. Returns null when the name is unusable. Handles both
+ *  "Last, First" and display "First Last" forms. Multi-word last names
+ *  ("Le Guin", "García Márquez") are preserved when the comma form is
+ *  used; for display form, the LAST whitespace-separated token is the
+ *  lastname (a known limitation — display forms with multi-word last
+ *  names will misclassify). */
+function splitAuthorParts(
+  raw: string
+): { lastname: string; firstFull: string; firstInitial: string } | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  let lastname = '';
+  let firstFull = '';
+  if (trimmed.includes(',')) {
+    const [last, rest] = trimmed.split(',', 2);
+    lastname = last.trim();
+    const restTokens = (rest ?? '').trim().split(/\s+/).filter(Boolean);
+    firstFull = restTokens[0] ?? '';
+  } else {
+    const tokens = trimmed.split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return null;
+    lastname = tokens[tokens.length - 1];
+    firstFull = tokens.length > 1 ? tokens[0] : '';
+  }
+  // Normalize for comparison: strip diacritics, lowercase, strip
+  // non-alpha (handles initials with periods, hyphens, apostrophes).
+  const lastNorm = lastname
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const firstNorm = firstFull
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z]/g, '');
+  if (!lastNorm || !firstNorm) return null;
+  return {
+    lastname: lastNorm,
+    firstFull: firstNorm,
+    firstInitial: firstNorm.charAt(0),
+  };
+}
+
+/** Split a multi-author string into individual author names. The
+ *  ledger pipeline uses semicolons as the canonical separator, but we
+ *  also tolerate "&" and " and " for older entries. */
+function splitMultiAuthor(raw: string): string[] {
+  if (!raw) return [];
+  return raw
+    .split(/;|\s&\s|\sand\s/i)
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
+function loadAuthoritySoftDismissals(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(AUTHORITY_SOFT_DISMISS_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((s): s is string => typeof s === 'string'));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveAuthoritySoftDismissals(set: Set<string>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(
+      AUTHORITY_SOFT_DISMISS_KEY,
+      JSON.stringify(Array.from(set))
+    );
+  } catch {
+    // ignore quota errors
+  }
+}
+
+/** Soft-dismiss an authority group from the tool view. Local-only —
+ *  re-detection on a different device or after localStorage clear will
+ *  still surface it there. */
+export function softDismissAuthorityGroup(matchKey: string): void {
+  const set = loadAuthoritySoftDismissals();
+  set.add(matchKey);
+  saveAuthoritySoftDismissals(set);
+}
+
+/**
+ * Detect groups of entries whose authors share a lastname + first-name
+ * initial but are stored in inconsistent forms.
+ *
+ * Multi-author entries: each author is checked independently. The
+ * group's handles point at the full ledger entry where any matching
+ * author appears (so a "Caulfield, Mike; Wineburg, Sam" entry can show
+ * up in BOTH a Caulfield group and a Wineburg group if either is in
+ * conflict).
+ *
+ * Skips entries with `authority_dismissed` set. Skips match keys in
+ * the localStorage soft-dismiss set. Caps at 50 groups.
+ */
+export function detectAuthorityIssues(
+  entries: LedgerEntry[],
+  options: { cap?: number } = {}
+): { groups: AuthorityGroup[]; truncated: number } {
+  const cap = options.cap ?? 50;
+  const softDismissed = loadAuthoritySoftDismissals();
+  const eligible = entries.filter((e) => !e.authority_dismissed);
+
+  // Bucket: matchKey ("lastname|firstInitial") → variant ("Solnit,
+  // Rebecca J." as stored) → { entryCount, handles }
+  const buckets = new Map<
+    string,
+    Map<
+      string,
+      { handles: EntryHandle[]; firstFullSeen: Set<string>; matchKeyDisplay: string }
+    >
+  >();
+
+  for (const e of eligible) {
+    const fullAuthor = e.authorLF ?? e.author ?? '';
+    if (!fullAuthor.trim()) continue;
+    const individuals = splitMultiAuthor(fullAuthor);
+    for (const indiv of individuals) {
+      const parts = splitAuthorParts(indiv);
+      if (!parts) continue;
+      const matchKey = `${parts.lastname}|${parts.firstInitial}`;
+      // Display form for the header — capitalize lastname, plus first
+      // initial with a period. "solnit|r" → "Solnit, R."
+      const lastDisplay = parts.lastname
+        .split(/\s+/)
+        .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : ''))
+        .join(' ');
+      const matchKeyDisplay = `${lastDisplay}, ${parts.firstInitial.toUpperCase()}.`;
+
+      let variants = buckets.get(matchKey);
+      if (!variants) {
+        variants = new Map();
+        buckets.set(matchKey, variants);
+      }
+      const variantKey = indiv.trim();
+      let v = variants.get(variantKey);
+      if (!v) {
+        v = {
+          handles: [],
+          firstFullSeen: new Set(),
+          matchKeyDisplay,
+        };
+        variants.set(variantKey, v);
+      }
+      v.firstFullSeen.add(parts.firstFull);
+      // Don't double-add a handle if the same multi-author entry has
+      // two authors that hash to this same matchKey (rare, but defensive).
+      const handle = entryHandle(e);
+      if (
+        !v.handles.some((h) =>
+          h.isbn === handle.isbn &&
+          h.titleNorm === handle.titleNorm &&
+          h.authorNorm === handle.authorNorm &&
+          h.date === handle.date &&
+          h.batchLabel === handle.batchLabel
+        )
+      ) {
+        v.handles.push(handle);
+      }
+    }
+  }
+
+  const groups: AuthorityGroup[] = [];
+  for (const [matchKey, variantsMap] of buckets) {
+    if (variantsMap.size < 2) continue;
+    if (softDismissed.has(matchKey)) continue;
+    // Filter: at least one variant must differ from the others in
+    // first-name representation (full vs initial vs middle). If every
+    // variant has the EXACT same firstFull spelling, they're really
+    // identical strings (case/whitespace differences only) — those
+    // aren't worth surfacing to the user.
+    const allFirstFulls = new Set<string>();
+    for (const v of variantsMap.values()) {
+      for (const ff of v.firstFullSeen) allFirstFulls.add(ff);
+    }
+    if (allFirstFulls.size < 2) continue;
+
+    const variants: AuthorityVariant[] = Array.from(variantsMap.entries())
+      .map(([name, v]) => ({
+        name,
+        entryCount: v.handles.length,
+        handles: v.handles,
+      }))
+      .sort((a, b) => b.entryCount - a.entryCount || a.name.localeCompare(b.name));
+    const totalEntries = variants.reduce((s, v) => s + v.entryCount, 0);
+    const display = variantsMap.values().next().value?.matchKeyDisplay ?? matchKey;
+    groups.push({ matchKey, matchKeyDisplay: display, variants, totalEntries });
+  }
+
+  groups.sort((a, b) => {
+    if (a.totalEntries !== b.totalEntries) {
+      return b.totalEntries - a.totalEntries;
+    }
+    return a.matchKey.localeCompare(b.matchKey);
+  });
+
+  const truncated = Math.max(0, groups.length - cap);
+  return { groups: groups.slice(0, cap), truncated };
+}
+
+/**
+ * Standardize a list of ledger entries to a canonical author form.
+ * Updates the author / authorLF / authorNorm fields and marks the
+ * entry as authority_dismissed with `canonical_form` recorded so the
+ * tool doesn't re-flag.
+ *
+ * `canonicalForm` should be the "Last, First Middle" string the user
+ * picked — for multi-author entries we replace ONLY the matching
+ * individual author within the original full string, leaving the
+ * other co-authors intact.
+ *
+ * `lastnameInitial` is the matchKey ("lastname|firstInitial") of the
+ * group — used to identify which individual author within a multi-
+ * author entry to substitute.
+ */
+export async function applyAuthorityCanonical(
+  handles: EntryHandle[],
+  canonicalForm: string,
+  matchKey: string
+): Promise<RemoteLedgerResponse> {
+  const dismissedAt = new Date().toISOString();
+  const dismissed = { dismissedAt, canonical_form: canonicalForm };
+
+  const local = loadLedger();
+  const updates: {
+    match: EntryHandle;
+    set: Partial<
+      Pick<
+        LedgerEntry,
+        'authority_dismissed' | 'author' | 'authorLF' | 'authorNorm'
+      >
+    >;
+  }[] = [];
+
+  const updated = local.map((e) => {
+    const matched = handles.some(
+      (h) =>
+        h.isbn === e.isbn &&
+        h.titleNorm === e.titleNorm &&
+        h.authorNorm === e.authorNorm &&
+        h.date === e.date &&
+        (h.batchLabel ?? null) === (e.batchLabel ?? null)
+    );
+    if (!matched) return e;
+    // Compute the new author string. For single-author entries it's
+    // just the canonical form. For multi-author entries we substitute
+    // only the individual author whose matchKey hits.
+    const fullAuthor = e.authorLF ?? e.author ?? '';
+    const individuals = splitMultiAuthor(fullAuthor);
+    const rebuilt = individuals
+      .map((indiv) => {
+        const parts = splitAuthorParts(indiv);
+        if (!parts) return indiv;
+        const indivKey = `${parts.lastname}|${parts.firstInitial}`;
+        return indivKey === matchKey ? canonicalForm : indiv;
+      })
+      .join('; ');
+    const set: Partial<LedgerEntry> = {
+      authority_dismissed: dismissed,
+    };
+    if (rebuilt !== fullAuthor) {
+      set.authorLF = rebuilt;
+      set.author = rebuilt;
+      set.authorNorm = normalizeAuthor(rebuilt);
+    }
+    updates.push({
+      match: {
+        isbn: e.isbn,
+        titleNorm: e.titleNorm,
+        authorNorm: e.authorNorm,
+        date: e.date,
+        batchLabel: e.batchLabel ?? null,
+      },
+      set,
+    });
+    return { ...e, ...set };
+  });
+  saveLedger(updated);
+
+  return pushLedgerDelta({ updateEntries: updates });
+}
+
+/** Dismiss an authority group as "actually different people" — sets
+ *  authority_dismissed (no canonical_form) on every entry. */
+export async function dismissAuthorityGroup(
+  handles: EntryHandle[]
+): Promise<RemoteLedgerResponse> {
+  const dismissedAt = new Date().toISOString();
+  const dismissed = { dismissedAt };
+
+  const local = loadLedger();
+  const updated = local.map((e) => {
+    if (
+      handles.some(
+        (h) =>
+          h.isbn === e.isbn &&
+          h.titleNorm === e.titleNorm &&
+          h.authorNorm === e.authorNorm &&
+          h.date === e.date &&
+          (h.batchLabel ?? null) === (e.batchLabel ?? null)
+      )
+    ) {
+      return { ...e, authority_dismissed: dismissed };
+    }
+    return e;
+  });
+  saveLedger(updated);
+
+  return pushLedgerDelta({
+    updateEntries: handles.map((h) => ({
+      match: h,
+      set: { authority_dismissed: dismissed },
+    })),
+  });
 }
