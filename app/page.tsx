@@ -7,9 +7,10 @@ import { ProcessingQueue } from '@/components/ProcessingQueue';
 import { BatchProgress } from '@/components/BatchProgress';
 import { CropModal } from '@/components/CropModal';
 import { BarcodeScanner, type BarcodeScanPreview } from '@/components/BarcodeScanner';
+import { ManualBookEntryModal, type ManualBookEntrySubmit } from '@/components/ManualBookEntryModal';
 import { useDarkMode, useStore } from '@/lib/store';
 import type { BookRecord, PhotoBatch } from '@/lib/types';
-import { createThumbnail, loadImage, makeId } from '@/lib/pipeline';
+import { addManualBook, createThumbnail, loadImage, makeId } from '@/lib/pipeline';
 import { processIsbnScan } from '@/lib/scan-pipeline';
 import { pushBatchToRepo, syncPendingBatchesFromRepo } from '@/lib/pending-batches';
 import { getLedgerBatches } from '@/lib/export-ledger';
@@ -118,6 +119,100 @@ export default function UploadPage() {
       }
     };
     flush();
+  }
+
+  // ---- Manual entry ----------------------------------------------------
+  // The modal is rendered at page level and owned by the upload page.
+  // A lazy "Manual entries" batch is created on first submit; subsequent
+  // entries this session group together so the user can review them all
+  // at once. Same lifecycle pattern as scan batches.
+  const [manualOpen, setManualOpen] = useState(false);
+  const manualBatchIdRef = useRef<string | null>(null);
+  const manualInflightRef = useRef(0);
+
+  function ensureManualBatch(): string {
+    if (manualBatchIdRef.current) return manualBatchIdRef.current;
+    const id = makeId();
+    const now = new Date();
+    const batch: PhotoBatch = {
+      id,
+      filename: `Manual entries · ${now.toLocaleString()}`,
+      fileSize: 0,
+      thumbnail: '',
+      status: 'done',
+      spinesDetected: 0,
+      booksIdentified: 0,
+      books: [],
+      batchLabel: batchLabel.trim() || undefined,
+      batchNotes: batchNotes.trim() || undefined,
+    };
+    addBatch(batch);
+    manualBatchIdRef.current = id;
+    return id;
+  }
+
+  function handleManualSubmit(values: ManualBookEntrySubmit) {
+    // Close immediately — lookup is async, the user shouldn't wait. The
+    // book will appear on Review whenever the lookup resolves.
+    setManualOpen(false);
+    const batchId = ensureManualBatch();
+    manualInflightRef.current += 1;
+    addManualBook({
+      title: values.title,
+      author: values.author,
+      isbn: values.isbn || undefined,
+      sourcePhoto: 'manual-entry',
+      batchLabel: batchLabel.trim() || undefined,
+      batchNotes: batchNotes.trim() || undefined,
+    })
+      .then((book) => {
+        addBook(batchId, book);
+      })
+      .catch(() => {
+        // Lookup failed entirely — surface a minimal stub so the user
+        // sees their entry on Review and can fix from there.
+        const stub: BookRecord = {
+          id: makeId(),
+          spineRead: {
+            position: 9999,
+            rawText: `${values.title}${values.author ? ' — ' + values.author : ''}`,
+            title: values.title,
+            author: values.author,
+            confidence: 'LOW',
+          },
+          title: values.title,
+          author: values.author,
+          authorLF: '',
+          isbn: values.isbn,
+          publisher: '',
+          publicationYear: 0,
+          lcc: '',
+          genreTags: [],
+          formTags: [],
+          confidence: 'LOW',
+          reasoning: '',
+          status: 'pending',
+          warnings: ['Basic details added. Edit fields and tap Reread for richer metadata.'],
+          sourcePhoto: 'manual-entry',
+          batchLabel: batchLabel.trim() || undefined,
+          batchNotes: batchNotes.trim() || undefined,
+          lookupSource: 'none',
+          lccSource: 'none',
+          manuallyAdded: true,
+          original: {
+            title: values.title,
+            author: values.author,
+            isbn: values.isbn,
+            publisher: '',
+            publicationYear: 0,
+            lcc: '',
+          },
+        };
+        addBook(batchId, stub);
+      })
+      .finally(() => {
+        manualInflightRef.current -= 1;
+      });
   }
 
   const [refreshing, setRefreshing] = useState(false);
@@ -481,6 +576,7 @@ export default function UploadPage() {
       <PhotoUploader
         onFiles={handleFiles}
         onScanRequest={() => setScannerOpen(true)}
+        onManualEntryRequest={() => setManualOpen(true)}
         disabled={isProcessing}
       />
 
@@ -774,6 +870,15 @@ export default function UploadPage() {
             );
           }}
           onClose={handleScannerClose}
+        />
+      )}
+
+      {/* Manual entry modal. Mounts on demand, batch label/notes
+          inherited at submit time from the page-level inputs. */}
+      {manualOpen && (
+        <ManualBookEntryModal
+          onSubmit={handleManualSubmit}
+          onClose={() => setManualOpen(false)}
         />
       )}
 

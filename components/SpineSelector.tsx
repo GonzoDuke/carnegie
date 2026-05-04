@@ -9,6 +9,10 @@ import {
   loadImage,
   type LoadedImage,
 } from '@/lib/pipeline';
+import {
+  ManualBookEntryModal,
+  type ManualBookEntrySubmit,
+} from './ManualBookEntryModal';
 
 interface SpineSelectorProps {
   batch: PhotoBatch;
@@ -38,10 +42,11 @@ export function SpineSelector({ batch, sourceFile, onAdd, onClose }: SpineSelect
   const [busy, setBusy] = useState<'pathA' | 'pathB' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Path B inputs
-  const [title, setTitle] = useState('');
-  const [author, setAuthor] = useState('');
-  const [isbn, setIsbn] = useState('');
+  // Path B opens the shared ManualBookEntryModal — no inline state
+  // needed. The submit handler is async-fire-and-forget like the
+  // upload-page flow; we close both the inner modal AND the
+  // SpineSelector after kickoff.
+  const [manualOpen, setManualOpen] = useState(false);
 
   // Load the source image once.
   useEffect(() => {
@@ -170,29 +175,64 @@ export function SpineSelector({ batch, sourceFile, onAdd, onClose }: SpineSelect
     }
   }
 
-  async function submitPathB() {
-    if (!title.trim()) {
-      setError('Title is required.');
-      return;
-    }
-    setError(null);
-    setBusy('pathB');
-    try {
-      const book = await addManualBook({
-        title,
-        author,
-        isbn: isbn.trim() || undefined,
-        sourcePhoto: batch.filename,
-        batchLabel: batch.batchLabel,
-        batchNotes: batch.batchNotes,
+  function submitPathB(values: ManualBookEntrySubmit) {
+    // Async fire-and-forget: close both modals immediately and dispatch
+    // the resulting BookRecord onto Review when the lookup resolves.
+    // Mirrors the upload-page handler so the user is never blocked
+    // waiting on the metadata round-trip.
+    setManualOpen(false);
+    onClose();
+    addManualBook({
+      title: values.title,
+      author: values.author,
+      isbn: values.isbn || undefined,
+      sourcePhoto: batch.filename,
+      batchLabel: batch.batchLabel,
+      batchNotes: batch.batchNotes,
+    })
+      .then((book) => onAdd(book))
+      .catch(() => {
+        // Lookup failed entirely — surface a minimal stub so the user
+        // sees their entry on Review and can recover by hand.
+        const stub: BookRecord = {
+          id: crypto.randomUUID(),
+          spineRead: {
+            position: 9999,
+            rawText: `${values.title}${values.author ? ' — ' + values.author : ''}`,
+            title: values.title,
+            author: values.author,
+            confidence: 'LOW',
+          },
+          title: values.title,
+          author: values.author,
+          authorLF: '',
+          isbn: values.isbn,
+          publisher: '',
+          publicationYear: 0,
+          lcc: '',
+          genreTags: [],
+          formTags: [],
+          confidence: 'LOW',
+          reasoning: '',
+          status: 'pending',
+          warnings: ['Basic details added. Edit fields and tap Reread for richer metadata.'],
+          sourcePhoto: batch.filename,
+          batchLabel: batch.batchLabel,
+          batchNotes: batch.batchNotes,
+          lookupSource: 'none',
+          lccSource: 'none',
+          manuallyAdded: true,
+          original: {
+            title: values.title,
+            author: values.author,
+            isbn: values.isbn,
+            publisher: '',
+            publicationYear: 0,
+            lcc: '',
+          },
+        };
+        onAdd(stub);
       });
-      onAdd(book);
-      setBusy(null);
-      onClose();
-    } catch (err: any) {
-      setError(err?.message ?? 'Manual add failed.');
-      setBusy(null);
-    }
   }
 
   return (
@@ -285,63 +325,25 @@ export function SpineSelector({ batch, sourceFile, onAdd, onClose }: SpineSelect
             or
           </div>
 
-          {/* Path B — always available */}
+          {/* Path B — opens the shared ManualBookEntryModal. The
+              modal handles ISBN/title/author capture, validation,
+              guidance copy, and submission. Same component the upload
+              page uses for "Manual entry". */}
           <section>
             <h3 className="text-xs uppercase tracking-wider font-semibold text-ink/60 dark:text-cream-300/60 mb-2">
               Path B · Enter manually
             </h3>
             <p className="text-sm text-ink/65 dark:text-cream-300/65 mb-3 leading-relaxed">
-              Type the title and author. Optionally include an ISBN to scope
-              the lookup to a specific edition. The lookup chain and tag
-              inference run as normal — only Pass B (the OCR step) is skipped.
+              Type the ISBN, title, or author. ISBN gives the cleanest match.
+              Lookup + tag inference run as normal — only Pass B (the OCR
+              step) is skipped.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="md:col-span-2">
-                <label className="block text-xs uppercase tracking-wider font-semibold text-ink/50 dark:text-cream-300/50 mb-1">
-                  Title <span className="text-red-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Branded by the Pink Triangle"
-                  disabled={busy !== null}
-                  className="w-full px-3 py-2 text-sm bg-cream-100 dark:bg-ink rounded border border-cream-300 dark:border-ink-soft focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50"
-                />
-              </div>
-              <div>
-                <label className="block text-xs uppercase tracking-wider font-semibold text-ink/50 dark:text-cream-300/50 mb-1">
-                  Author
-                </label>
-                <input
-                  type="text"
-                  value={author}
-                  onChange={(e) => setAuthor(e.target.value)}
-                  placeholder="Ken Setterington"
-                  disabled={busy !== null}
-                  className="w-full px-3 py-2 text-sm bg-cream-100 dark:bg-ink rounded border border-cream-300 dark:border-ink-soft focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50"
-                />
-              </div>
-              <div>
-                <label className="block text-xs uppercase tracking-wider font-semibold text-ink/50 dark:text-cream-300/50 mb-1">
-                  ISBN <span className="font-normal text-ink/40 dark:text-cream-300/40 normal-case">— optional</span>
-                </label>
-                <input
-                  type="text"
-                  value={isbn}
-                  onChange={(e) => setIsbn(e.target.value)}
-                  placeholder="9780006486527"
-                  disabled={busy !== null}
-                  className="w-full px-3 py-2 text-sm font-mono bg-cream-100 dark:bg-ink rounded border border-cream-300 dark:border-ink-soft focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50"
-                />
-              </div>
-            </div>
             <button
-              onClick={submitPathB}
-              disabled={!title.trim() || busy !== null}
-              className="mt-3 px-4 py-2 text-sm rounded-md bg-accent text-cream-50 hover:bg-accent-deep disabled:opacity-40 disabled:cursor-not-allowed transition"
+              onClick={() => setManualOpen(true)}
+              disabled={busy !== null}
+              className="px-4 py-2 text-sm rounded-md bg-accent text-cream-50 hover:bg-accent-deep disabled:opacity-40 disabled:cursor-not-allowed transition"
             >
-              {busy === 'pathB' ? 'Adding…' : 'Add manually'}
+              Open manual entry…
             </button>
           </section>
 
@@ -352,6 +354,13 @@ export function SpineSelector({ batch, sourceFile, onAdd, onClose }: SpineSelect
           )}
         </div>
       </div>
+
+      {manualOpen && (
+        <ManualBookEntryModal
+          onSubmit={submitPathB}
+          onClose={() => setManualOpen(false)}
+        />
+      )}
     </div>
   );
 }

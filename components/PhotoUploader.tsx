@@ -13,6 +13,8 @@ interface PhotoUploaderProps {
   onFiles: (files: File[], opts: { source: 'gallery' | 'camera' }) => void;
   /** Tap "Scan barcode" — the parent owns the scanner modal mount. */
   onScanRequest?: () => void;
+  /** Tap "Manual entry" — the parent owns the manual-entry modal. */
+  onManualEntryRequest?: () => void;
   disabled?: boolean;
 }
 
@@ -22,7 +24,7 @@ interface SessionThumb {
   name: string;
 }
 
-export function PhotoUploader({ onFiles, onScanRequest, disabled }: PhotoUploaderProps) {
+export function PhotoUploader({ onFiles, onScanRequest, onManualEntryRequest, disabled }: PhotoUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -259,21 +261,14 @@ export function PhotoUploader({ onFiles, onScanRequest, disabled }: PhotoUploade
         <div className="text-[13px] text-text-quaternary mb-5">
           JPG, PNG, HEIC up to 30 MB
         </div>
-        <div className="inline-flex flex-wrap justify-center gap-2.5">
+        {/* 2x2 entry grid. All four buttons get the same outlined
+            treatment — no primary/secondary distinction. Order:
+              [Take Photo]   [Scan barcode]
+              [Choose photos] [Manual entry] */}
+        <div className="grid grid-cols-2 gap-2.5 max-w-[400px] mx-auto">
           <button
             type="button"
-            className="inline-flex items-center text-[14px] font-medium px-5 py-[9px] rounded-md bg-navy text-white hover:bg-navy-deep transition disabled:opacity-50"
-            disabled={disabled}
-            onClick={(e) => {
-              e.stopPropagation();
-              inputRef.current?.click();
-            }}
-          >
-            Choose photos
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 text-[14px] font-medium px-5 py-[9px] rounded-md bg-surface-card text-text-secondary border border-line hover:bg-surface-page transition disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 text-[14px] font-medium px-4 py-[10px] rounded-md bg-surface-card text-text-secondary border border-line hover:bg-surface-page hover:border-navy transition disabled:opacity-50"
             disabled={disabled}
             onClick={(e) => {
               e.stopPropagation();
@@ -285,40 +280,71 @@ export function PhotoUploader({ onFiles, onScanRequest, disabled }: PhotoUploade
               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
               <circle cx="12" cy="13" r="4" />
             </svg>
-            Camera
+            Take Photo
           </button>
-          {onScanRequest && (
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 text-[14px] font-medium px-5 py-[9px] rounded-md bg-surface-card text-text-secondary border border-line hover:bg-surface-page transition disabled:opacity-50"
-              disabled={disabled}
-              onClick={(e) => {
-                e.stopPropagation();
-                onScanRequest();
-              }}
-              title="Scan a book's back-cover barcode to add it without photographing the spine"
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-2 text-[14px] font-medium px-4 py-[10px] rounded-md bg-surface-card text-text-secondary border border-line hover:bg-surface-page hover:border-navy transition disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={disabled || !onScanRequest}
+            onClick={(e) => {
+              e.stopPropagation();
+              onScanRequest?.();
+            }}
+            title="Scan a book's back-cover barcode to add it without photographing the spine"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.7"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-              >
-                <path d="M3 6v12" />
-                <path d="M6 6v12" />
-                <path d="M10 6v12" />
-                <path d="M13 6v12" />
-                <path d="M17 6v12" />
-                <path d="M20 6v12" />
-              </svg>
-              Scan barcode
-            </button>
-          )}
+              <path d="M3 6v12" />
+              <path d="M6 6v12" />
+              <path d="M10 6v12" />
+              <path d="M13 6v12" />
+              <path d="M17 6v12" />
+              <path d="M20 6v12" />
+            </svg>
+            Scan barcode
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-2 text-[14px] font-medium px-4 py-[10px] rounded-md bg-surface-card text-text-secondary border border-line hover:bg-surface-page hover:border-navy transition disabled:opacity-50"
+            disabled={disabled}
+            onClick={(e) => {
+              e.stopPropagation();
+              inputRef.current?.click();
+            }}
+            title="Pick image files from your device"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="9" cy="9" r="2" />
+              <path d="M21 15l-5-5L5 21" />
+            </svg>
+            Choose photos
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-2 text-[14px] font-medium px-4 py-[10px] rounded-md bg-surface-card text-text-secondary border border-line hover:bg-surface-page hover:border-navy transition disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={disabled || !onManualEntryRequest}
+            onClick={(e) => {
+              e.stopPropagation();
+              onManualEntryRequest?.();
+            }}
+            title="Type a book's ISBN, title, and/or author to add it without a photo"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+            </svg>
+            Manual entry
+          </button>
         </div>
       </div>
 

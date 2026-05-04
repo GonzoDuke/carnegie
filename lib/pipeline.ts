@@ -1144,11 +1144,15 @@ export interface AddManualBookOptions {
  * truth. Run lookup + tag inference, return a fully-formed BookRecord.
  */
 export async function addManualBook(opts: AddManualBookOptions): Promise<BookRecord> {
-  const title = opts.title.trim();
-  const author = opts.author.trim();
+  let title = opts.title.trim();
+  let author = opts.author.trim();
   const isbn = opts.isbn?.trim() || '';
 
-  // Lookup: ISBN-scoped if provided, otherwise standard.
+  // Lookup: ISBN-scoped if provided, otherwise standard. ISBN-only
+  // entries (no title) take the ISBN-direct path so the strongest
+  // single signal a user can give us actually fires a lookup; before
+  // this branch was added, ISBN-only entries silently skipped lookup
+  // and landed with empty metadata.
   let lookup: BookLookupResult = {
     isbn: '',
     publisher: '',
@@ -1166,6 +1170,20 @@ export async function addManualBook(opts: AddManualBookOptions): Promise<BookRec
         : await lookupBookClient(title, author);
     } catch {
       // ignore
+    }
+  } else if (isbn) {
+    try {
+      lookup = await lookupBookClient('', '', {
+        matchEdition: true,
+        hints: { isbn },
+      });
+      // Adopt the canonical title/author from the lookup as the
+      // user-facing fields — the user gave us only an ISBN, so the
+      // database is the source of truth for what to display.
+      if (lookup.canonicalTitle) title = lookup.canonicalTitle.trim();
+      if (lookup.canonicalAuthor) author = lookup.canonicalAuthor.trim();
+    } catch {
+      // ignore — caller will see an empty-shell record with the warning
     }
   }
 
