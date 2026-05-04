@@ -200,6 +200,12 @@ async function lookupViaServer(isbn: string): Promise<IsbnLookupResult | null> {
       subjects?: string[];
       coverUrl?: string;
       source?: 'openlibrary' | 'googlebooks' | 'isbndb' | 'none';
+      // Server now populates these on every lookupSpecificEdition
+      // branch — they were silently dropped before, which is what made
+      // ISBN-only manual entries and barcode server-fallbacks land
+      // with empty title/author.
+      canonicalTitle?: string;
+      canonicalAuthor?: string;
     };
     if (!data || data.source === 'none' || !(data.isbn || data.publisher || data.publicationYear)) {
       return null;
@@ -214,12 +220,8 @@ async function lookupViaServer(isbn: string): Promise<IsbnLookupResult | null> {
           ? 'googlebooks'
           : 'none';
     return {
-      // /api/lookup-book doesn't return a title field today; the ISBNdb
-      // direct path on the server has it but the BookLookupResult type
-      // omits it. Pre-fill empty for now — the caller fills the title
-      // from a separate ISBNdb call when needed, or the user types it.
-      title: '',
-      author: '',
+      title: data.canonicalTitle ?? '',
+      author: data.canonicalAuthor ?? '',
       publisher: data.publisher ?? '',
       publicationYear: data.publicationYear ?? 0,
       lcc: data.lcc ?? '',

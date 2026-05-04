@@ -496,6 +496,49 @@ async function enrichFromIsbn(
   }
 }
 
+/**
+ * Build the deduped cover-URL chain for a book.
+ *
+ * Order (highest priority first, all optional):
+ *   1. Open Library Covers API by ISBN (when ISBN is present) — uses
+ *      `?default=false` so missing covers 404 instead of returning a
+ *      grey placeholder, which lets `<Cover>`'s onError chain advance
+ *      cleanly to the next URL.
+ *   2. Google Books `imageLinks.thumbnail` (when supplied).
+ *   3. ISBNdb `image` field (when supplied).
+ *   4. Any pre-existing fallbacks already on the result.
+ *
+ * Returns `{ primary, fallbacks }`. `primary` is the first non-empty URL;
+ * `fallbacks` is the full deduped chain (including primary as element 0).
+ * Both are empty when no source produced a URL.
+ *
+ * Extracted from lookupBook's terminal cover-art block so every code
+ * path that constructs a BookLookupResult — lookupBook itself, all
+ * three lookupSpecificEdition branches — uses identical chain logic
+ * instead of each one open-coding a different subset.
+ */
+function buildCoverChain(
+  isbn: string | undefined,
+  gbThumbnail?: string,
+  isbndbImage?: string,
+  existingFallbacks?: string[]
+): { primary: string; fallbacks: string[] } {
+  const chain: string[] = [];
+  if (isbn) {
+    const cleaned = isbn.replace(/[^\dxX]/g, '');
+    if (cleaned) {
+      chain.push(`https://covers.openlibrary.org/b/isbn/${cleaned}-M.jpg?default=false`);
+    }
+  }
+  if (gbThumbnail) chain.push(gbThumbnail);
+  if (isbndbImage) chain.push(isbndbImage);
+  if (Array.isArray(existingFallbacks)) {
+    for (const u of existingFallbacks) chain.push(u);
+  }
+  const deduped = Array.from(new Set(chain.filter(Boolean)));
+  return { primary: deduped[0] ?? '', fallbacks: deduped };
+}
+
 function parsePublishDateYear(arr?: string[]): number {
   if (!arr || arr.length === 0) return 0;
   // Find the smallest 4-digit year across all publish_date strings (closest to first publication).
@@ -558,6 +601,7 @@ export async function lookupSpecificEdition(
                 ''
             );
             const finalLcc = lcc || normalizeLcc(await lookupLccByIsbn(cleaned));
+            const cover = buildCoverChain(cleaned);
             const out: BookLookupResult = {
               isbn: cleaned,
               publisher: doc.publisher?.[0] ?? hints.publisher ?? '',
@@ -565,6 +609,18 @@ export async function lookupSpecificEdition(
               lcc: finalLcc,
               subjects: doc.subject?.slice(0, 10),
               source: 'openlibrary',
+              // Title/author from the OL response — previously dropped
+              // (BookLookupResult has no `title`/`author`, only the
+              // canonical-* twins). Consumers (addManualBook,
+              // scan-pipeline's lookupViaServer) read these directly.
+              canonicalTitle: doc.title || undefined,
+              canonicalAuthor: doc.author_name?.[0] || undefined,
+              allAuthors:
+                doc.author_name && doc.author_name.length > 0
+                  ? [...doc.author_name]
+                  : undefined,
+              coverUrl: cover.primary || undefined,
+              coverUrlFallbacks: cover.fallbacks.length > 0 ? cover.fallbacks : undefined,
             };
             log.tier('ol-by-isbn', `GET ${url} → ${res.status} → matched ${describeFilled(out)}`);
             log.finish({ ...out, tier: 'ol-by-isbn' });
@@ -633,6 +689,7 @@ export async function lookupSpecificEdition(
               ''
           );
           if (!lcc && isbn) lcc = normalizeLcc(await lookupLccByIsbn(isbn));
+          const cover = buildCoverChain(isbn);
           const out: BookLookupResult = {
             isbn,
             publisher: best.publisher?.[0] ?? hints.publisher ?? '',
@@ -640,6 +697,16 @@ export async function lookupSpecificEdition(
             lcc,
             subjects: best.subject?.slice(0, 10),
             source: 'openlibrary',
+            // Same canonical-title/author/cover plumbing as the ISBN
+            // branch above — previously dropped.
+            canonicalTitle: best.title || undefined,
+            canonicalAuthor: best.author_name?.[0] || undefined,
+            allAuthors:
+              best.author_name && best.author_name.length > 0
+                ? [...best.author_name]
+                : undefined,
+            coverUrl: cover.primary || undefined,
+            coverUrlFallbacks: cover.fallbacks.length > 0 ? cover.fallbacks : undefined,
           };
           log.tier('ol-year-scoped', `matched ${describeFilled(out)}`);
           log.finish({ ...out, tier: 'ol-year-scoped' });
@@ -665,6 +732,11 @@ export async function lookupSpecificEdition(
       const hit = await lookupIsbndb(title, author, cleaned, log);
       if (hit && (hit.isbn || hit.publisher || hit.publicationYear)) {
         const sruLcc = await lookupLccByIsbn(cleaned);
+        // ISBNdb returns the cover image directly; OL covers API still
+        // gets prepended (it's higher quality on average), with the
+        // ISBNdb image as the first fallback.
+        const cover = buildCoverChain(hit.isbn || cleaned, undefined, hit.coverUrl || undefined);
+        const isbndbTitle = hit.titleLong || hit.title || undefined;
         const out: BookLookupResult = {
           isbn: hit.isbn || cleaned,
           publisher: hit.publisher || hints.publisher || '',
@@ -672,8 +744,22 @@ export async function lookupSpecificEdition(
           lcc: normalizeLcc(sruLcc) || '',
           subjects: hit.subjects.length > 0 ? hit.subjects.slice(0, 10) : undefined,
           source: 'isbndb',
-          coverUrl: hit.coverUrl || undefined,
+          coverUrl: cover.primary || hit.coverUrl || undefined,
+          coverUrlFallbacks: cover.fallbacks.length > 0 ? cover.fallbacks : undefined,
           ddc: hit.ddc || undefined,
+          // Canonical title/author/all-authors from the ISBNdb hit —
+          // previously dropped. ISBNdb's title_long is preferred when
+          // present (it includes subtitles); falls back to title.
+          canonicalTitle: isbndbTitle,
+          canonicalAuthor: hit.author || undefined,
+          allAuthors:
+            hit.allAuthors && hit.allAuthors.length > 0 ? hit.allAuthors : undefined,
+          // ISBNdb's per-book enrichment fields, when supplied.
+          pageCount: hit.pages,
+          binding: hit.binding,
+          language: hit.language,
+          edition: hit.edition,
+          synopsis: hit.synopsis,
         };
         log.tier('isbndb-fallback', `matched ${describeFilled(out)}`);
         log.finish({ ...out, tier: 'isbndb-direct' });
@@ -1907,22 +1993,15 @@ export async function lookupBook(
   // -------------------------------------------------------------------------
   // Cover art chain.
   // -------------------------------------------------------------------------
-  const coverChain: string[] = [];
-  if (result.isbn) {
-    const cleaned = result.isbn.replace(/[^\dxX]/g, '');
-    if (cleaned) {
-      coverChain.push(`https://covers.openlibrary.org/b/isbn/${cleaned}-M.jpg?default=false`);
-    }
-  }
-  if (gbCoverUrl) coverChain.push(gbCoverUrl);
-  if (isbndbCoverUrl) coverChain.push(isbndbCoverUrl);
-  if (Array.isArray(result.coverUrlFallbacks)) {
-    for (const u of result.coverUrlFallbacks) coverChain.push(u);
-  }
-  const dedupedChain = Array.from(new Set(coverChain.filter(Boolean)));
-  if (dedupedChain.length > 0) {
-    result.coverUrlFallbacks = dedupedChain;
-    result.coverUrl = dedupedChain[0];
+  const cover = buildCoverChain(
+    result.isbn,
+    gbCoverUrl || undefined,
+    isbndbCoverUrl || undefined,
+    result.coverUrlFallbacks
+  );
+  if (cover.fallbacks.length > 0) {
+    result.coverUrlFallbacks = cover.fallbacks;
+    result.coverUrl = cover.primary;
   }
 
   const final = Object.assign(result, { tier: tier || 'none', lccSource });
