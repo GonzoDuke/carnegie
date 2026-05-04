@@ -12,6 +12,7 @@ import {
   pushLedgerDelta,
 } from '@/lib/export-ledger';
 import { deletePendingBatchFromRepo } from '@/lib/pending-batches';
+import { isNoWriteMode, logSkippedWrite } from '@/lib/no-write-mode';
 import {
   buildChangelogEntries,
   buildUpdatedVocabularyJson,
@@ -260,6 +261,21 @@ export default function ExportPage() {
     if (promotions.length === 0) return;
     setCommitState({ kind: 'pending' });
     const date = new Date();
+    // Local-only mode early-return — render the success state without
+    // hitting the server. The local vocabulary cache and changelog
+    // composition still ran via buildUpdatedVocabularyJson; they're
+    // not persisted to the repo, but they're correct for this session.
+    if (isNoWriteMode()) {
+      logSkippedWrite('commitVocabularyToRepo (POST /api/commit-vocabulary)', {
+        newTagCount: promotions.length,
+      });
+      setCommitState({
+        kind: 'done',
+        newTagCount: promotions.length,
+        commits: [],
+      });
+      return;
+    }
     try {
       const res = await fetch('/api/commit-vocabulary', {
         method: 'POST',

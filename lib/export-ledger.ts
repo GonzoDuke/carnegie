@@ -1,4 +1,5 @@
 import type { BookRecord } from './types';
+import { isNoWriteMode, logSkippedWrite } from './no-write-mode';
 
 const LEDGER_KEY = 'carnegie:export-ledger:v1';
 const REMOTE_AVAILABLE_KEY = 'carnegie:export-ledger:remote-available:v1';
@@ -265,6 +266,15 @@ export async function pushLedgerDelta(
   }
 ): Promise<RemoteLedgerResponse> {
   if (typeof window === 'undefined') return { available: false };
+  // Local-only mode early-return — caller gets a success-shaped
+  // response (no error, no commit) so success-path UI renders without
+  // the "couldn't sync" toast. The local cache update happens in the
+  // calling helpers (saveLedger via dismissDuplicateGroup etc.) before
+  // pushLedgerDelta is invoked, so local state stays consistent.
+  if (isNoWriteMode()) {
+    logSkippedWrite('pushLedgerDelta', delta);
+    return { available: true };
+  }
   try {
     const res = await fetch('/api/ledger', {
       method: 'POST',

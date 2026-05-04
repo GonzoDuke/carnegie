@@ -6,6 +6,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useDarkMode, useStore } from '@/lib/store';
 import { getLedgerBatches, loadLedger } from '@/lib/export-ledger';
 import { confirmDiscardSession } from '@/lib/session';
+import {
+  isNoWriteMode,
+  setNoWriteMode,
+  subscribeNoWriteMode,
+} from '@/lib/no-write-mode';
 import { MobileShell } from './MobileShell';
 import { fireUndo } from './UndoToast';
 
@@ -83,6 +88,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       batches: getLedgerBatches().length,
     });
   }, [state.allBooks.length, state.batches.length]);
+
+  // Local-only-mode reactive state. Hydrate from localStorage post-mount
+  // and subscribe to in-tab + cross-tab flips so the indicator + toggle
+  // stay in sync everywhere it's rendered.
+  const [noWrite, setNoWrite] = useState(false);
+  useEffect(() => {
+    setNoWrite(isNoWriteMode());
+    return subscribeNoWriteMode(() => setNoWrite(isNoWriteMode()));
+  }, []);
 
   const workflow: NavItemDef[] = [
     { href: '/upload', label: 'Upload', icon: <UploadIcon /> },
@@ -246,6 +260,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 />
               </div>
             )}
+
+            {/* Local-only mode toggle — small dev affordance below the
+                lifetime stats. Tapping the row flips the flag; the
+                state is reactive across both this surface and the
+                mobile menu via subscribeNoWriteMode. */}
+            <SidebarLocalOnlyToggle
+              on={noWrite}
+              onToggle={() => setNoWriteMode(!noWrite)}
+            />
           </div>
         </div>
       </aside>
@@ -255,6 +278,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           tables. On phone the sidebar is gone and the mobile chrome
           (48px top bar + ~56px bottom tab bar) sits above; the responsive
           padding below clears them so the page doesn't tuck under. */}
+      {/* Local-only mode indicator — a thin gold bar fixed to the very
+          top of the viewport. Always visible regardless of scroll
+          position, sidebar/mobile-chrome state, or which page is
+          rendered. z-50 puts it above the mobile top bar (z-30) and
+          the sidebar (no positioned ancestor). */}
+      {noWrite && (
+        <div
+          aria-hidden
+          className="fixed top-0 inset-x-0 z-50 pointer-events-none"
+          style={{ height: 2, background: GOLD }}
+        />
+      )}
+
       <main
         className="flex-1 min-h-screen overflow-x-hidden md:!ml-[260px] pt-12 md:pt-0 pb-16 md:pb-0"
       >
@@ -263,6 +299,74 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             a mobile app stretched. Phone gets tighter padding. */}
         <div className="w-full px-4 md:px-8 lg:px-12 py-4 md:py-10">{children}</div>
       </main>
+    </div>
+  );
+}
+
+function SidebarLocalOnlyToggle({
+  on,
+  onToggle,
+}: {
+  on: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div
+      className="mt-3 pt-3"
+      style={{ borderTop: `1px solid ${SIDE_FOOT_BORDER}` }}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-2 text-left"
+        aria-pressed={on}
+        aria-label={`Local-only mode (${on ? 'on' : 'off'})`}
+      >
+        <span
+          className="flex items-center gap-1.5 flex-1 min-w-0"
+          style={{ fontSize: 12, color: on ? GOLD : SIDE_TEXT, lineHeight: 1.4 }}
+        >
+          {on && (
+            <span
+              aria-hidden
+              className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+              style={{ background: GOLD }}
+            />
+          )}
+          Local-only mode
+        </span>
+        <span
+          aria-hidden
+          className="flex-shrink-0 relative inline-block transition-colors"
+          style={{
+            width: 26,
+            height: 14,
+            borderRadius: 999,
+            background: on ? GOLD : '#2F2F2F',
+          }}
+        >
+          <span
+            className="absolute top-[2px] inline-block transition-all"
+            style={{
+              left: on ? 14 : 2,
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: '#141414',
+            }}
+          />
+        </span>
+      </button>
+      <div
+        style={{
+          fontSize: 10,
+          color: SIDE_SECTION,
+          marginTop: 3,
+          lineHeight: 1.4,
+        }}
+      >
+        {on ? 'Cloud sync disabled. Local cache only.' : 'Disable cloud sync to iterate locally.'}
+      </div>
     </div>
   );
 }

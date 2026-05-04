@@ -25,6 +25,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { VOCAB, type DomainKey } from '@/lib/tag-domains';
 import { loadLedger, pushLedgerDelta, syncLedgerFromRepo } from '@/lib/export-ledger';
+import { isNoWriteMode, logSkippedWrite } from '@/lib/no-write-mode';
 import vocabSeed from '@/lib/tag-vocabulary.json';
 
 interface VocabShape {
@@ -181,6 +182,16 @@ export default function VocabularyPage() {
     commitMessage: string
   ): Promise<boolean> {
     setError(null);
+    // Local-only mode early-return — pretend the commit succeeded. The
+    // caller treats `true` as "vocabulary update accepted", which
+    // matches what we want: in-memory and localStorage state already
+    // reflect the change; we just don't persist to the repo.
+    if (isNoWriteMode()) {
+      logSkippedWrite('vocabulary commit (POST /api/commit-vocabulary)', {
+        commitMessage,
+      });
+      return true;
+    }
     try {
       const json = JSON.stringify(nextVocab, null, 2) + '\n';
       const dateStr = new Date().toISOString().slice(0, 10);

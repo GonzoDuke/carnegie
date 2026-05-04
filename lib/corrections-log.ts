@@ -13,6 +13,8 @@
  * user removed in a prior session, are no-ops.
  */
 
+import { isNoWriteMode, logSkippedWrite } from './no-write-mode';
+
 const CORRECTIONS_KEY = 'carnegie:corrections-log:v1';
 const REMOTE_AVAILABLE_KEY = 'carnegie:corrections-log:remote-available:v1';
 
@@ -168,6 +170,10 @@ export async function pushCorrectionDelta(
   delta: { add?: CorrectionEntry[]; remove?: CorrectionEntry[] }
 ): Promise<RemoteCorrectionsResponse> {
   if (typeof window === 'undefined') return { available: false };
+  if (isNoWriteMode()) {
+    logSkippedWrite('pushCorrectionDelta', delta);
+    return { available: true };
+  }
   try {
     const res = await fetch('/api/corrections', {
       method: 'POST',

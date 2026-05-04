@@ -1,4 +1,5 @@
 import type { BookRecord, PhotoBatch } from './types';
+import { isNoWriteMode, logSkippedWrite } from './no-write-mode';
 
 const REMOTE_AVAILABLE_KEY = 'carnegie:pending-batches:remote-available:v1';
 
@@ -62,6 +63,10 @@ export async function pushBatchToRepo(
   batch: PhotoBatch
 ): Promise<RemotePendingBatchesResponse> {
   if (typeof window === 'undefined') return { available: false };
+  if (isNoWriteMode()) {
+    logSkippedWrite('pushBatchToRepo', { batchId: batch.id, bookCount: batch.books.length });
+    return { available: true };
+  }
   try {
     const slim = slimBatchForSync(batch);
     const res = await fetch('/api/pending-batches', {
@@ -96,6 +101,10 @@ export async function deletePendingBatchFromRepo(
   batchId: string
 ): Promise<RemotePendingBatchesResponse> {
   if (typeof window === 'undefined') return { available: false };
+  if (isNoWriteMode()) {
+    logSkippedWrite('deletePendingBatchFromRepo', { batchId });
+    return { available: true };
+  }
   try {
     const res = await fetch(
       `/api/pending-batches?batchId=${encodeURIComponent(batchId)}`,

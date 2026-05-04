@@ -2,11 +2,18 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { confirmDiscardSession } from '@/lib/session';
+import {
+  isNoWriteMode,
+  setNoWriteMode,
+  subscribeNoWriteMode,
+} from '@/lib/no-write-mode';
 import { fireUndo } from './UndoToast';
 
 const NAVY = '#1B3A5C';
+const GOLD = '#C4A35A';
 
 interface TabDef {
   href: string;
@@ -27,6 +34,35 @@ interface TabDef {
 export function MobileShell() {
   const pathname = usePathname();
   const { state, clear, addBatch } = useStore();
+
+  // Local-only mode: reactive so the indicator dot on the settings
+  // icon and the toggle row in the menu both reflect in-tab + cross-tab flips.
+  const [noWrite, setNoWrite] = useState(false);
+  useEffect(() => {
+    setNoWrite(isNoWriteMode());
+    return subscribeNoWriteMode(() => setNoWrite(isNoWriteMode()));
+  }, []);
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // Close the menu on outside click or Escape.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
 
   const sessionEmpty =
     state.allBooks.length === 0 && state.batches.length === 0;
@@ -117,6 +153,98 @@ export function MobileShell() {
           >
             <NewSessionIcon />
           </button>
+          {/* Settings menu — gear icon. A small gold dot overlays the
+              icon when local-only mode is on so the indicator is always
+              visible from the phone chrome. */}
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label="Settings"
+              aria-expanded={menuOpen}
+              className="flex items-center justify-center w-9 h-9 rounded-full transition relative"
+              style={{
+                color: 'rgba(255,255,255,0.85)',
+                background: 'rgba(255,255,255,0.08)',
+              }}
+            >
+              <GearIcon />
+              {noWrite && (
+                <span
+                  aria-hidden
+                  className="absolute top-1 right-1 inline-block w-2 h-2 rounded-full"
+                  style={{ background: GOLD }}
+                />
+              )}
+            </button>
+            {menuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-11 z-40 rounded-md shadow-xl border"
+                style={{
+                  width: 240,
+                  background: '#1F1F1F',
+                  borderColor: '#2F2F2F',
+                  padding: 10,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setNoWriteMode(!noWrite)}
+                  className="w-full flex items-center justify-between gap-2 text-left p-2 rounded hover:bg-white/5 transition"
+                  aria-pressed={noWrite}
+                >
+                  <span
+                    className="flex items-center gap-1.5 flex-1 min-w-0"
+                    style={{ fontSize: 13, color: noWrite ? GOLD : '#E0E0E0', lineHeight: 1.4 }}
+                  >
+                    {noWrite && (
+                      <span
+                        aria-hidden
+                        className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        style={{ background: GOLD }}
+                      />
+                    )}
+                    Local-only mode
+                  </span>
+                  <span
+                    aria-hidden
+                    className="flex-shrink-0 relative inline-block transition-colors"
+                    style={{
+                      width: 28,
+                      height: 16,
+                      borderRadius: 999,
+                      background: noWrite ? GOLD : '#2F2F2F',
+                    }}
+                  >
+                    <span
+                      className="absolute top-[2px] inline-block transition-all"
+                      style={{
+                        left: noWrite ? 14 : 2,
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        background: '#141414',
+                      }}
+                    />
+                  </span>
+                </button>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: '#707070',
+                    padding: '0 8px 4px',
+                    marginTop: 2,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {noWrite
+                    ? 'Cloud sync disabled. Local cache only.'
+                    : 'Disable cloud sync to iterate locally.'}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -241,6 +369,25 @@ function InfoIcon() {
       <circle cx="12" cy="12" r="9" />
       <path d="M12 11v5" />
       <path d="M12 8v.01" />
+    </svg>
+  );
+}
+
+function GearIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      width="18"
+      height="18"
+      aria-hidden
+    >
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
   );
 }
