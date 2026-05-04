@@ -12,6 +12,14 @@ const REPO = process.env.GITHUB_REPO || 'GonzoDuke/carnegie';
 const BRANCH = process.env.GITHUB_BRANCH || 'main';
 const LEDGER_PATH = 'lib/export-ledger.json';
 
+interface EntryHandle {
+  isbn: string;
+  titleNorm: string;
+  authorNorm: string;
+  date: string;
+  batchLabel: string | null;
+}
+
 interface PostBody {
   add?: LedgerEntry[];
   removeBatchLabels?: (string | null)[];
@@ -22,6 +30,41 @@ interface PostBody {
    * Vocabulary screen so a rename propagates to historical exports.
    */
   renameTag?: { from: string; to: string };
+  /**
+   * Per-entry partial updates. Used by the duplicates tool to set
+   * `dedupe_dismissed` and `work_group_id` without rewriting the
+   * whole entry. Match by EntryHandle (isbn+titleNorm+authorNorm+
+   * date+batchLabel) — entries that match exactly get the patch
+   * shallow-merged in.
+   */
+  updateEntries?: {
+    match: EntryHandle;
+    set: Partial<Pick<LedgerEntry, 'dedupe_dismissed' | 'work_group_id'>>;
+  }[];
+  /** Per-entry deletions, identified by EntryHandle. Destructive. */
+  removeEntries?: EntryHandle[];
+}
+
+function handleMatchesEntry(h: EntryHandle, e: LedgerEntry): boolean {
+  return (
+    h.isbn === e.isbn &&
+    h.titleNorm === e.titleNorm &&
+    h.authorNorm === e.authorNorm &&
+    h.date === e.date &&
+    (h.batchLabel ?? null) === (e.batchLabel ?? null)
+  );
+}
+
+function isValidHandle(v: unknown): v is EntryHandle {
+  if (!v || typeof v !== 'object') return false;
+  const h = v as Record<string, unknown>;
+  return (
+    typeof h.isbn === 'string' &&
+    typeof h.titleNorm === 'string' &&
+    typeof h.authorNorm === 'string' &&
+    typeof h.date === 'string' &&
+    (h.batchLabel === null || typeof h.batchLabel === 'string')
+  );
 }
 
 interface GhFile {
@@ -174,7 +217,21 @@ export async function POST(req: NextRequest) {
       : '';
   const doRename = renameFrom.length > 0 && renameTo.length > 0 && renameFrom !== renameTo;
 
-  if (!clearAll && additions.length === 0 && removeLabels.length === 0 && !doRename) {
+  const validUpdates = (Array.isArray(body.updateEntries) ? body.updateEntries : []).filter(
+    (u) => u && typeof u === 'object' && isValidHandle(u.match) && u.set && typeof u.set === 'object'
+  );
+  const validRemoves = (Array.isArray(body.removeEntries) ? body.removeEntries : []).filter(
+    (h): h is EntryHandle => isValidHandle(h)
+  );
+
+  if (
+    !clearAll &&
+    additions.length === 0 &&
+    removeLabels.length === 0 &&
+    !doRename &&
+    validUpdates.length === 0 &&
+    validRemoves.length === 0
+  ) {
     return NextResponse.json({ error: 'Empty delta' }, { status: 400 });
   }
 
@@ -205,6 +262,30 @@ export async function POST(req: NextRequest) {
     if (validAdditions.length > 0) {
       next = mergeLedgerAdditions(next, validAdditions);
     }
+    let removedEntries = 0;
+    if (validRemoves.length > 0) {
+      const before = next.length;
+      next = next.filter((e) => !validRemoves.some((h) => handleMatchesEntry(h, e)));
+      removedEntries = before - next.length;
+    }
+    let updatedEntries = 0;
+    if (validUpdates.length > 0) {
+      next = next.map((e) => {
+        const update = validUpdates.find((u) => handleMatchesEntry(u.match, e));
+        if (!update) return e;
+        updatedEntries += 1;
+        // Whitelist the patchable fields — never let a client write
+        // arbitrary properties into a ledger entry via this op.
+        const patch: Partial<LedgerEntry> = {};
+        if ('dedupe_dismissed' in update.set) {
+          patch.dedupe_dismissed = update.set.dedupe_dismissed;
+        }
+        if ('work_group_id' in update.set) {
+          patch.work_group_id = update.set.work_group_id;
+        }
+        return { ...e, ...patch };
+      });
+    }
     let renameAffected = 0;
     if (doRename) {
       const fromLower = renameFrom.toLowerCase();
@@ -232,7 +313,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Skip the write when nothing actually changed — saves a no-op commit.
+    // entriesMatch alone is identity-only (ISBN-or-title+author), so a
+    // pure updateEntries patch would falsely register here as unchanged.
+    // Force a write whenever updateEntries / removeEntries / renameTag
+    // touched anything.
+    const sideEffectMutated =
+      removedEntries > 0 || updatedEntries > 0 || renameAffected > 0;
     if (
+      !sideEffectMutated &&
       next.length === current.length &&
       next.every((e, i) => entriesMatch(e, current[i]))
     ) {
@@ -258,6 +346,16 @@ export async function POST(req: NextRequest) {
     if (validAdditions.length > 0) {
       messageParts.push(
         `add ${validAdditions.length} ${validAdditions.length === 1 ? 'entry' : 'entries'}`
+      );
+    }
+    if (removedEntries > 0) {
+      messageParts.push(
+        `remove ${removedEntries} ${removedEntries === 1 ? 'entry' : 'entries'}`
+      );
+    }
+    if (updatedEntries > 0) {
+      messageParts.push(
+        `update ${updatedEntries} ${updatedEntries === 1 ? 'entry' : 'entries'} (dedupe)`
       );
     }
     if (doRename && renameAffected > 0) {

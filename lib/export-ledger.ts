@@ -41,6 +41,28 @@ export interface LedgerEntry {
    * entries without an LCC when computing the dominant class letter.
    */
   lcc?: string;
+  /**
+   * Set when the user dismissed this entry from the Duplicates &
+   * editions tool. `type` records which action they took:
+   *   - `intentional`: "These multiple copies are deliberate" (exact dupes)
+   *   - `different_works`: "These aren't actually the same work" (edition false positive)
+   * Either way, `detectDuplicates` excludes the entry from future
+   * grouping. `dismissedFromGroup` records the matchKey at the time
+   * of dismissal so we can audit later if we add an undo flow.
+   */
+  dedupe_dismissed?: {
+    type: 'intentional' | 'different_works';
+    dismissedAt: string;
+    dismissedFromGroup: string;
+  };
+  /**
+   * Cross-reference id linking ledger entries the user has confirmed
+   * are the same underlying work (different editions, printings,
+   * translations). Written by the "Confirm same work" action in the
+   * duplicates tool. Future series-tracking will read this so it can
+   * count "the same work" once instead of N times.
+   */
+  work_group_id?: string;
 }
 
 export function normalizeIsbn(isbn: string | undefined | null): string {
@@ -135,6 +157,43 @@ interface RemoteLedgerResponse {
 }
 
 /**
+ * Stable per-entry identity for the duplicates tool. The append/merge
+ * paths dedupe via entriesMatch (ISBN-or-title+author), so this composite
+ * is technically redundant for those paths — but the duplicates UI may
+ * see entries that bypassed dedupe (sync race, manual JSON edits, future
+ * second-copy support), so we hash on the full tuple to keep updates
+ * surgical. `date` and `batchLabel` are included so two entries that
+ * share an ISBN but were exported on different days remain distinct.
+ */
+export interface EntryHandle {
+  isbn: string;
+  titleNorm: string;
+  authorNorm: string;
+  date: string;
+  batchLabel: string | null;
+}
+
+export function entryHandle(e: LedgerEntry): EntryHandle {
+  return {
+    isbn: e.isbn,
+    titleNorm: e.titleNorm,
+    authorNorm: e.authorNorm,
+    date: e.date,
+    batchLabel: e.batchLabel ?? null,
+  };
+}
+
+function handleEquals(h: EntryHandle, e: LedgerEntry): boolean {
+  return (
+    h.isbn === e.isbn &&
+    h.titleNorm === e.titleNorm &&
+    h.authorNorm === e.authorNorm &&
+    h.date === e.date &&
+    (h.batchLabel ?? null) === (e.batchLabel ?? null)
+  );
+}
+
+/**
  * Fetch the authoritative ledger from lib/export-ledger.json via the
  * /api/ledger route. Updates the localStorage cache when the remote is
  * available. Returns the remote entries when fetched, or null when the
@@ -173,6 +232,16 @@ export async function pushLedgerDelta(
     clearAll?: boolean;
     /** Replace every occurrence of `from` in `tags` arrays with `to`. */
     renameTag?: { from: string; to: string };
+    /**
+     * Apply a partial update to specific entries, identified by EntryHandle.
+     * Used by the duplicates tool for dismissals and work-group cross-refs.
+     */
+    updateEntries?: {
+      match: EntryHandle;
+      set: Partial<Pick<LedgerEntry, 'dedupe_dismissed' | 'work_group_id'>>;
+    }[];
+    /** Delete specific entries identified by EntryHandle. Destructive. */
+    removeEntries?: EntryHandle[];
   }
 ): Promise<RemoteLedgerResponse> {
   if (typeof window === 'undefined') return { available: false };
@@ -558,4 +627,264 @@ export function deleteLedgerBatch(batchLabel: string | undefined): number {
   const removed = before.length - after.length;
   if (removed > 0) saveLedger(after);
   return removed;
+}
+
+// ---------------------------------------------------------------------------
+// Duplicates & editions detection — used by the /stacks/duplicates tool.
+// Two distinct cases:
+//   1. EXACT: multiple ledger entries that share the same ISBN.
+//   2. EDITION: multiple entries that resolve to the same work
+//      (matching normalized title + author last name) but have
+//      DIFFERENT ISBNs — different printings, paperback vs hardcover,
+//      translations, etc.
+//
+// In practice exact-by-ISBN groups are rare because appendToLedger
+// dedupes same-ISBN re-exports in place. They show up when entries
+// bypassed dedupe (manual JSON edit, sync race, future second-copy
+// support). Edition groups are the meatier real-world case.
+// ---------------------------------------------------------------------------
+
+const SOFT_DISMISS_KEY = 'carnegie:dedupe-soft-dismissals:v1';
+
+export interface DuplicateGroup {
+  type: 'exact' | 'edition';
+  /** ISBN for exact groups, normalized "title|author" for edition groups. */
+  matchKey: string;
+  entries: LedgerEntry[];
+}
+
+/** Normalize a title for edition matching: strip subtitle, leading
+ *  articles, punctuation; lowercase; collapse whitespace. */
+function normalizeTitleForEdition(title: string | undefined): string {
+  if (!title) return '';
+  let t = title.toLowerCase().trim();
+  // Strip subtitle (everything after first colon).
+  const colon = t.indexOf(':');
+  if (colon >= 0) t = t.slice(0, colon).trim();
+  // Strip leading articles.
+  t = t.replace(/^(the|a|an)\s+/, '');
+  // Strip punctuation, collapse whitespace.
+  t = t.replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return t;
+}
+
+/** Last-name only normalization for edition matching. Accepts both
+ *  "Last, First" and "First Last" forms. */
+function normalizeAuthorLastnameOnly(author: string | undefined): string {
+  if (!author) return '';
+  const trimmed = author.trim();
+  if (!trimmed) return '';
+  let lastname = '';
+  if (trimmed.includes(',')) {
+    lastname = trimmed.split(',', 1)[0];
+  } else {
+    const tokens = trimmed.split(/\s+/);
+    lastname = tokens[tokens.length - 1] ?? '';
+  }
+  return lastname
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function loadSoftDismissals(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(SOFT_DISMISS_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((s): s is string => typeof s === 'string'));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveSoftDismissals(set: Set<string>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(SOFT_DISMISS_KEY, JSON.stringify(Array.from(set)));
+  } catch {
+    // ignore quota errors
+  }
+}
+
+/** Soft-dismiss a group from the duplicates view. Local-only. The
+ *  ledger is not modified — re-detection on a different device will
+ *  still surface the group there. */
+export function softDismissDuplicateGroup(matchKey: string): void {
+  const set = loadSoftDismissals();
+  set.add(matchKey);
+  saveSoftDismissals(set);
+}
+
+/**
+ * Detect duplicate groups across the ledger.
+ *
+ * Exact groups: any cluster of ≥2 entries sharing a non-empty ISBN.
+ * Edition groups: any cluster of ≥2 entries with DIFFERENT ISBNs but
+ *   matching (normalizeTitleForEdition, normalizeAuthorLastnameOnly).
+ *
+ * Excludes entries with `dedupe_dismissed` set (the user said "this
+ * group is settled"). Excludes match keys in localStorage soft-dismiss
+ * set (the user said "keep all as-is, hide this group").
+ *
+ * Sorted by entry count descending, then alphabetical by matchKey for
+ * stable rendering. Caps at 50 groups for v1; the caller can read
+ * `truncated` and surface a "{N} more" message.
+ */
+export function detectDuplicates(
+  entries: LedgerEntry[],
+  options: { cap?: number } = {}
+): { groups: DuplicateGroup[]; truncated: number } {
+  const cap = options.cap ?? 50;
+  const softDismissed = loadSoftDismissals();
+  const eligible = entries.filter((e) => !e.dedupe_dismissed);
+
+  // 1. Exact groups by ISBN.
+  const byIsbn = new Map<string, LedgerEntry[]>();
+  for (const e of eligible) {
+    if (!e.isbn) continue;
+    const list = byIsbn.get(e.isbn) ?? [];
+    list.push(e);
+    byIsbn.set(e.isbn, list);
+  }
+  const exactGroups: DuplicateGroup[] = [];
+  for (const [isbn, list] of byIsbn) {
+    if (list.length < 2) continue;
+    if (softDismissed.has(`exact:${isbn}`)) continue;
+    exactGroups.push({ type: 'exact', matchKey: isbn, entries: list });
+  }
+
+  // 2. Edition groups by normalized title+author. Skip entries with
+  //    no usable normalized form — those would all collide on "|" and
+  //    create false groups.
+  const byWork = new Map<string, LedgerEntry[]>();
+  for (const e of eligible) {
+    const t = normalizeTitleForEdition(e.title ?? e.titleNorm);
+    const a = normalizeAuthorLastnameOnly(e.authorLF ?? e.author ?? '');
+    if (!t || !a) continue;
+    const key = `${t}|${a}`;
+    const list = byWork.get(key) ?? [];
+    list.push(e);
+    byWork.set(key, list);
+  }
+  const editionGroups: DuplicateGroup[] = [];
+  for (const [key, list] of byWork) {
+    if (list.length < 2) continue;
+    if (softDismissed.has(`edition:${key}`)) continue;
+    // Edition group requires DIFFERENT ISBNs — otherwise it's covered
+    // by an exact group above.
+    const isbns = new Set(list.map((e) => e.isbn).filter(Boolean));
+    if (isbns.size < 2) continue;
+    editionGroups.push({ type: 'edition', matchKey: key, entries: list });
+  }
+
+  const all = [...exactGroups, ...editionGroups].sort((a, b) => {
+    if (a.entries.length !== b.entries.length) {
+      return b.entries.length - a.entries.length;
+    }
+    return a.matchKey.localeCompare(b.matchKey);
+  });
+
+  const truncated = Math.max(0, all.length - cap);
+  return { groups: all.slice(0, cap), truncated };
+}
+
+/**
+ * Mark a list of ledger entries as dismissed from the duplicates tool.
+ * Writes both locally and to the remote ledger. Caller should refetch
+ * the ledger after this resolves.
+ */
+export async function dismissDuplicateGroup(
+  handles: EntryHandle[],
+  type: 'intentional' | 'different_works',
+  matchKey: string
+): Promise<RemoteLedgerResponse> {
+  const dismissedAt = new Date().toISOString();
+  const dismissedFromGroup = matchKey;
+
+  // Optimistic local update so the UI sees the change immediately.
+  const local = loadLedger();
+  const updated = local.map((e) => {
+    if (handles.some((h) => handleEquals(h, e))) {
+      return {
+        ...e,
+        dedupe_dismissed: { type, dismissedAt, dismissedFromGroup },
+      };
+    }
+    return e;
+  });
+  saveLedger(updated);
+
+  return pushLedgerDelta({
+    updateEntries: handles.map((h) => ({
+      match: h,
+      set: {
+        dedupe_dismissed: { type, dismissedAt, dismissedFromGroup },
+      },
+    })),
+  });
+}
+
+/**
+ * Confirm a list of ledger entries as the same work — assigns them a
+ * shared work_group_id and marks them dismissed-as-different_works=false
+ * (well, marks as dismissed since they're settled). Future series
+ * tooling can read work_group_id to count "the same work" once.
+ */
+export async function confirmSameWork(
+  handles: EntryHandle[],
+  matchKey: string
+): Promise<RemoteLedgerResponse> {
+  // Reuse an existing work_group_id if any of the entries already has one,
+  // so this is idempotent across multiple confirmations.
+  const local = loadLedger();
+  const matched = local.filter((e) => handles.some((h) => handleEquals(h, e)));
+  const existing = matched.find((e) => e.work_group_id)?.work_group_id;
+  const work_group_id = existing ?? generateWorkGroupId();
+  const dismissedAt = new Date().toISOString();
+  const dismissed = {
+    type: 'different_works' as const, // settled — exclude from future detection
+    dismissedAt,
+    dismissedFromGroup: matchKey,
+  };
+
+  const updated = local.map((e) => {
+    if (handles.some((h) => handleEquals(h, e))) {
+      return { ...e, work_group_id, dedupe_dismissed: dismissed };
+    }
+    return e;
+  });
+  saveLedger(updated);
+
+  return pushLedgerDelta({
+    updateEntries: handles.map((h) => ({
+      match: h,
+      set: { work_group_id, dedupe_dismissed: dismissed },
+    })),
+  });
+}
+
+/**
+ * Remove specific ledger entries by handle. Destructive. The caller
+ * is responsible for confirming with the user before invoking.
+ */
+export async function removeLedgerEntries(
+  handles: EntryHandle[]
+): Promise<RemoteLedgerResponse> {
+  const local = loadLedger();
+  const filtered = local.filter((e) => !handles.some((h) => handleEquals(h, e)));
+  saveLedger(filtered);
+  return pushLedgerDelta({ removeEntries: handles });
+}
+
+function generateWorkGroupId(): string {
+  // No need for cryptographic strength — we're avoiding collisions
+  // across a user's own ledger, not generating session keys.
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+  return `wg-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }

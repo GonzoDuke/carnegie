@@ -25,6 +25,7 @@ import { useStore } from '@/lib/store';
 import {
   loadLedger,
   syncLedgerFromRepo,
+  detectDuplicates,
   type LedgerEntry,
 } from '@/lib/export-ledger';
 import {
@@ -518,23 +519,9 @@ function countAuthorityConflicts(entries: LedgerEntry[]): number {
   return conflicts;
 }
 
-// Duplicates by ISBN, then by normalized title+author. A "duplicate
-// work" is any cluster of ≥2 ledger entries that resolve to the same
-// book.
-function countDuplicateWorks(entries: LedgerEntry[]): number {
-  const seen = new Map<string, number>();
-  for (const e of entries) {
-    const key = e.isbn ? `isbn:${e.isbn}` : `ta:${e.titleNorm}|${e.authorNorm}`;
-    seen.set(key, (seen.get(key) ?? 0) + 1);
-  }
-  let count = 0;
-  for (const v of seen.values()) if (v > 1) count += 1;
-  return count;
-}
-
 function ToolsRow({ ledger }: { ledger: LedgerEntry[] }) {
   const authorityCount = useMemo(() => countAuthorityConflicts(ledger), [ledger]);
-  const duplicatesCount = useMemo(() => countDuplicateWorks(ledger), [ledger]);
+  const duplicateGroups = useMemo(() => detectDuplicates(ledger).groups.length, [ledger]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -556,11 +543,11 @@ function ToolsRow({ ledger }: { ledger: LedgerEntry[] }) {
         title="Duplicates & editions"
         body="Multiple copies or editions of the same work."
         badge={
-          duplicatesCount === 0
+          duplicateGroups === 0
             ? { text: 'All clear', tone: 'green' }
             : {
-                text: `${duplicatesCount} ${duplicatesCount === 1 ? 'work' : 'works'}`,
-                tone: 'green',
+                text: `${duplicateGroups} ${duplicateGroups === 1 ? 'group' : 'groups'}`,
+                tone: 'amber',
               }
         }
       />
