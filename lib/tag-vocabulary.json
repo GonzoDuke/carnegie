@@ -34,7 +34,10 @@
       "label": "General works",
       "lcc_letter": "A",
       "description": "Encyclopedias, almanacs, general reference works, periodicals not classed elsewhere.",
-      "tags": []
+      "tags": [
+        "Personal narrative",
+        "Social commentary"
+      ]
     },
     "philosophy_psychology_religion": {
       "label": "Philosophy, psychology, religion",
@@ -60,7 +63,10 @@
         "Addiction",
         "Neuroscience",
         "Self-improvement",
-        "Social psychology"
+        "Social psychology",
+        "Activism & Social Justice",
+        "Personal development",
+        "Social justice"
       ]
     },
     "auxiliary_history": {
@@ -163,7 +169,9 @@
       "description": "Music — scores, performance, theory, history, criticism, musician biographies. LCC M (music itself) + ML (literature about music incl. ML420 musician biographies) + MT (instruction).",
       "tags": [
         "Music",
-        "Music biography"
+        "Music biography",
+        "Media studies",
+        "Pop culture criticism"
       ]
     },
     "fine_arts": {
@@ -198,7 +206,8 @@
         "Linguistics",
         "Etymology",
         "History of language",
-        "Profanity studies"
+        "Profanity studies",
+        "Media literacy"
       ]
     },
     "science": {
