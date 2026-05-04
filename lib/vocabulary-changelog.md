@@ -33,4 +33,10 @@ Created baseline vocabulary from 186-book LibraryThing export + 22-book proof of
 - Added `Modern civilization` to **auxiliary_history**
 - Added `Profanity studies` to **language_literature**
 
+## 2026-05-04
+
+- Added `Profanity studies` to **Language and literature** — first seen on "The F***ing History of Swearing" by Anna Maria Kiosse
+- Added `Social psychology` to **Philosophy, psychology, religion** — first seen on "F You Very Much" by Danny Wallace
+- Added `Modern civilization` to **World history** — first seen on "Shit Is Fucked up and Bullshit" by Malcolm Harris
+
 <!-- New entries will be appended below automatically by the approve command -->
