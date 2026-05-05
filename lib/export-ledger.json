@@ -109,5 +109,20 @@
     "publisher": "University of Minnesota Press",
     "publicationYear": 1977,
     "lcc": "BF-0469.00000000"
+  },
+  {
+    "isbn": "9781405521017",
+    "titleNorm": "consider the lobster",
+    "authorNorm": "david foster wallace",
+    "date": "2026-05-05",
+    "tags": [
+      "Essays"
+    ],
+    "title": "Consider the Lobster",
+    "author": "David Foster Wallace",
+    "authorLF": "Wallace, David Foster",
+    "publisher": "imusti",
+    "publicationYear": 2005,
+    "lcc": "PS3573 .A425635"
   }
 ]
