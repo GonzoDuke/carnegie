@@ -11,8 +11,8 @@ import { useStore } from '@/lib/store';
 import { VOCAB, domainForLcc, type DomainKey } from '@/lib/tag-domains';
 import type { PhotoBatch } from '@/lib/types';
 import { flagIfPreviouslyExported, syncLedgerFromRepo } from '@/lib/export-ledger';
+import { syncCorrectionsFromRepo } from '@/lib/corrections-log';
 import { confirmDiscardSession } from '@/lib/session';
-import { syncPendingBatchesFromRepo } from '@/lib/pending-batches';
 import { fireUndo } from '@/components/UndoToast';
 
 type Filter = 'all' | 'pending' | 'approved' | 'rejected' | 'low';
@@ -59,31 +59,28 @@ export default function ReviewPage() {
     setRefreshState('pending');
     setRefreshMessage(null);
     try {
-      // Pull pending batches AND the export ledger from GitHub in
-      // parallel — the ledger drives previously-exported flagging,
-      // so a stale local copy means duplicates can slip through.
-      const [remote, ledger] = await Promise.all([
-        syncPendingBatchesFromRepo(),
+      // Pull the export ledger and corrections log from GitHub. The
+      // ledger drives previously-exported flagging — a stale local copy
+      // means duplicates can slip through. Cross-device pending-batches
+      // sync was removed; in-flight batches are device-local.
+      const [ledger, corrections] = await Promise.all([
         syncLedgerFromRepo().catch(() => null),
+        syncCorrectionsFromRepo().catch(() => null),
       ]);
-      if (!remote) {
+      if (!ledger && !corrections) {
         setRefreshState('error');
         setRefreshMessage('Sync unavailable — working offline.');
         setTimeout(() => setRefreshState('idle'), 3500);
         return;
       }
-      const existing = new Set(state.batches.map((b) => b.id));
-      let added = 0;
-      for (const raw of remote) {
-        if (existing.has(raw.id)) continue;
-        addBatch(raw);
-        added += 1;
-      }
       setRefreshState('done');
-      const batchPart =
-        added === 0 ? 'Already up to date' : `Pulled ${added} new ${added === 1 ? 'batch' : 'batches'}`;
-      const ledgerPart = ledger ? `; ledger synced (${ledger.length} entries).` : '.';
-      setRefreshMessage(`${batchPart}${ledgerPart}`);
+      const ledgerPart = ledger
+        ? `Ledger synced (${ledger.length} entries)`
+        : 'Ledger unchanged';
+      const correctionsPart = corrections
+        ? `; corrections synced (${corrections.length}).`
+        : '.';
+      setRefreshMessage(`${ledgerPart}${correctionsPart}`);
       setTimeout(() => setRefreshState('idle'), 3500);
     } catch {
       setRefreshState('error');

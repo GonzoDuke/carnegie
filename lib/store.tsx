@@ -25,11 +25,6 @@ import { toTitleCase } from './csv-export';
 import { flagIfPreviouslyExported, loadLedger, syncLedgerFromRepo } from './export-ledger';
 import { syncCorrectionsFromRepo, loadCorrections, setCorrectionsCache } from './corrections-log';
 import { migrateLegacyDomain } from './tag-domains';
-import {
-  deletePendingBatchFromRepo,
-  pushBatchToRepo,
-  syncPendingBatchesFromRepo,
-} from './pending-batches';
 
 // ---------------------------------------------------------------------------
 // sanitizeBook — defensive coercion for any BookRecord that flows in from
@@ -657,85 +652,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.batches, state.allBooks]);
 
-  // Debounced post-mutation sync. Watches state.batches and pushes any
-  // batch whose books-array reference changed since the last seen
-  // value to GitHub via pushBatchToRepo. The reducer creates new array
-  // refs on every UPDATE_BOOK / MERGE_DUPLICATES / etc., so reference
-  // inequality is sufficient and cheap — no deep equality needed.
-  //
-  // 2-second per-batch debounce: rapid edits (typing in a field) collapse
-  // into a single push after the user stops, but the timer is keyed by
-  // batchId so editing batch A doesn't reset batch B's timer.
-  //
-  // Gates (matching the per-creation push sites' implicit assumptions):
-  //   1. !hasHydrated.current — same gate the persist effect uses; never
-  //      push localStorage state back to GitHub on mount.
-  //   2. status === 'processing' — processQueue owns the push for batches
-  //      it's actively working on; we must not race it with stale snapshots.
-  //   3. books.length === 0 — empty batches get cleaned up elsewhere
-  //      (handleScannerClose drops empty scan batches); pushing them is
-  //      noise.
-  //
-  // Concurrent-edit semantics: this is "newest state wins" — pushing the
-  // current device's state will overwrite the remote copy. For Carnegie's
-  // single-user/two-device pattern this is acceptable and intended.
-  const syncTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const lastSyncedBooksRef = useRef<Map<string, BookRecord[]>>(new Map());
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const seen = lastSyncedBooksRef.current;
-    const timeouts = syncTimeoutsRef.current;
-    const liveIds = new Set<string>();
-
-    for (const batch of state.batches) {
-      liveIds.add(batch.id);
-      const prev = seen.get(batch.id);
-      // Update last-seen unconditionally so the next run compares
-      // against the current reference, even when we skip the push.
-      seen.set(batch.id, batch.books);
-      if (prev === batch.books) continue;
-      if (!hasHydrated.current) continue;
-      if (batch.status === 'processing') continue;
-      if (batch.books.length === 0) continue;
-
-      // Reset any pending timer for this batch — only the freshest
-      // snapshot (after debounce settles) gets pushed.
-      const existing = timeouts.get(batch.id);
-      if (existing) clearTimeout(existing);
-
-      const t = setTimeout(() => {
-        timeouts.delete(batch.id);
-        const current = stateRef.current.batches.find((b) => b.id === batch.id);
-        if (!current) return;
-        if (current.status === 'processing') return;
-        if (current.books.length === 0) return;
-        pushBatchToRepo(current).catch(() => {});
-      }, 2000);
-      timeouts.set(batch.id, t);
-    }
-
-    // Drop tracking for batches that have been removed since the last
-    // run, and clear any pending timeout for them.
-    for (const id of Array.from(seen.keys())) {
-      if (!liveIds.has(id)) {
-        seen.delete(id);
-        const t = timeouts.get(id);
-        if (t) {
-          clearTimeout(t);
-          timeouts.delete(id);
-        }
-      }
-    }
-  }, [state.batches]);
-
-  // Unmount cleanup — prevents stray pushes after the provider tears down.
-  useEffect(() => {
-    const timeouts = syncTimeoutsRef.current;
-    return () => {
-      for (const t of timeouts.values()) clearTimeout(t);
-      timeouts.clear();
-    };
-  }, []);
+  // (The pending-batches cross-device sync was removed. Active in-flight
+  // batches are device-local now — start and finish processing on the
+  // same device. The export ledger and corrections log still sync, so
+  // library state stays coherent across devices once batches finalize
+  // and ship.)
 
   // Pull the authoritative ledger from the repo on app load so duplicate
   // detection is consistent across devices. syncLedgerFromRepo updates the
@@ -743,24 +664,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // remote isn't available (no GITHUB_TOKEN configured), this is a no-op
   // and we keep using whatever's in the local cache.
   //
-  // In parallel, pull any pending batches that were processed on another
-  // device (typically a phone capture) so they appear in /review here.
+  // Tag-correction log is pulled in parallel so this session's inference
+  // calls can include corrections made on other devices as few-shot
+  // examples. No-op when GITHUB_TOKEN isn't configured.
   useEffect(() => {
     syncLedgerFromRepo().catch(() => {});
-    // Pull the latest tag-correction log so this session's inference
-    // calls can include corrections made on other devices as few-shot
-    // examples. No-op when GITHUB_TOKEN isn't configured.
     syncCorrectionsFromRepo().catch(() => {});
-    syncPendingBatchesFromRepo()
-      .then((remoteBatches) => {
-        if (!remoteBatches || remoteBatches.length === 0) return;
-        const existingIds = new Set(stateRef.current.batches.map((b) => b.id));
-        for (const raw of remoteBatches) {
-          if (existingIds.has(raw.id)) continue;
-          dispatch({ type: 'ADD_BATCH', batch: sanitizeBatch(raw) });
-        }
-      })
-      .catch(() => {});
   }, []);
 
   // Pending files live in a ref — they can't be serialized and don't need to
@@ -952,17 +861,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           dispatch({ type: 'UPDATE_BATCH', id: batch.id, patch: { status: 'done' } });
 
           // Push the finalized batch to the repo so other devices (typically
-          // a tablet picking up a phone capture) can see it on their next
-          // sync. Fire-and-forget — failures never block the UI, and the
-          // route returns 501 cleanly when GITHUB_TOKEN isn't configured.
-          const finalizedBatch: PhotoBatch = {
-            ...batch,
-            status: 'done',
-            spinesDetected: detections.length,
-            booksIdentified: finalBooks.length,
-            books: finalBooks,
-          };
-          pushBatchToRepo(finalizedBatch).catch(() => {});
+          // (Cross-device pending-batches sync was removed; the
+          // finalized batch lives in this device's store from here on.
+          // The export ledger still syncs once the user exports.)
         } catch (err: any) {
           dispatch({
             type: 'UPDATE_BATCH',
@@ -1085,22 +986,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       removeBatch: (id) => {
         pendingFiles.current.delete(id);
         dispatch({ type: 'REMOVE_BATCH', id });
-        // Drop the cross-device copy too so other devices stop seeing it.
-        deletePendingBatchFromRepo(id).catch(() => {});
       },
       addBook: (batchId, book) => dispatch({ type: 'ADD_BOOK', batchId, book }),
       updateBook: (id, patch) => dispatch({ type: 'UPDATE_BOOK', id, patch }),
       removeBooks: (ids) => dispatch({ type: 'REMOVE_BOOKS', ids }),
       clear: () => {
         pendingFiles.current.clear();
-        // Tear down every remote pending-batch entry so the next session
-        // doesn't pull back the work the user just discarded. Snapshot ids
-        // before dispatch so the loop reads pre-clear state.
-        const idsToWipe = stateRef.current.batches.map((b) => b.id);
         dispatch({ type: 'CLEAR' });
-        for (const id of idsToWipe) {
-          deletePendingBatchFromRepo(id).catch(() => {});
-        }
       },
       setPendingFile: (batchId, file) => {
         pendingFiles.current.set(batchId, file);

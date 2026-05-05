@@ -12,13 +12,14 @@ import { useDarkMode, useStore } from '@/lib/store';
 import type { BookRecord, PhotoBatch } from '@/lib/types';
 import { addManualBook, createThumbnail, loadImage, makeId } from '@/lib/pipeline';
 import { processIsbnScan } from '@/lib/scan-pipeline';
-import { pushBatchToRepo, syncPendingBatchesFromRepo } from '@/lib/pending-batches';
 import {
   getLedgerBatches,
   loadLedger,
+  syncLedgerFromRepo,
   type LedgerBatch,
   type LedgerEntry,
 } from '@/lib/export-ledger';
+import { syncCorrectionsFromRepo } from '@/lib/corrections-log';
 import { fireUndo } from '@/components/UndoToast';
 
 // 1200px wide is the realistic floor we still get useful spine-detection
@@ -92,22 +93,6 @@ export default function UploadPage() {
         previewResult: preview,
       });
       addBook(batchId, book);
-      // Push the scan batch to GitHub on each successful scan, not just
-      // on Done-tap. Closes the gap where a session ends (screen lock,
-      // app backgrounded, browser closed) before handleScannerClose
-      // fires — those scans would otherwise live only on the source
-      // device. handleScannerClose's terminal push still fires on Done
-      // for cleanup; per-scan sync keeps cross-device visibility live.
-      // Fire-and-forget — 409-retry shim handles concurrent writes.
-      const finalized = stateRef.current.batches.find((b) => b.id === batchId);
-      if (finalized) {
-        const synced: PhotoBatch = {
-          ...finalized,
-          books: [...finalized.books, book],
-          booksIdentified: finalized.booksIdentified + 1,
-        };
-        pushBatchToRepo(synced).catch(() => {});
-      }
     } catch (err) {
       scanErrorRef.current =
         err instanceof Error ? err.message : 'Lookup failed.';
@@ -119,9 +104,8 @@ export default function UploadPage() {
 
   function handleScannerClose() {
     setScannerOpen(false);
-    // Push the finalized scan batch to the repo so other devices see
-    // it on next sync. Wait briefly so any in-flight scans complete
-    // and their addBook dispatches land before we snapshot the batch.
+    // Wait briefly so any in-flight scans complete and their addBook
+    // dispatches land before we evaluate the batch's final state.
     const batchId = scanBatchIdRef.current;
     scanBatchIdRef.current = null;
     if (!batchId) return;
@@ -131,9 +115,7 @@ export default function UploadPage() {
         return;
       }
       const finalized = stateRef.current.batches.find((b) => b.id === batchId);
-      if (finalized && finalized.books.length > 0) {
-        pushBatchToRepo(finalized).catch(() => {});
-      } else if (finalized && finalized.books.length === 0) {
+      if (finalized && finalized.books.length === 0) {
         // Scanner closed without any successful scans — drop the empty
         // batch so it doesn't clutter the queue.
         removeBatch(batchId);
@@ -188,25 +170,6 @@ export default function UploadPage() {
     })
       .then((book) => {
         addBook(batchId, book);
-        // Push the manual-entries batch to GitHub on each successful
-        // addition. The user has no "I'm done with manual entry"
-        // moment (the modal closes after each book), so per-book sync
-        // is the closest analog to the scan flow's behavior from the
-        // user's perspective. Fire-and-forget — failures never block
-        // the UI, and the pending-batches POST has a 409-retry shim
-        // for concurrent-write conflicts.
-        const finalized = stateRef.current.batches.find((b) => b.id === batchId);
-        if (finalized) {
-          // Synthesize the post-dispatch state since stateRef is one
-          // tick behind the addBook dispatch. Append the new book to
-          // the pre-dispatch batch snapshot.
-          const synced: PhotoBatch = {
-            ...finalized,
-            books: [...finalized.books, book],
-            booksIdentified: finalized.booksIdentified + 1,
-          };
-          pushBatchToRepo(synced).catch(() => {});
-        }
       })
       .catch(() => {
         // Lookup failed entirely — surface a minimal stub so the user
@@ -249,18 +212,6 @@ export default function UploadPage() {
           },
         };
         addBook(batchId, stub);
-        // Push the stub too — the user typed something and we want
-        // it visible on other devices the same way a successful
-        // lookup would be. Same fire-and-forget pattern.
-        const finalized = stateRef.current.batches.find((b) => b.id === batchId);
-        if (finalized) {
-          const synced: PhotoBatch = {
-            ...finalized,
-            books: [...finalized.books, stub],
-            booksIdentified: finalized.booksIdentified + 1,
-          };
-          pushBatchToRepo(synced).catch(() => {});
-        }
       })
       .finally(() => {
         manualInflightRef.current -= 1;
@@ -270,27 +221,24 @@ export default function UploadPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
 
+  // Refresh from cloud — pulls the export ledger and corrections log.
+  // Pending in-flight batches no longer sync across devices, so this
+  // doesn't fan out to /api/pending-batches. Useful when another device
+  // exported books and we want this device's "previously exported"
+  // flagging to catch up.
   async function refreshFromCloud() {
     if (refreshing) return;
     setRefreshing(true);
     setRefreshMsg(null);
     try {
-      const remote = await syncPendingBatchesFromRepo();
-      if (!remote) {
+      const [remoteLedger, remoteCorrections] = await Promise.all([
+        syncLedgerFromRepo(),
+        syncCorrectionsFromRepo(),
+      ]);
+      if (!remoteLedger && !remoteCorrections) {
         setRefreshMsg('Sync unavailable.');
       } else {
-        const existing = new Set(state.batches.map((b) => b.id));
-        let added = 0;
-        for (const raw of remote) {
-          if (existing.has(raw.id)) continue;
-          addBatch(raw);
-          added += 1;
-        }
-        setRefreshMsg(
-          added === 0
-            ? 'Already up to date.'
-            : `Pulled ${added} new ${added === 1 ? 'batch' : 'batches'}.`
-        );
+        setRefreshMsg('Synced.');
       }
     } catch {
       setRefreshMsg('Refresh failed.');
@@ -560,9 +508,7 @@ export default function UploadPage() {
 
   function handleRemove(id: string) {
     // Snapshot the batch + its source File so the undo handler can
-    // restore both. The cross-device GitHub file is already deleted by
-    // removeBatch's own side-effect; on undo we re-push so the remote
-    // copy comes back too.
+    // restore both locally.
     const snapshot = stateRef.current.batches.find((b) => b.id === id);
     const file = snapshot ? getPendingFileFromMap(id) : null;
     removeBatch(id);
@@ -570,9 +516,6 @@ export default function UploadPage() {
       fireUndo(`Removed "${snapshot.filename}".`, () => {
         addBatch(snapshot);
         if (file) setPendingFile(snapshot.id, file);
-        if (snapshot.status === 'done' && snapshot.books.length > 0) {
-          pushBatchToRepo(snapshot).catch(() => {});
-        }
       });
     }
   }

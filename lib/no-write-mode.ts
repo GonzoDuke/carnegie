@@ -1,7 +1,7 @@
 /**
  * Local-only mode — a developer affordance that suppresses every
- * remote-write call (ledger, pending-batches, corrections, vocabulary)
- * while leaving local state, reads, and AI calls fully functional.
+ * remote-write call (ledger, corrections, vocabulary) while leaving
+ * local state, reads, and AI calls fully functional.
  *
  * The flag lives in localStorage so it survives reloads. Each write
  * site reads the flag at call time (not module-load time) so flipping

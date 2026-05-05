@@ -11,7 +11,6 @@ import {
   bookToLedgerEntry,
   pushLedgerDelta,
 } from '@/lib/export-ledger';
-import { deletePendingBatchFromRepo } from '@/lib/pending-batches';
 import { isNoWriteMode, logSkippedWrite } from '@/lib/no-write-mode';
 import {
   buildChangelogEntries,
@@ -150,20 +149,6 @@ export default function ExportPage() {
     // "confirm import" step, so this is the most reliable signal we have.
     appendToLedger(booksToExport);
 
-    // Pending-batch cleanup: any parent batch that contributed an exported
-    // book is fair game to wipe from the repo. Other devices will stop
-    // seeing it on their next sync. Local state is untouched so the
-    // exporting device still shows what just shipped. Fire-and-forget.
-    const exportedBookIds = new Set(booksToExport.map((b) => b.id));
-    const exportedBatchIds = new Set<string>();
-    for (const b of state.batches) {
-      if (b.books.some((bk) => exportedBookIds.has(bk.id))) {
-        exportedBatchIds.add(b.id);
-      }
-    }
-    for (const id of exportedBatchIds) {
-      deletePendingBatchFromRepo(id).catch(() => {});
-    }
     // Fan the same delta out to the repo so other devices see the export
     // on their next load. Fire-and-forget — the local cache is already
     // updated, so the user can keep working even if the network call is
